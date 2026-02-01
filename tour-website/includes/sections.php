@@ -8,30 +8,32 @@
  * Sayfa section'larını getir
  */
 function getPageSections($pageId) {
+    static $cache = [];
     $lang = getCurrentLang();
+    $cacheKey = $pageId . '_' . $lang;
+    
+    // Cache'den döndür
+    if (isset($cache[$cacheKey])) {
+        return $cache[$cacheKey];
+    }
+    
     try {
         $db = getDB();
+        // Tek sorguda section ve çevirileri al (N+1 query problemi çözümü)
         $stmt = $db->prepare("
-            SELECT s.*
+            SELECT s.*, 
+                   COALESCE(st.title, s.title) as title,
+                   COALESCE(st.subtitle, s.subtitle) as subtitle,
+                   COALESCE(st.content, s.content) as content
             FROM sections s
+            LEFT JOIN section_translations st ON s.id = st.section_id AND st.language_code = ?
             WHERE s.page_id = ? AND s.is_active = 1
             ORDER BY s.sort_order
         ");
-        $stmt->execute([$pageId]);
+        $stmt->execute([$lang, $pageId]);
         $sections = $stmt->fetchAll();
         
-        // Çevirileri ayrı olarak al
-        foreach ($sections as &$section) {
-            $transStmt = $db->prepare("SELECT * FROM section_translations WHERE section_id = ? AND language_code = ?");
-            $transStmt->execute([$section['id'], $lang]);
-            $trans = $transStmt->fetch();
-            if ($trans) {
-                $section['title'] = $trans['title'] ?: $section['title'];
-                $section['subtitle'] = $trans['subtitle'] ?: $section['subtitle'];
-                $section['content'] = $trans['content'] ?: $section['content'];
-            }
-        }
-        
+        $cache[$cacheKey] = $sections;
         return $sections;
     } catch (Exception $e) {
         return [];
@@ -112,7 +114,14 @@ function getHeroData() {
  * Öne çıkan destinasyonları getir
  */
 function getFeaturedDestinations($limit = 4) {
+    static $cache = [];
     $lang = getCurrentLang();
+    $cacheKey = $lang . '_' . $limit;
+    
+    if (isset($cache[$cacheKey])) {
+        return $cache[$cacheKey];
+    }
+    
     try {
         $db = getDB();
         $stmt = $db->prepare("
@@ -127,7 +136,8 @@ function getFeaturedDestinations($limit = 4) {
             LIMIT ?
         ");
         $stmt->execute([$lang, $limit]);
-        return $stmt->fetchAll();
+        $cache[$cacheKey] = $stmt->fetchAll();
+        return $cache[$cacheKey];
     } catch (Exception $e) {
         return [];
     }
@@ -137,7 +147,14 @@ function getFeaturedDestinations($limit = 4) {
  * Öne çıkan turları getir
  */
 function getFeaturedTours($limit = 6) {
+    static $cache = [];
     $lang = getCurrentLang();
+    $cacheKey = $lang . '_' . $limit;
+    
+    if (isset($cache[$cacheKey])) {
+        return $cache[$cacheKey];
+    }
+    
     try {
         $db = getDB();
         $stmt = $db->prepare("
@@ -153,7 +170,8 @@ function getFeaturedTours($limit = 6) {
             LIMIT ?
         ");
         $stmt->execute([$lang, $limit]);
-        return $stmt->fetchAll();
+        $cache[$cacheKey] = $stmt->fetchAll();
+        return $cache[$cacheKey];
     } catch (Exception $e) {
         return [];
     }
@@ -163,7 +181,14 @@ function getFeaturedTours($limit = 6) {
  * Testimonial'ları getir
  */
 function getTestimonials($limit = 6) {
+    static $cache = [];
     $lang = getCurrentLang();
+    $cacheKey = $lang . '_' . $limit;
+    
+    if (isset($cache[$cacheKey])) {
+        return $cache[$cacheKey];
+    }
+    
     try {
         $db = getDB();
         $stmt = $db->prepare("
@@ -177,7 +202,8 @@ function getTestimonials($limit = 6) {
             LIMIT ?
         ");
         $stmt->execute([$lang, $limit]);
-        return $stmt->fetchAll();
+        $cache[$cacheKey] = $stmt->fetchAll();
+        return $cache[$cacheKey];
     } catch (Exception $e) {
         return [];
     }
@@ -187,7 +213,14 @@ function getTestimonials($limit = 6) {
  * Features (Neden Biz) getir
  */
 function getFeatures($section = 'why_us') {
+    static $cache = [];
     $lang = getCurrentLang();
+    $cacheKey = $lang . '_' . $section;
+    
+    if (isset($cache[$cacheKey])) {
+        return $cache[$cacheKey];
+    }
+    
     try {
         $db = getDB();
         $stmt = $db->prepare("
@@ -200,7 +233,8 @@ function getFeatures($section = 'why_us') {
             ORDER BY f.sort_order
         ");
         $stmt->execute([$lang, $section]);
-        return $stmt->fetchAll();
+        $cache[$cacheKey] = $stmt->fetchAll();
+        return $cache[$cacheKey];
     } catch (Exception $e) {
         return [];
     }

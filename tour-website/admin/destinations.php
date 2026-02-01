@@ -15,186 +15,10 @@ $languages = $db->query("SELECT * FROM languages WHERE is_active = 1 ORDER BY so
 $defaultLang = array_filter($languages, fn($l) => $l['is_default']);
 $defaultLang = reset($defaultLang) ?: $languages[0] ?? ['code' => 'tr'];
 
-// Image kolonu yoksa ekle
-try {
-    $checkCol = $db->query("SHOW COLUMNS FROM destinations LIKE 'image'")->fetch();
-    if (!$checkCol) {
-        $db->query("ALTER TABLE destinations ADD COLUMN image VARCHAR(255) DEFAULT NULL AFTER badge");
-    }
-} catch (Exception $e) {}
-
-// destination_vehicles tablosunu oluştur
-try {
-    $db->query("
-        CREATE TABLE IF NOT EXISTS destination_vehicles (
-            id INT AUTO_INCREMENT PRIMARY KEY,
-            destination_id INT NOT NULL,
-            vehicle_id INT NOT NULL,
-            price DECIMAL(10,2) NOT NULL DEFAULT 0,
-            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-            UNIQUE KEY unique_dest_vehicle (destination_id, vehicle_id),
-            FOREIGN KEY (destination_id) REFERENCES destinations(id) ON DELETE CASCADE,
-            FOREIGN KEY (vehicle_id) REFERENCES vehicles(id) ON DELETE CASCADE
-        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
-    ");
-} catch (Exception $e) {}
-
-// page_settings tablosunu oluştur (sayfa ayarları için)
-try {
-    $db->query("
-        CREATE TABLE IF NOT EXISTS page_settings (
-            id INT AUTO_INCREMENT PRIMARY KEY,
-            page_key VARCHAR(50) NOT NULL UNIQUE,
-            background_image VARCHAR(255) DEFAULT NULL,
-            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-            updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
-        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
-    ");
-    
-    $db->query("
-        CREATE TABLE IF NOT EXISTS page_setting_translations (
-            id INT AUTO_INCREMENT PRIMARY KEY,
-            page_setting_id INT NOT NULL,
-            language_code VARCHAR(5) NOT NULL,
-            title VARCHAR(255) DEFAULT NULL,
-            slug VARCHAR(255) DEFAULT NULL,
-            subtitle TEXT DEFAULT NULL,
-            UNIQUE KEY unique_page_lang (page_setting_id, language_code),
-            FOREIGN KEY (page_setting_id) REFERENCES page_settings(id) ON DELETE CASCADE
-        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
-    ");
-    
-    // Slug kolonu yoksa ekle
-    try {
-        $db->query("ALTER TABLE page_setting_translations ADD COLUMN slug VARCHAR(255) DEFAULT NULL AFTER title");
-    } catch (Exception $e) {}
-    
-    // features_visible kolonu yoksa ekle
-    try {
-        $db->query("ALTER TABLE page_settings ADD COLUMN features_visible TINYINT(1) DEFAULT 1");
-    } catch (Exception $e) {}
-    
-    // Destinasyonlar sayfası için varsayılan kayıt
-    $db->query("INSERT IGNORE INTO page_settings (page_key) VALUES ('destinations')");
-    $db->query("INSERT IGNORE INTO page_settings (page_key) VALUES ('destination_detail')");
-} catch (Exception $e) {}
-
-// Transfer detay sayfası çevirileri için tablo
-try {
-    $db->query("
-        CREATE TABLE IF NOT EXISTS transfer_detail_translations (
-            id INT AUTO_INCREMENT PRIMARY KEY,
-            language_code VARCHAR(5) NOT NULL UNIQUE,
-            available_vehicles VARCHAR(255) DEFAULT NULL,
-            choose_vehicle VARCHAR(255) DEFAULT NULL,
-            passengers VARCHAR(100) DEFAULT NULL,
-            luggage VARCHAR(100) DEFAULT NULL,
-            book_now VARCHAR(100) DEFAULT NULL,
-            transfer_features VARCHAR(255) DEFAULT NULL,
-            what_we_offer VARCHAR(255) DEFAULT NULL,
-            vehicle_type VARCHAR(100) DEFAULT NULL,
-            continue_booking VARCHAR(255) DEFAULT NULL,
-            change_vehicle VARCHAR(100) DEFAULT NULL,
-            full_name VARCHAR(100) DEFAULT NULL,
-            email VARCHAR(100) DEFAULT NULL,
-            phone VARCHAR(100) DEFAULT NULL,
-            flight_date VARCHAR(100) DEFAULT NULL,
-            flight_time VARCHAR(100) DEFAULT NULL,
-            flight_number VARCHAR(100) DEFAULT NULL,
-            adults_count VARCHAR(100) DEFAULT NULL,
-            child_seat VARCHAR(100) DEFAULT NULL,
-            yes_no VARCHAR(255) DEFAULT NULL,
-            hotel_address VARCHAR(255) DEFAULT NULL,
-            notes VARCHAR(100) DEFAULT NULL,
-            location VARCHAR(100) DEFAULT NULL,
-            transfer_route VARCHAR(255) DEFAULT NULL,
-            gallery VARCHAR(100) DEFAULT NULL,
-            gallery_desc VARCHAR(255) DEFAULT NULL,
-            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-            updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
-        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
-    ");
-    
-    // Yeni alanları ekle (mevcut tabloya)
-    $newColumns = [
-        'change_vehicle', 'full_name', 'email', 'phone', 
-        'flight_date', 'flight_time', 'flight_number',
-        'adults_count', 'children_count', 'child_seat', 'yes_no', 'hotel_address',
-        'return_transfer', 'return_flight_date', 'return_flight_time',
-        'return_flight_number', 'return_pickup_time', 'return_hotel_address',
-        'transfer_info_title', 'total_price'
-    ];
-    foreach ($newColumns as $col) {
-        try {
-            $db->query("ALTER TABLE transfer_detail_translations ADD COLUMN {$col} VARCHAR(255) DEFAULT NULL");
-        } catch (Exception $e) {}
-    }
-} catch (Exception $e) {}
-
-// destination_translations tablosuna from_location ve to_location ekle
-try {
-    $db->query("ALTER TABLE destination_translations ADD COLUMN from_location VARCHAR(255) DEFAULT NULL AFTER slug");
-} catch (Exception $e) {}
-try {
-    $db->query("ALTER TABLE destination_translations ADD COLUMN to_location VARCHAR(255) DEFAULT NULL AFTER from_location");
-} catch (Exception $e) {}
-
-// Transfer özellikleri için dinamik tablo (icon, başlık, açıklama)
-try {
-    $db->query("
-        CREATE TABLE IF NOT EXISTS transfer_features (
-            id INT AUTO_INCREMENT PRIMARY KEY,
-            icon VARCHAR(100) NOT NULL DEFAULT 'bi-check-circle',
-            sort_order INT DEFAULT 0,
-            is_active TINYINT(1) DEFAULT 1,
-            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-            updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
-        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
-    ");
-    
-    $db->query("
-        CREATE TABLE IF NOT EXISTS transfer_feature_translations (
-            id INT AUTO_INCREMENT PRIMARY KEY,
-            feature_id INT NOT NULL,
-            language_code VARCHAR(5) NOT NULL,
-            title VARCHAR(255) NOT NULL,
-            description TEXT,
-            UNIQUE KEY unique_feature_lang (feature_id, language_code),
-            FOREIGN KEY (feature_id) REFERENCES transfer_features(id) ON DELETE CASCADE
-        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
-    ");
-} catch (Exception $e) {}
-
-// Sözleşme çevirileri için tablo
-try {
-    $db->query("
-        CREATE TABLE IF NOT EXISTS terms_translations (
-            id INT AUTO_INCREMENT PRIMARY KEY,
-            language_code VARCHAR(5) NOT NULL UNIQUE,
-            title VARCHAR(255) DEFAULT NULL,
-            checkbox_text VARCHAR(255) DEFAULT NULL,
-            content TEXT DEFAULT NULL,
-            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-            updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
-        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
-    ");
-} catch (Exception $e) {}
-
-// Uyarı mesajı çevirileri için tablo
-try {
-    $db->query("
-        CREATE TABLE IF NOT EXISTS booking_alert_translations (
-            id INT AUTO_INCREMENT PRIMARY KEY,
-            language_code VARCHAR(5) NOT NULL UNIQUE,
-            icon VARCHAR(100) DEFAULT 'bi-exclamation-triangle',
-            color VARCHAR(20) DEFAULT 'warning',
-            message TEXT DEFAULT NULL,
-            is_active TINYINT(1) DEFAULT 1,
-            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-            updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
-        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
-    ");
-} catch (Exception $e) {}
+// Tablolar migration ile oluşturuldu:
+// destination_vehicles, page_settings, page_setting_translations,
+// transfer_detail_translations, transfer_features, transfer_feature_translations,
+// terms_translations, booking_alert_translations
 
 // Sayfa ayarları kaydetme (Transfer Sayfası)
 if ($action === 'page_settings' && $_SERVER['REQUEST_METHOD'] === 'POST') {
@@ -941,9 +765,10 @@ try {
                             <a href="?action=edit&id=<?= $dest['id'] ?>" class="btn btn-sm btn-outline-primary">
                                 <i class="bi bi-pencil"></i>
                             </a>
-                            <a href="?action=delete&id=<?= $dest['id'] ?>" class="btn btn-sm btn-outline-danger btn-delete">
+                            <button type="button" class="btn btn-sm btn-outline-danger" 
+                                    data-delete data-entity="destinations" data-id="<?= $dest['id'] ?>">
                                 <i class="bi bi-trash"></i>
-                            </a>
+                            </button>
                         </td>
                     </tr>
                     <?php endforeach; ?>

@@ -58,21 +58,26 @@ $stmt = $db->prepare("
 $stmt->execute([$lang]);
 $destinations = $stmt->fetchAll();
 
-// Her destinasyon için minimum fiyatı ve para birimini al
+// Tüm destinasyonlar için minimum fiyatları tek sorguda al (N+1 query problemi çözümü)
 $destinationPrices = [];
-foreach ($destinations as $dest) {
+if (!empty($destinations)) {
+    $destIds = array_column($destinations, 'id');
+    $placeholders = implode(',', array_fill(0, count($destIds), '?'));
     $priceStmt = $db->prepare("
-        SELECT MIN(price) as min_price, currency 
+        SELECT destination_id, MIN(price) as min_price, currency 
         FROM destination_vehicles 
-        WHERE destination_id = ? AND language_code = ? AND price > 0
-        GROUP BY currency
-        ORDER BY min_price ASC
-        LIMIT 1
+        WHERE destination_id IN ($placeholders) AND language_code = ? AND price > 0
+        GROUP BY destination_id, currency
     ");
-    $priceStmt->execute([$dest['id'], $lang]);
-    $priceData = $priceStmt->fetch();
-    if ($priceData) {
-        $destinationPrices[$dest['id']] = $priceData;
+    $params = array_merge($destIds, [$lang]);
+    $priceStmt->execute($params);
+    $priceResults = $priceStmt->fetchAll();
+    foreach ($priceResults as $row) {
+        // Her destinasyon için en düşük fiyatı al
+        if (!isset($destinationPrices[$row['destination_id']]) || 
+            $row['min_price'] < $destinationPrices[$row['destination_id']]['min_price']) {
+            $destinationPrices[$row['destination_id']] = $row;
+        }
     }
 }
 
@@ -94,7 +99,7 @@ require_once INCLUDES_PATH . 'header.php';
         <p><?= e($pageSubtitle) ?></p>
         <nav class="breadcrumbs">
             <ol>
-                <li><a href="<?= SITE_URL ?>"><?= __('menu_home', 'header') ?></a></li>
+                <li><a href="<?= langUrl('') ?>"><?= __('menu_home', 'header') ?></a></li>
                 <li class="current"><?= e($pageTitle) ?></li>
             </ol>
         </nav>
@@ -152,171 +157,6 @@ require_once INCLUDES_PATH . 'header.php';
     </div>
 </section><!-- /Travel Destinations Section -->
 
-<style>
-/* Transfer kartları için özel stiller - Kare kartlar */
-#travel-destinations .isotope-container .destination-tile {
-    display: block !important;
-}
-
-#travel-destinations .isotope-container .destination-tile .tile-image {
-    position: relative !important;
-    overflow: hidden !important;
-    border-radius: 12px !important;
-    width: 100% !important;
-    padding-bottom: 100% !important;
-    height: 0 !important;
-}
-
-#travel-destinations .isotope-container .destination-tile .tile-image img {
-    position: absolute !important;
-    top: 0 !important;
-    left: 0 !important;
-    width: 100% !important;
-    height: 100% !important;
-    object-fit: cover !important;
-    transition: transform 0.3s ease !important;
-}
-
-#travel-destinations .isotope-container .destination-tile:hover .tile-image img {
-    transform: scale(1.05) !important;
-}
-
-#travel-destinations .isotope-container .destination-tile .tile-image .overlay-content {
-    position: absolute !important;
-    top: 0 !important;
-    left: 0 !important;
-    right: 0 !important;
-    bottom: 0 !important;
-    background: linear-gradient(to bottom, transparent 0%, transparent 0%,
-        rgba(0, 0, 0, 0.4) 0%,
-        rgba(0, 0, 0, 0.85) 65%) !important;
-    display: flex !important;
-    flex-direction: column !important;
-    justify-content: flex-end !important;
-    padding: 15px !important;
-}
-
-#travel-destinations .isotope-container .destination-tile .tile-image .overlay-content .destination-tag {
-    position: absolute !important;
-    top: 12px !important;
-    right: 12px !important;
-    bottom: auto !important;
-    left: auto !important;
-    background: #28a745 !important;
-    color: white !important;
-    padding: 5px 12px !important;
-    border-radius: 15px !important;
-    font-size: 11px !important;
-    font-weight: 600 !important;
-    text-transform: uppercase !important;
-}
-
-#travel-destinations .isotope-container .destination-tile .tile-image .overlay-content .destination-info {
-    color: white !important;
-    margin-top: auto !important;
-}
-
-#travel-destinations .isotope-container .destination-tile .tile-image .overlay-content .destination-info h4 {
-    color: white !important;
-    font-size: 25px !important;
-    font-weight: 700 !important;
-    margin-bottom: 6px !important;
-    line-height: 1.2 !important;
-}
-
-#travel-destinations .isotope-container .destination-tile .tile-image .overlay-content .destination-info p {
-    display: none !important;
-}
-
-#travel-destinations .isotope-container .destination-tile .tile-image .overlay-content .destination-info .destination-stats {
-    display: flex !important;
-    justify-content: space-between !important;
-    align-items: center !important;
-    flex-wrap: wrap !important;
-    gap: 8px !important;
-}
-
-#travel-destinations .isotope-container .destination-tile .tile-image .overlay-content .destination-info .destination-stats .tours-available {
-    font-size: 13px !important;
-    opacity: 0.9 !important;
-    color: white !important;
-}
-
-#travel-destinations .isotope-container .destination-tile .tile-image .overlay-content .destination-info .destination-stats .tours-available i {
-    margin-right: 4px !important;
-}
-
-#travel-destinations .isotope-container .destination-tile .tile-image .overlay-content .destination-info .destination-stats .starting-price {
-    background: #28a745 !important;
-    color: white !important;
-    padding: 8px 18px !important;
-    border-radius: 20px !important;
-    font-size: 20px !important;
-    font-weight: 600 !important;
-    display: inline-block !important;
-    visibility: visible !important;
-    opacity: 1 !important;
-}
-
-/* XL (1200px+) için 6 kart */
-@media (min-width: 1200px) {
-    #travel-destinations .isotope-container .destination-tile .tile-image .overlay-content {
-        padding: 12px !important;
-    }
-    #travel-destinations .isotope-container .destination-tile .tile-image .overlay-content .destination-info h4 {
-        font-size: 25px !important;
-        margin-bottom: 5px !important;
-    }
-    #travel-destinations .isotope-container .destination-tile .tile-image .overlay-content .destination-info .destination-stats {
-        flex-direction: column !important;
-        align-items: flex-start !important;
-        gap: 5px !important;
-    }
-    #travel-destinations .isotope-container .destination-tile .tile-image .overlay-content .destination-info .destination-stats .tours-available {
-        font-size: 13px !important;
-    }
-    #travel-destinations .isotope-container .destination-tile .tile-image .overlay-content .destination-info .destination-stats .starting-price {
-        font-size: 20px !important;
-        padding: 8px 18px !important;
-    }
-    #travel-destinations .isotope-container .destination-tile .tile-image .overlay-content .destination-tag {
-        font-size: 10px !important;
-        padding: 4px 10px !important;
-        top: 10px !important;
-        right: 10px !important;
-    }
-}
-
-/* Responsive - LG (992px - 1199px) için 4 kart */
-@media (min-width: 992px) and (max-width: 1199.98px) {
-    #travel-destinations .isotope-container .destination-tile .tile-image .overlay-content .destination-info h4 {
-        font-size: 25px !important;
-    }
-    #travel-destinations .isotope-container .destination-tile .tile-image .overlay-content .destination-info .destination-stats .tours-available {
-        font-size: 13px !important;
-    }
-    #travel-destinations .isotope-container .destination-tile .tile-image .overlay-content .destination-info .destination-stats .starting-price {
-        font-size: 20px !important;
-        padding: 8px 18px !important;
-    }
-}
-
-/* Responsive - Mobil (768px altı) için 2 kart */
-@media (max-width: 767.98px) {
-    #travel-destinations .isotope-container .destination-tile .tile-image .overlay-content {
-        padding: 12px !important;
-    }
-    #travel-destinations .isotope-container .destination-tile .tile-image .overlay-content .destination-info h4 {
-        font-size: 25px !important;
-    }
-    #travel-destinations .isotope-container .destination-tile .tile-image .overlay-content .destination-info .destination-stats .tours-available {
-        font-size: 13px !important;
-    }
-    #travel-destinations .isotope-container .destination-tile .tile-image .overlay-content .destination-info .destination-stats .starting-price {
-        padding: 8px 18px !important;
-        font-size: 20px !important;
-    }
-}
-</style>
+<link rel="stylesheet" href="<?= ASSETS_URL ?>css/pages/destinations.css">
 
 <?php require_once INCLUDES_PATH . 'footer.php'; ?>

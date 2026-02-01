@@ -7,6 +7,24 @@ $settings = $GLOBALS['section_settings'];
 $limit = $settings['limit'] ?? 4;
 $destinations = getFeaturedDestinations($limit);
 
+// Dinamik URL prefix al (hardcoded /destinasyon/ yerine)
+$lang = getCurrentLang();
+$destinationPrefix = 'transfers';
+try {
+    $db = getDB();
+    $prefixStmt = $db->prepare("
+        SELECT pst.slug 
+        FROM page_settings ps
+        LEFT JOIN page_setting_translations pst ON ps.id = pst.page_setting_id AND pst.language_code = ?
+        WHERE ps.page_key = 'destinations'
+    ");
+    $prefixStmt->execute([$lang]);
+    $prefixRow = $prefixStmt->fetch();
+    if (!empty($prefixRow['slug'])) {
+        $destinationPrefix = $prefixRow['slug'];
+    }
+} catch (Exception $e) {}
+
 ?>
 
 <section id="featured-destinations" class="featured-destinations section">
@@ -25,7 +43,7 @@ $destinations = getFeaturedDestinations($limit);
       <div class="col-lg-6" data-aos="zoom-in" data-aos-delay="200">
         <div class="featured-destination">
           <div class="destination-overlay">
-            <img src="<?= $destinations[0]['featured_image'] ? UPLOADS_URL . e($destinations[0]['featured_image']) : ASSETS_URL . 'img/travel/destination-3.webp' ?>" alt="<?= e($destinations[0]['title']) ?>" class="img-fluid">
+            <img src="<?= $destinations[0]['featured_image'] ? UPLOADS_URL . e($destinations[0]['featured_image']) : ASSETS_URL . 'img/travel/destination-3.webp' ?>" alt="<?= e($destinations[0]['title']) ?>" class="img-fluid" loading="lazy">
             <div class="destination-info">
               <?php if ($destinations[0]['badge']): ?>
               <span class="destination-tag"><?= e($destinations[0]['badge']) ?></span>
@@ -47,7 +65,7 @@ $destinations = getFeaturedDestinations($limit);
                 <span class="starting-from"><?= __('starting_from', 'general') ?></span>
                 <span class="amount">$<?= number_format($destinations[0]['starting_price'], 0) ?></span>
               </div>
-              <a href="<?= SITE_URL ?>/destinasyon/<?= e($destinations[0]['slug']) ?>" class="explore-btn">
+              <a href="<?= langUrl($destinationPrefix . '/' . $destinations[0]['slug']) ?>" class="explore-btn">
                 <span><?= __('explore_now', 'general') ?></span>
                 <i class="bi bi-arrow-right"></i>
               </a>
@@ -63,7 +81,7 @@ $destinations = getFeaturedDestinations($limit);
           <div class="col-12" data-aos="fade-left" data-aos-delay="<?= 300 + ($index * 100) ?>">
             <div class="compact-destination">
               <div class="destination-image">
-                <img src="<?= $dest['featured_image'] ? UPLOADS_URL . e($dest['featured_image']) : ASSETS_URL . 'img/travel/destination-7.webp' ?>" alt="<?= e($dest['title']) ?>" class="img-fluid">
+                <img src="<?= $dest['featured_image'] ? UPLOADS_URL . e($dest['featured_image']) : ASSETS_URL . 'img/travel/destination-7.webp' ?>" alt="<?= e($dest['title']) ?>" class="img-fluid" loading="lazy">
                 <?php if ($dest['badge']): ?>
                 <div class="badge-offer"><?= e($dest['badge']) ?></div>
                 <?php endif; ?>
@@ -77,7 +95,7 @@ $destinations = getFeaturedDestinations($limit);
                   <span class="rating"><i class="bi bi-star-fill"></i> <?= number_format($dest['rating'], 1) ?></span>
                   <span class="price"><?= __('from', 'general') ?> $<?= number_format($dest['starting_price'], 0) ?></span>
                 </div>
-                <a href="<?= SITE_URL ?>/destinasyon/<?= e($dest['slug']) ?>" class="quick-link"><?= __('view_details', 'general') ?> <i class="bi bi-chevron-right"></i></a>
+                <a href="<?= langUrl($destinationPrefix . '/' . $dest['slug']) ?>" class="quick-link"><?= __('view_details', 'general') ?> <i class="bi bi-chevron-right"></i></a>
               </div>
             </div>
           </div>

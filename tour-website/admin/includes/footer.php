@@ -13,6 +13,8 @@
 <!-- Summernote -->
 <script src="https://cdn.jsdelivr.net/npm/summernote@0.8.20/dist/summernote-bs5.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/summernote@0.8.20/dist/lang/summernote-tr-TR.min.js"></script>
+<!-- Admin JS (AJAX & Toast) -->
+<script src="<?= ADMIN_URL ?>/assets/js/admin.js"></script>
 
 <script>
 $(document).ready(function() {

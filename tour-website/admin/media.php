@@ -8,28 +8,7 @@ require_once __DIR__ . '/includes/header.php';
 
 $db = getDB();
 
-// Medya tablosunu oluştur (yoksa)
-$db->exec("
-    CREATE TABLE IF NOT EXISTS media (
-        id INT AUTO_INCREMENT PRIMARY KEY,
-        filename VARCHAR(255) NOT NULL,
-        original_name VARCHAR(255) NOT NULL,
-        file_path VARCHAR(500) NOT NULL,
-        file_type VARCHAR(50) NOT NULL,
-        mime_type VARCHAR(100) NOT NULL,
-        file_size INT NOT NULL DEFAULT 0,
-        width INT DEFAULT NULL,
-        height INT DEFAULT NULL,
-        alt_text VARCHAR(255) DEFAULT NULL,
-        title VARCHAR(255) DEFAULT NULL,
-        folder VARCHAR(100) DEFAULT 'general',
-        uploaded_by INT DEFAULT NULL,
-        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-        INDEX idx_file_type (file_type),
-        INDEX idx_folder (folder),
-        INDEX idx_created (created_at)
-    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
-");
+// Media tablosu migration ile oluşturuldu
 
 // Silme işlemi
 if (isset($_GET['delete']) && is_numeric($_GET['delete'])) {

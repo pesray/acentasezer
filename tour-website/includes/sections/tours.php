@@ -6,6 +6,24 @@ $section = $GLOBALS['current_section'];
 $settings = $GLOBALS['section_settings'];
 $limit = $settings['limit'] ?? 6;
 $tours = getFeaturedTours($limit);
+
+// Dinamik URL prefix al (hardcoded /tur/ ve /turlar yerine)
+$lang = getCurrentLang();
+$tourPrefix = 'tours';
+try {
+    $db = getDB();
+    $prefixStmt = $db->prepare("
+        SELECT pst.slug 
+        FROM page_settings ps
+        LEFT JOIN page_setting_translations pst ON ps.id = pst.page_setting_id AND pst.language_code = ?
+        WHERE ps.page_key = 'tours'
+    ");
+    $prefixStmt->execute([$lang]);
+    $prefixRow = $prefixStmt->fetch();
+    if (!empty($prefixRow['slug'])) {
+        $tourPrefix = $prefixRow['slug'];
+    }
+} catch (Exception $e) {}
 ?>
 
 <section id="featured-tours" class="featured-tours section">
@@ -49,7 +67,7 @@ $tours = getFeaturedTours($limit);
             <?php endif; ?>
             
             <div class="tour-action">
-              <a href="<?= SITE_URL ?>/tur/<?= e($tour['slug']) ?>" class="btn-book"><?= __('book_now', 'general') ?></a>
+              <a href="<?= langUrl($tourPrefix . '/' . $tour['slug']) ?>" class="btn-book"><?= __('book_now', 'general') ?></a>
               <div class="tour-rating">
                 <?php for ($i = 1; $i <= 5; $i++): ?>
                   <?php if ($i <= floor($tour['rating'])): ?>
@@ -70,7 +88,7 @@ $tours = getFeaturedTours($limit);
     </div>
 
     <div class="text-center mt-5" data-aos="fade-up" data-aos-delay="500">
-      <a href="<?= SITE_URL ?>/turlar" class="btn-view-all"><?= __('view_all_tours', 'general') ?></a>
+      <a href="<?= langUrl($tourPrefix) ?>" class="btn-view-all"><?= __('view_all_tours', 'general') ?></a>
     </div>
 
   </div>

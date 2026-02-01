@@ -14,7 +14,9 @@ $adminName = $_SESSION['admin_name'] ?? 'Admin';
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="csrf-token" content="<?= generateCSRFToken() ?>">
     <title><?= isset($pageTitle) ? e($pageTitle) . ' - ' : '' ?>Admin Panel</title>
+    <script>window.ADMIN_URL = '<?= ADMIN_URL ?>';</script>
     
     <!-- Bootstrap 5 CSS -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
@@ -197,9 +199,6 @@ $adminName = $_SESSION['admin_name'] ?? 'Admin';
         <a href="<?= ADMIN_URL ?>/homepage.php" class="nav-link <?= $currentPage === 'homepage' ? 'active' : '' ?>">
             <i class="bi bi-house-door"></i> Anasayfa
         </a>
-        <a href="<?= ADMIN_URL ?>/pages.php" class="nav-link <?= $currentPage === 'pages' ? 'active' : '' ?>">
-            <i class="bi bi-file-earmark-text"></i> Sayfalar
-        </a>
         <a href="<?= ADMIN_URL ?>/sections.php" class="nav-link <?= $currentPage === 'sections' ? 'active' : '' ?>">
             <i class="bi bi-layout-text-window"></i> Section'lar
         </a>
@@ -228,23 +227,8 @@ $adminName = $_SESSION['admin_name'] ?? 'Admin';
         <a href="<?= ADMIN_URL ?>/media.php" class="nav-link <?= $currentPage === 'media' ? 'active' : '' ?>">
             <i class="bi bi-collection"></i> Medya Yönetimi
         </a>
-        <a href="<?= ADMIN_URL ?>/blog.php" class="nav-link <?= $currentPage === 'blog' ? 'active' : '' ?>">
-            <i class="bi bi-journal-text"></i> Blog Yazıları
-        </a>
-        <a href="<?= ADMIN_URL ?>/gallery.php" class="nav-link <?= $currentPage === 'gallery' ? 'active' : '' ?>">
-            <i class="bi bi-image"></i> Galeri
-        </a>
-        <a href="<?= ADMIN_URL ?>/testimonials.php" class="nav-link <?= $currentPage === 'testimonials' ? 'active' : '' ?>">
-            <i class="bi bi-chat-quote"></i> Yorumlar
-        </a>
+      
         
-        <div class="nav-section">Diğer</div>
-        <a href="<?= ADMIN_URL ?>/faq.php" class="nav-link <?= $currentPage === 'faq' ? 'active' : '' ?>">
-            <i class="bi bi-question-circle"></i> SSS
-        </a>
-        <a href="<?= ADMIN_URL ?>/contacts.php" class="nav-link <?= $currentPage === 'contacts' ? 'active' : '' ?>">
-            <i class="bi bi-envelope"></i> Mesajlar
-        </a>
         
         <div class="nav-section">Ayarlar</div>
         <a href="<?= ADMIN_URL ?>/languages.php" class="nav-link <?= $currentPage === 'languages' ? 'active' : '' ?>">

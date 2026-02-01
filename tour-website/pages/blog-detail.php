@@ -57,7 +57,7 @@ require_once INCLUDES_PATH . 'header.php';
             <div class="col-lg-8">
                 <article class="blog-post">
                     <?php if ($post['featured_image']): ?>
-                    <img src="<?= UPLOADS_URL . e($post['featured_image']) ?>" alt="<?= e($post['title']) ?>" class="img-fluid mb-4 rounded">
+                    <img src="<?= UPLOADS_URL . e($post['featured_image']) ?>" alt="<?= e($post['title']) ?>" class="img-fluid mb-4 rounded" loading="lazy">
                     <?php endif; ?>
                     
                     <div class="post-content">

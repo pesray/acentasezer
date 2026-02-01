@@ -39,8 +39,89 @@ define('DEFAULT_LANG', 'en');
 // Base path sabiti (XAMPP için)
 define('BASE_PATH', parse_url(SITE_URL, PHP_URL_PATH) ?: '');
 
-// URL'den dil kodunu çıkar
+// Aktif dil kodlarını cache'li olarak al (performans için)
+function getLanguageCodes() {
+    static $codes = null;
+    if ($codes === null) {
+        try {
+            $db = getDB();
+            $codes = $db->query("SELECT code FROM languages WHERE is_active = 1")->fetchAll(PDO::FETCH_COLUMN);
+        } catch (Exception $e) {
+            $codes = ['tr', 'en', 'de']; // Fallback
+        }
+    }
+    return $codes;
+}
+
+// Tarayıcı dilini algıla (Accept-Language header)
+function detectBrowserLanguage() {
+    // Önce cookie'den kullanıcı tercihini kontrol et
+    if (isset($_COOKIE['user_lang'])) {
+        $cookieLang = $_COOKIE['user_lang'];
+        $activeLangs = getLanguageCodes();
+        if (in_array($cookieLang, $activeLangs)) {
+            return $cookieLang;
+        }
+    }
+    
+    // Accept-Language header'ını al
+    $acceptLang = $_SERVER['HTTP_ACCEPT_LANGUAGE'] ?? '';
+    if (empty($acceptLang)) {
+        return DEFAULT_LANG;
+    }
+    
+    // Aktif dilleri al
+    $activeLangs = getLanguageCodes();
+    
+    // Accept-Language'ı parse et (örn: "en-US,en;q=0.9,tr;q=0.8,de;q=0.7")
+    $langs = [];
+    foreach (explode(',', $acceptLang) as $part) {
+        $part = trim($part);
+        if (strpos($part, ';') !== false) {
+            list($lang, $q) = explode(';', $part);
+            $q = (float) str_replace('q=', '', $q);
+        } else {
+            $lang = $part;
+            $q = 1.0;
+        }
+        // Dil kodunun ilk 2 karakterini al (en-US -> en)
+        $lang = strtolower(substr($lang, 0, 2));
+        $langs[$lang] = $q;
+    }
+    
+    // Q değerine göre sırala (yüksekten düşüğe)
+    arsort($langs);
+    
+    // Aktif dillerden eşleşeni bul
+    foreach ($langs as $lang => $q) {
+        if (in_array($lang, $activeLangs)) {
+            return $lang;
+        }
+    }
+    
+    // Eşleşme yoksa varsayılan dil
+    return DEFAULT_LANG;
+}
+
+// Kullanıcı dil tercihini cookie'ye kaydet
+function saveLanguagePreference($lang) {
+    // 1 yıl geçerli cookie
+    setcookie('user_lang', $lang, [
+        'expires' => time() + (365 * 24 * 60 * 60),
+        'path' => '/',
+        'secure' => isset($_SERVER['HTTPS']),
+        'httponly' => true,
+        'samesite' => 'Lax'
+    ]);
+}
+
+// URL'den dil kodunu çıkar (cache kullanır)
 function extractLangFromUrl() {
+    static $result = null;
+    if ($result !== null) {
+        return $result ?: null;
+    }
+    
     $requestUri = $_SERVER['REQUEST_URI'] ?? '/';
     $path = parse_url($requestUri, PHP_URL_PATH);
     
@@ -53,16 +134,13 @@ function extractLangFromUrl() {
     // İlk segment dil kodu mu kontrol et
     $segments = explode('/', $path);
     if (!empty($segments[0]) && strlen($segments[0]) === 2) {
-        // Aktif diller arasında mı kontrol et
-        try {
-            $db = getDB();
-            $stmt = $db->prepare("SELECT code FROM languages WHERE code = ? AND is_active = 1");
-            $stmt->execute([$segments[0]]);
-            if ($stmt->fetch()) {
-                return $segments[0];
-            }
-        } catch (Exception $e) {}
+        $langCodes = getLanguageCodes();
+        if (in_array($segments[0], $langCodes)) {
+            $result = $segments[0];
+            return $result;
+        }
     }
+    $result = false; // null yerine false kullan (cache için)
     return null;
 }
 
@@ -91,8 +169,13 @@ function getCurrentLang() {
     return $currentLang;
 }
 
-// URL'den dil ön ekini çıkarılmış path'i al
+// URL'den dil ön ekini çıkarılmış path'i al (cache kullanır)
 function getPathWithoutLang() {
+    static $result = null;
+    if ($result !== null) {
+        return $result;
+    }
+    
     $requestUri = $_SERVER['REQUEST_URI'] ?? '/';
     $path = parse_url($requestUri, PHP_URL_PATH);
     
@@ -106,18 +189,16 @@ function getPathWithoutLang() {
     
     // İlk segment dil kodu mu kontrol et
     if (!empty($segments[0]) && strlen($segments[0]) === 2) {
-        try {
-            $db = getDB();
-            $stmt = $db->prepare("SELECT code FROM languages WHERE code = ? AND is_active = 1");
-            $stmt->execute([$segments[0]]);
-            if ($stmt->fetch()) {
-                array_shift($segments); // Dil kodunu çıkar
-                return implode('/', $segments);
-            }
-        } catch (Exception $e) {}
+        $langCodes = getLanguageCodes();
+        if (in_array($segments[0], $langCodes)) {
+            array_shift($segments); // Dil kodunu çıkar
+            $result = implode('/', $segments);
+            return $result;
+        }
     }
     
-    return $path;
+    $result = $path;
+    return $result;
 }
 
 // Dil bazlı URL oluştur
@@ -134,11 +215,15 @@ function getAlternateLanguageUrl($targetLang) {
     $currentLang = getCurrentLang();
     $path = getPathWithoutLang();
     
-    // Sayfa ayarlarından slug çevirilerini kontrol et
+    // Boş path = ana sayfa
+    if (empty($path)) {
+        return langUrl('', $targetLang);
+    }
+    
     try {
         $db = getDB();
         
-        // Mevcut path için page_key bul
+        // Tüm sayfa slug'larını al (mevcut ve hedef dil için)
         $stmt = $db->prepare("
             SELECT ps.page_key, pst_current.slug as current_slug, pst_target.slug as target_slug
             FROM page_settings ps
@@ -147,40 +232,79 @@ function getAlternateLanguageUrl($targetLang) {
         ");
         $stmt->execute([$currentLang, $targetLang]);
         
+        $pageSlugs = [];
         while ($row = $stmt->fetch()) {
-            $currentSlug = $row['current_slug'] ?? '';
-            $targetSlug = $row['target_slug'] ?? '';
-            
-            // Eğer mevcut path bu sayfanın slug'ı ile eşleşiyorsa
-            if ($currentSlug && $path === $currentSlug) {
-                // Hedef dildeki slug'ı kullan
-                $newPath = $targetSlug ?: $currentSlug;
+            $pageSlugs[$row['page_key']] = [
+                'current' => $row['current_slug'] ?? '',
+                'target' => $row['target_slug'] ?? ''
+            ];
+        }
+        
+        // 1. Listeleme sayfası kontrolü (transferler, turlar, vb.)
+        foreach ($pageSlugs as $pageKey => $slugs) {
+            if (!empty($slugs['current']) && $path === $slugs['current']) {
+                $newPath = $slugs['target'] ?: $slugs['current'];
                 return langUrl($newPath, $targetLang);
             }
         }
         
-        // Transfer/destinasyon detay sayfası kontrolü
-        if (preg_match('#^(transfer|destinasyon|destination)/([a-z0-9-]+)$#', $path, $matches)) {
-            $detailSlug = $matches[2];
+        // 2. Detay sayfası kontrolü: /liste-slug/detay-slug formatı
+        // Transfer detay sayfası
+        $destSlugCurrent = $pageSlugs['destinations']['current'] ?? '';
+        $destSlugTarget = $pageSlugs['destinations']['target'] ?? '';
+        if ($destSlugCurrent && preg_match('#^' . preg_quote($destSlugCurrent, '#') . '/([a-z0-9-]+)$#i', $path, $matches)) {
+            $detailSlug = $matches[1];
             
             // Destinasyon çevirisini bul
             $stmt = $db->prepare("
                 SELECT d.id, 
-                       COALESCE(dt_current.slug, d.slug) as current_slug,
                        COALESCE(dt_target.slug, d.slug) as target_slug
                 FROM destinations d
                 LEFT JOIN destination_translations dt_current ON d.id = dt_current.destination_id AND dt_current.language_code = ?
                 LEFT JOIN destination_translations dt_target ON d.id = dt_target.destination_id AND dt_target.language_code = ?
-                WHERE COALESCE(dt_current.slug, d.slug) = ?
+                WHERE COALESCE(dt_current.slug, d.slug) = ? OR d.slug = ?
             ");
-            $stmt->execute([$currentLang, $targetLang, $detailSlug]);
+            $stmt->execute([$currentLang, $targetLang, $detailSlug, $detailSlug]);
             $dest = $stmt->fetch();
             
             if ($dest) {
-                // Hedef dildeki prefix'i al (transfer/destination)
-                $prefix = ($targetLang === 'tr') ? 'transfer' : 'transfer';
+                $prefix = $destSlugTarget ?: $destSlugCurrent;
                 return langUrl($prefix . '/' . $dest['target_slug'], $targetLang);
             }
+        }
+        
+        // Tur detay sayfası
+        $tourSlugCurrent = $pageSlugs['tours']['current'] ?? '';
+        $tourSlugTarget = $pageSlugs['tours']['target'] ?? '';
+        if ($tourSlugCurrent && preg_match('#^' . preg_quote($tourSlugCurrent, '#') . '/([a-z0-9-]+)$#i', $path, $matches)) {
+            $detailSlug = $matches[1];
+            
+            // Tur çevirisini bul
+            $stmt = $db->prepare("
+                SELECT t.id, 
+                       COALESCE(tt_target.slug, t.slug) as target_slug
+                FROM tours t
+                LEFT JOIN tour_translations tt_current ON t.id = tt_current.tour_id AND tt_current.language_code = ?
+                LEFT JOIN tour_translations tt_target ON t.id = tt_target.tour_id AND tt_target.language_code = ?
+                WHERE COALESCE(tt_current.slug, t.slug) = ? OR t.slug = ?
+            ");
+            $stmt->execute([$currentLang, $targetLang, $detailSlug, $detailSlug]);
+            $tour = $stmt->fetch();
+            
+            if ($tour) {
+                $prefix = $tourSlugTarget ?: $tourSlugCurrent;
+                return langUrl($prefix . '/' . $tour['target_slug'], $targetLang);
+            }
+        }
+        
+        // Blog detay sayfası
+        $blogSlugCurrent = $pageSlugs['blog']['current'] ?? 'blog';
+        $blogSlugTarget = $pageSlugs['blog']['target'] ?? 'blog';
+        if ($blogSlugCurrent && preg_match('#^' . preg_quote($blogSlugCurrent, '#') . '/([a-z0-9-]+)$#i', $path, $matches)) {
+            $detailSlug = $matches[1];
+            // Blog için çeviri varsa kullan, yoksa aynı slug
+            $prefix = $blogSlugTarget ?: $blogSlugCurrent;
+            return langUrl($prefix . '/' . $detailSlug, $targetLang);
         }
         
     } catch (Exception $e) {}
@@ -189,56 +313,6 @@ function getAlternateLanguageUrl($targetLang) {
     return langUrl($path, $targetLang);
 }
 
-// Tarayıcı dilini algıla
-function detectBrowserLanguage() {
-    // Accept-Language header'ını al
-    $acceptLang = $_SERVER['HTTP_ACCEPT_LANGUAGE'] ?? '';
-    if (empty($acceptLang)) {
-        return DEFAULT_LANG;
-    }
-    
-    // Aktif dilleri al
-    try {
-        $db = getDB();
-        $stmt = $db->query("SELECT code FROM languages WHERE is_active = 1");
-        $activeLangs = $stmt->fetchAll(PDO::FETCH_COLUMN);
-    } catch (Exception $e) {
-        return DEFAULT_LANG;
-    }
-    
-    if (empty($activeLangs)) {
-        return DEFAULT_LANG;
-    }
-    
-    // Accept-Language header'ını parse et
-    // Örnek: "en-US,en;q=0.9,tr;q=0.8,de;q=0.7"
-    $langs = [];
-    foreach (explode(',', $acceptLang) as $part) {
-        $part = trim($part);
-        if (strpos($part, ';') !== false) {
-            list($lang, $q) = explode(';', $part);
-            $q = (float) str_replace('q=', '', $q);
-        } else {
-            $lang = $part;
-            $q = 1.0;
-        }
-        // Sadece dil kodunu al (en-US -> en)
-        $lang = strtolower(substr($lang, 0, 2));
-        $langs[$lang] = $q;
-    }
-    
-    // Öncelik sırasına göre sırala
-    arsort($langs);
-    
-    // Aktif dillerle eşleştir
-    foreach ($langs as $lang => $q) {
-        if (in_array($lang, $activeLangs)) {
-            return $lang;
-        }
-    }
-    
-    return DEFAULT_LANG;
-}
 
 // Çeviri fonksiyonu
 function __($key, $group = 'general') {
@@ -334,7 +408,15 @@ function getSetting($key, $default = '') {
 
 // Menü öğelerini getir
 function getMenuItems($menuSlug, $parentId = null) {
+    static $cache = [];
     $lang = getCurrentLang();
+    $cacheKey = $menuSlug . '_' . $lang . '_' . ($parentId ?? 'root');
+    
+    // Cache'den döndür
+    if (isset($cache[$cacheKey])) {
+        return $cache[$cacheKey];
+    }
+    
     try {
         $db = getDB();
         $sql = "SELECT mi.*, COALESCE(mit.title, mi.title) as title, COALESCE(mit.url, mi.url) as url
@@ -362,6 +444,7 @@ function getMenuItems($menuSlug, $parentId = null) {
             $item['children'] = getMenuItems($menuSlug, $item['id']);
         }
         
+        $cache[$cacheKey] = $items;
         return $items;
     } catch (Exception $e) {
         return [];

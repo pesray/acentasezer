@@ -22,6 +22,26 @@ $bodyClass = 'destination-details-page';
 $lang = getCurrentLang();
 $db = getDB();
 
+// Transferler listesi için dil bazlı slug al
+$transfersSlug = 'transfers'; // varsayılan
+$transfersTitle = '';
+try {
+    $slugStmt = $db->prepare("
+        SELECT pst.slug, pst.title 
+        FROM page_settings ps
+        LEFT JOIN page_setting_translations pst ON ps.id = pst.page_setting_id AND pst.language_code = ?
+        WHERE ps.page_key = 'destinations'
+    ");
+    $slugStmt->execute([$lang]);
+    $slugRow = $slugStmt->fetch();
+    if (!empty($slugRow['slug'])) {
+        $transfersSlug = $slugRow['slug'];
+    }
+    if (!empty($slugRow['title'])) {
+        $transfersTitle = $slugRow['title'];
+    }
+} catch (Exception $e) {}
+
 // Bu transfer için araç fiyatlarını getir
 $vehicleStmt = $db->prepare("
     SELECT v.*, dv.price, dv.currency
@@ -199,7 +219,7 @@ require_once INCLUDES_PATH . 'header.php';
         <nav class="breadcrumbs">
             <ol>
                 <li><a href="<?= langUrl('') ?>"><?= $t['home'] ?></a></li>
-                <li><a href="<?= langUrl('transfers') ?>"><?= $t['transfers'] ?></a></li>
+                <li><a href="<?= langUrl($transfersSlug) ?>"><?= !empty($transfersTitle) ? e($transfersTitle) : $t['transfers'] ?></a></li>
                 <li class="current"><?= e($destination['title']) ?></li>
             </ol>
         </nav>
@@ -227,33 +247,26 @@ require_once INCLUDES_PATH . 'header.php';
 
         <!-- Vehicle Selection & Booking Section -->
         <?php 
-        // Araç içi hizmetleri veritabanından al (dil bazlı)
+        // Araç içi hizmetleri tek sorguda al (N+1 query problemi çözüldü)
         $availableServices = [];
-        // URL'den dil kodunu doğrudan al
         $currentLang = extractLangFromUrl() ?: (is_string($lang) ? $lang : 'tr');
         try {
-            // Önce tüm hizmetleri al
-            $serviceStmt = $db->query("SELECT id, icon FROM vehicle_services WHERE is_active = 1 ORDER BY sort_order");
+            $serviceStmt = $db->prepare("
+                SELECT vs.id, vs.icon, 
+                       COALESCE(vst.name, vst_tr.name, '') as name
+                FROM vehicle_services vs
+                LEFT JOIN vehicle_service_translations vst ON vs.id = vst.service_id AND vst.language_code = ?
+                LEFT JOIN vehicle_service_translations vst_tr ON vs.id = vst_tr.service_id AND vst_tr.language_code = 'tr'
+                WHERE vs.is_active = 1
+                ORDER BY vs.sort_order
+            ");
+            $serviceStmt->execute([$currentLang]);
             $allServices = $serviceStmt->fetchAll();
             
             foreach ($allServices as $svc) {
-                // Mevcut dilde çeviriyi al
-                $transStmt = $db->prepare("SELECT name FROM vehicle_service_translations WHERE service_id = ? AND language_code = ?");
-                $transStmt->execute([$svc['id'], $currentLang]);
-                $trans = $transStmt->fetch();
-                $foundName = $trans['name'] ?? '';
-                
-                // Yoksa TR fallback
-                if (empty($foundName)) {
-                    $transStmt2 = $db->prepare("SELECT name FROM vehicle_service_translations WHERE service_id = ? AND language_code = 'tr'");
-                    $transStmt2->execute([$svc['id']]);
-                    $trans2 = $transStmt2->fetch();
-                    $foundName = $trans2['name'] ?? '';
-                }
-                
                 $availableServices[$svc['id']] = [
                     'icon' => $svc['icon'],
-                    'label' => $foundName
+                    'label' => $svc['name']
                 ];
             }
         } catch (Exception $e) {}
@@ -280,9 +293,9 @@ require_once INCLUDES_PATH . 'header.php';
                     <div class="vehicle-select-inner">
                         <div class="vehicle-select-image">
                             <?php if (!empty($vehicle['image'])): ?>
-                            <img src="<?= UPLOADS_URL . e($vehicle['image']) ?>" alt="<?= e($vehicle['brand'] . ' ' . $vehicle['model']) ?>">
+                            <img src="<?= UPLOADS_URL . e($vehicle['image']) ?>" alt="<?= e($vehicle['brand'] . ' ' . $vehicle['model']) ?>" loading="lazy">
                             <?php else: ?>
-                            <img src="<?= ASSETS_URL ?>img/travel/tour-1.webp" alt="<?= e($vehicle['brand'] . ' ' . $vehicle['model']) ?>">
+                            <img src="<?= ASSETS_URL ?>img/travel/tour-1.webp" alt="<?= e($vehicle['brand'] . ' ' . $vehicle['model']) ?>" loading="lazy">
                             <?php endif; ?>
                         </div>
                         <div class="vehicle-select-info">
@@ -616,7 +629,7 @@ require_once INCLUDES_PATH . 'header.php';
                     <div class="swiper-slide">
                         <div class="gallery-item">
                             <a href="<?= UPLOADS_URL . e($image) ?>" class="glightbox">
-                                <img src="<?= UPLOADS_URL . e($image) ?>" alt="<?= e($destination['title']) ?>" class="img-fluid">
+                                <img src="<?= UPLOADS_URL . e($image) ?>" alt="<?= e($destination['title']) ?>" class="img-fluid" loading="lazy">
                             </a>
                         </div>
                     </div>
@@ -630,664 +643,8 @@ require_once INCLUDES_PATH . 'header.php';
     </div>
 </section><!-- /Transfer Details Section -->
 
-<style>
-/* Vehicle Selection Cards */
-.booking-section {
-    margin-top: 40px;
-}
+<link rel="stylesheet" href="<?= ASSETS_URL ?>css/pages/destination-detail.css">
 
-.vehicle-selection-list {
-    display: flex;
-    flex-direction: column;
-    gap: 15px;
-}
-
-.vehicle-select-card {
-    background: var(--surface-color);
-    border: 2px solid #e8e8e8;
-    border-radius: 12px;
-    overflow: hidden;
-    transition: all 0.3s ease;
-    cursor: pointer;
-}
-
-.vehicle-select-card:hover {
-    border-color: var(--accent-color);
-    box-shadow: 0 5px 20px rgba(0, 0, 0, 0.1);
-}
-
-.vehicle-select-card.selected {
-    border-color: var(--accent-color);
-    background: linear-gradient(135deg, rgba(var(--accent-color-rgb), 0.05) 0%, rgba(var(--accent-color-rgb), 0.02) 100%);
-}
-
-.vehicle-select-inner {
-    display: flex;
-    align-items: center;
-    padding: 15px 20px;
-    gap: 20px;
-}
-
-.vehicle-select-image {
-    flex-shrink: 0;
-    width: 140px;
-    height: 90px;
-    border-radius: 8px;
-    overflow: hidden;
-}
-
-.vehicle-select-image img {
-    width: 100%;
-    height: 100%;
-    object-fit: cover;
-}
-
-.vehicle-select-info {
-    flex: 1;
-    min-width: 0;
-}
-
-.vehicle-select-info .vehicle-title {
-    font-size: 18px;
-    font-weight: 700;
-    color: var(--heading-color);
-    margin: 0 0 8px 0;
-}
-
-.vehicle-specs {
-    display: flex;
-    gap: 15px;
-    margin-bottom: 8px;
-}
-
-.vehicle-specs .spec-item {
-    font-size: 14px;
-    color: #666;
-}
-
-.vehicle-specs .spec-item i {
-    color: var(--accent-color);
-    margin-right: 5px;
-}
-
-.vehicle-services-inline {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 8px;
-}
-
-.vehicle-services-inline .service-tag {
-    font-size: 12px;
-    color: #28a745;
-    background: rgba(40, 167, 69, 0.1);
-    padding: 3px 10px;
-    border-radius: 20px;
-}
-
-.vehicle-services-inline .service-tag i {
-    font-size: 10px;
-    margin-right: 4px;
-}
-
-.vehicle-select-price {
-    flex-shrink: 0;
-    text-align: center;
-}
-
-.vehicle-select-price .price-tag {
-    font-size: 24px;
-    font-weight: 700;
-    color: var(--accent-color);
-    margin-bottom: 10px;
-}
-
-.btn-select-vehicle {
-    background: var(--accent-color);
-    color: #fff;
-    border: none;
-    padding: 10px 20px;
-    border-radius: 25px;
-    font-weight: 600;
-    font-size: 14px;
-    cursor: pointer;
-    transition: all 0.3s ease;
-}
-
-.btn-select-vehicle:hover {
-    background: var(--accent-color-dark, #0a8a8a);
-    transform: translateY(-2px);
-}
-
-.vehicle-select-card.selected .btn-select-vehicle {
-    background: #28a745;
-}
-
-/* Booking Form Wrapper */
-.booking-form-wrapper {
-    margin-top: 30px;
-    background: var(--surface-color);
-    border-radius: 15px;
-    padding: 30px;
-    box-shadow: 0 5px 30px rgba(0, 0, 0, 0.1);
-    animation: slideDown 0.4s ease;
-}
-
-@keyframes slideDown {
-    from {
-        opacity: 0;
-        transform: translateY(-20px);
-    }
-    to {
-        opacity: 1;
-        transform: translateY(0);
-    }
-}
-
-/* Transfer Info Header */
-.transfer-info-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding: 20px 25px;
-    background: linear-gradient(135deg, rgba(var(--accent-color-rgb), 0.1) 0%, rgba(var(--accent-color-rgb), 0.05) 100%);
-    border-radius: 12px;
-    margin-bottom: 25px;
-    flex-wrap: wrap;
-    gap: 15px;
-}
-
-.transfer-info-left {
-    flex: 1;
-}
-
-.transfer-info-title {
-    font-size: 18px;
-    font-weight: 700;
-    color: var(--heading-color);
-    margin: 0 0 8px 0;
-}
-
-.transfer-route-info {
-    display: flex;
-    align-items: center;
-    gap: 12px;
-    flex-wrap: wrap;
-}
-
-.transfer-route-info .route-point {
-    display: flex;
-    align-items: center;
-    gap: 6px;
-    font-size: 15px;
-    color: #555;
-    font-weight: 500;
-}
-
-.transfer-route-info .route-point i {
-    font-size: 16px;
-}
-
-.transfer-route-info .route-arrow {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    color: #333;
-    font-size: 22px;
-    font-weight: bold;
-}
-
-.transfer-route-info .route-arrow i {
-    animation: arrowPulse 1.5s ease-in-out infinite;
-}
-
-@keyframes arrowPulse {
-    0%, 100% { transform: translateX(0); }
-    50% { transform: translateX(4px); }
-}
-
-.transfer-info-right {
-    display: flex;
-    align-items: center;
-    gap: 15px;
-}
-
-.selected-vehicle-compact {
-    text-align: right;
-}
-
-.selected-vehicle-compact .selected-name {
-    display: block;
-    font-weight: 600;
-    color: var(--heading-color);
-    font-size: 15px;
-}
-
-.selected-vehicle-compact .selected-price {
-    display: block;
-    font-weight: 700;
-    color: var(--accent-color);
-    font-size: 20px;
-}
-
-.btn-change-vehicle {
-    background: transparent;
-    border: 1px solid #ddd;
-    color: #666;
-    width: 40px;
-    height: 40px;
-    border-radius: 50%;
-    cursor: pointer;
-    transition: all 0.3s ease;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-}
-
-.btn-change-vehicle:hover {
-    background: #f5f5f5;
-    color: var(--accent-color);
-    border-color: var(--accent-color);
-}
-
-@media (max-width: 576px) {
-    .transfer-info-header {
-        flex-direction: column;
-        align-items: flex-start;
-    }
-    .transfer-info-right {
-        width: 100%;
-        justify-content: space-between;
-    }
-    .selected-vehicle-compact {
-        text-align: left;
-    }
-}
-
-/* Booking Form Styles */
-.booking-form .form-label {
-    font-weight: 600;
-    color: var(--heading-color);
-    margin-bottom: 8px;
-    font-size: 14px;
-}
-
-.booking-form .form-control,
-.booking-form .form-select {
-    padding: 12px 15px;
-    border-radius: 8px;
-    border: 1px solid #e0e0e0;
-    font-size: 15px;
-}
-
-.booking-form .form-control:focus,
-.booking-form .form-select:focus {
-    border-color: var(--accent-color);
-    box-shadow: 0 0 0 3px rgba(var(--accent-color-rgb), 0.1);
-}
-
-/* Quantity Selector */
-.quantity-selector {
-    display: flex;
-    align-items: center;
-    border: 1px solid #e0e0e0;
-    border-radius: 8px;
-    overflow: hidden;
-}
-
-.quantity-selector .qty-btn {
-    width: 44px;
-    height: 44px;
-    background: #f8f9fa;
-    border: none;
-    color: var(--accent-color);
-    font-size: 18px;
-    cursor: pointer;
-    transition: all 0.2s ease;
-}
-
-.quantity-selector .qty-btn:hover {
-    background: var(--accent-color);
-    color: #fff;
-}
-
-.quantity-selector .qty-input {
-    flex: 1;
-    text-align: center;
-    border: none;
-    border-left: 1px solid #e0e0e0;
-    border-right: 1px solid #e0e0e0;
-    border-radius: 0;
-    font-weight: 600;
-    font-size: 16px;
-    padding: 10px;
-}
-
-.quantity-selector .qty-input:focus {
-    box-shadow: none;
-}
-
-/* Child Seat Radio Options */
-.child-seat-options {
-    display: flex;
-    gap: 10px;
-    flex-wrap: wrap;
-}
-
-.child-seat-options .radio-option {
-    flex: 1;
-    min-width: 80px;
-}
-
-.child-seat-options .radio-option input {
-    display: none;
-}
-
-.child-seat-options .radio-option span {
-    display: block;
-    padding: 12px 15px;
-    text-align: center;
-    border: 1px solid #e0e0e0;
-    border-radius: 8px;
-    cursor: pointer;
-    font-weight: 500;
-    transition: all 0.2s ease;
-}
-
-.child-seat-options .radio-option input:checked + span {
-    background: var(--accent-color);
-    color: #fff;
-    border-color: var(--accent-color);
-}
-
-.child-seat-options .radio-option:hover span {
-    border-color: var(--accent-color);
-}
-
-/* Return Transfer Checkbox */
-.return-transfer-check {
-    padding: 12px 15px;
-    background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
-    border-radius: 8px;
-    border: 1px solid #e0e0e0;
-    margin-bottom: 0;
-}
-
-.return-transfer-check .form-check-input {
-    width: 20px;
-    height: 20px;
-    margin-top: 0;
-    cursor: pointer;
-}
-
-.return-transfer-check .form-check-input:checked {
-    background-color: var(--accent-color);
-    border-color: var(--accent-color);
-}
-
-.return-transfer-check .form-check-label {
-    font-weight: 600;
-    color: var(--heading-color);
-    cursor: pointer;
-    margin-left: 8px;
-}
-
-/* Return Transfer Section */
-.return-transfer-section {
-    background: linear-gradient(135deg, #f0f7ff 0%, #e8f4fd 100%);
-    border: 1px solid #cce5ff;
-    border-radius: 12px;
-    padding: 20px;
-    margin-top: 10px;
-}
-
-.return-section-title {
-    color: var(--accent-color);
-    font-size: 16px;
-    font-weight: 700;
-    margin-bottom: 15px;
-    padding-bottom: 10px;
-    border-bottom: 1px solid #cce5ff;
-}
-
-/* Booking Alert */
-.booking-alert {
-    display: flex;
-    align-items: flex-start;
-    gap: 12px;
-    padding: 15px 20px;
-    border-radius: 10px;
-    font-size: 14px;
-    margin-top: 10px;
-}
-
-.booking-alert i {
-    font-size: 20px;
-    flex-shrink: 0;
-    margin-top: 2px;
-}
-
-.booking-alert.alert-warning {
-    background: linear-gradient(135deg, #fff8e1 0%, #ffecb3 100%);
-    border: 1px solid #ffc107;
-    color: #856404;
-}
-
-.booking-alert.alert-danger {
-    background: linear-gradient(135deg, #ffebee 0%, #ffcdd2 100%);
-    border: 1px solid #f44336;
-    color: #c62828;
-}
-
-.booking-alert.alert-info {
-    background: linear-gradient(135deg, #e3f2fd 0%, #bbdefb 100%);
-    border: 1px solid #2196f3;
-    color: #1565c0;
-}
-
-.booking-alert.alert-success {
-    background: linear-gradient(135deg, #e8f5e9 0%, #c8e6c9 100%);
-    border: 1px solid #4caf50;
-    color: #2e7d32;
-}
-
-.booking-alert.alert-primary {
-    background: linear-gradient(135deg, #e8eaf6 0%, #c5cae9 100%);
-    border: 1px solid #3f51b5;
-    color: #283593;
-}
-
-.booking-alert.alert-secondary {
-    background: linear-gradient(135deg, #f5f5f5 0%, #e0e0e0 100%);
-    border: 1px solid #9e9e9e;
-    color: #424242;
-}
-
-/* Booking Footer */
-.booking-footer {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding: 20px 25px;
-    background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
-    border-radius: 12px;
-    border: 1px solid #dee2e6;
-    flex-wrap: wrap;
-    gap: 20px;
-}
-
-.booking-footer-left {
-    display: flex;
-    flex-direction: column;
-    gap: 12px;
-}
-
-.total-price-section {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-}
-
-.total-price-section .total-label {
-    font-size: 16px;
-    font-weight: 600;
-    color: #555;
-}
-
-.total-price-section .total-amount {
-    font-size: 28px;
-    font-weight: 700;
-    color: var(--accent-color);
-}
-
-.terms-checkbox-wrapper {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-}
-
-.terms-checkbox-wrapper .form-check-input {
-    width: 20px;
-    height: 20px;
-    cursor: pointer;
-}
-
-.terms-checkbox-wrapper .form-check-label a {
-    color: var(--accent-color);
-    text-decoration: underline;
-    font-weight: 500;
-}
-
-.terms-checkbox-wrapper .form-check-label a:hover {
-    color: #0a8a8a;
-}
-
-.booking-footer-right {
-    display: flex;
-    align-items: center;
-}
-
-/* Submit Button */
-.btn-submit-booking {
-    padding: 15px 50px;
-    font-size: 17px;
-    border-radius: 30px;
-    font-weight: 600;
-    transition: all 0.3s ease;
-}
-
-.btn-submit-booking:disabled {
-    background: #ccc;
-    border-color: #ccc;
-    cursor: not-allowed;
-    opacity: 0.7;
-}
-
-@media (max-width: 576px) {
-    .booking-footer {
-        flex-direction: column;
-        align-items: stretch;
-    }
-    .booking-footer-right {
-        justify-content: center;
-    }
-    .btn-submit-booking {
-        width: 100%;
-    }
-}
-
-/* Gallery lightbox */
-.gallery-item a {
-    display: block;
-    overflow: hidden;
-    border-radius: 10px;
-}
-
-.gallery-item img {
-    transition: transform 0.3s ease;
-}
-
-.gallery-item:hover img {
-    transform: scale(1.05);
-}
-
-/* Responsive */
-@media (max-width: 991px) {
-    .vehicle-select-inner {
-        flex-wrap: wrap;
-    }
-    
-    .vehicle-select-image {
-        width: 120px;
-        height: 80px;
-    }
-    
-    .vehicle-select-info {
-        flex: 1 1 calc(100% - 140px);
-    }
-    
-    .vehicle-select-price {
-        width: 100%;
-        display: flex;
-        align-items: center;
-        justify-content: space-between;
-        margin-top: 10px;
-        padding-top: 15px;
-        border-top: 1px solid #eee;
-    }
-    
-    .vehicle-select-price .price-tag {
-        margin-bottom: 0;
-    }
-}
-
-@media (max-width: 767px) {
-    .vehicle-select-inner {
-        padding: 15px;
-    }
-    
-    .vehicle-select-image {
-        width: 100px;
-        height: 70px;
-    }
-    
-    .vehicle-select-info .vehicle-title {
-        font-size: 16px;
-    }
-    
-    .vehicle-specs {
-        flex-direction: column;
-        gap: 5px;
-    }
-    
-    .booking-form-wrapper {
-        padding: 20px;
-    }
-    
-    .selected-vehicle-info {
-        flex-wrap: wrap;
-    }
-    
-    .selected-vehicle-info .selected-price {
-        margin-left: 0;
-        width: 100%;
-        margin-top: 10px;
-    }
-    
-    .child-seat-options .radio-option {
-        min-width: 70px;
-    }
-    
-    /* Mobilde dönüş transferi checkbox'ı tam satır kaplasın */
-    .return-transfer-check {
-        width: 100%;
-        padding: 15px;
-        background: linear-gradient(135deg, #f0f7ff 0%, #e8f4fd 100%);
-        border: 1px solid #cce5ff;
-        border-radius: 10px;
-        margin-top: 5px;
-    }
-}
-</style>
 
 <script>
 document.addEventListener('DOMContentLoaded', function() {

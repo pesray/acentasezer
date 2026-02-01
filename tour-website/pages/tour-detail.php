@@ -7,7 +7,21 @@ require_once dirname(__DIR__) . '/config/config.php';
 require_once INCLUDES_PATH . 'sections.php';
 
 $slug = $_GET['slug'] ?? '';
-$tour = getTourBySlug($slug);
+$lang = getCurrentLang();
+$db = getDB();
+
+// Turu slug'a göre getir
+$stmt = $db->prepare("
+    SELECT t.*, COALESCE(tt.title, t.title) as title, COALESCE(tt.slug, t.slug) as slug,
+           COALESCE(tt.description, t.description) as description,
+           COALESCE(tt.meta_title, t.meta_title) as meta_title,
+           COALESCE(tt.meta_description, t.meta_description) as meta_description
+    FROM tours t
+    LEFT JOIN tour_translations tt ON t.id = tt.tour_id AND tt.language_code = ?
+    WHERE (t.slug = ? OR tt.slug = ?) AND t.status = 'published'
+");
+$stmt->execute([$lang, $slug, $slug]);
+$tour = $stmt->fetch();
 
 if (!$tour) {
     header('HTTP/1.0 404 Not Found');
@@ -19,123 +33,524 @@ $pageTitle = $tour['meta_title'] ?: $tour['title'];
 $metaDescription = $tour['meta_description'] ?: $tour['description'];
 $bodyClass = 'tour-details-page';
 
-$highlights = json_decode($tour['highlights'], true) ?: [];
-$included = json_decode($tour['included'], true) ?: [];
-$excluded = json_decode($tour['excluded'], true) ?: [];
-$itinerary = json_decode($tour['itinerary'], true) ?: [];
+// Bu tur için araçları getir - önce mevcut dilde, yoksa herhangi bir dilde
+$vehicles = [];
+try {
+    // Önce mevcut dilde dene
+    $vehicleStmt = $db->prepare("
+        SELECT v.*, tv.price, tv.currency
+        FROM tour_vehicles tv
+        JOIN vehicles v ON tv.vehicle_id = v.id
+        WHERE tv.tour_id = ? AND tv.language_code = ? AND v.is_active = 1
+        ORDER BY v.sort_order
+    ");
+    $vehicleStmt->execute([$tour['id'], $lang]);
+    $vehicles = $vehicleStmt->fetchAll();
+    
+    // Mevcut dilde yoksa, herhangi bir dildeki araçları al (fallback)
+    if (empty($vehicles)) {
+        $vehicleStmt = $db->prepare("
+            SELECT v.*, tv.price, tv.currency, tv.language_code
+            FROM tour_vehicles tv
+            JOIN vehicles v ON tv.vehicle_id = v.id
+            WHERE tv.tour_id = ? AND v.is_active = 1
+            GROUP BY v.id
+            ORDER BY v.sort_order
+        ");
+        $vehicleStmt->execute([$tour['id']]);
+        $vehicles = $vehicleStmt->fetchAll();
+    }
+} catch (Exception $e) {}
+
+// Sayfa ayarlarını çek (turlar için)
+$pageSettings = null;
+try {
+    $stmt = $db->prepare("
+        SELECT ps.*, pst.slug as page_slug
+        FROM page_settings ps
+        LEFT JOIN page_setting_translations pst ON ps.id = pst.page_setting_id AND pst.language_code = ?
+        WHERE ps.page_key = 'tours'
+    ");
+    $stmt->execute([$lang]);
+    $pageSettings = $stmt->fetch();
+} catch (Exception $e) {}
+
+$toursPrefix = !empty($pageSettings['page_slug']) ? $pageSettings['page_slug'] : 'tours';
+
+// Para birimi sembolleri
+$currencySymbols = [
+    'TRY' => '₺',
+    'USD' => '$',
+    'EUR' => '€',
+    'GBP' => '£'
+];
+
+// Araç içi hizmetleri tek sorguda al
+$availableServices = [];
+try {
+    $serviceStmt = $db->prepare("
+        SELECT vs.id, vs.icon, 
+               COALESCE(vst.name, vst_tr.name, '') as name
+        FROM vehicle_services vs
+        LEFT JOIN vehicle_service_translations vst ON vs.id = vst.service_id AND vst.language_code = ?
+        LEFT JOIN vehicle_service_translations vst_tr ON vs.id = vst_tr.service_id AND vst_tr.language_code = 'tr'
+        WHERE vs.is_active = 1
+        ORDER BY vs.sort_order
+    ");
+    $serviceStmt->execute([$lang]);
+    $allServices = $serviceStmt->fetchAll();
+    
+    foreach ($allServices as $svc) {
+        $availableServices[$svc['id']] = [
+            'icon' => $svc['icon'],
+            'label' => $svc['name']
+        ];
+    }
+} catch (Exception $e) {}
+
+// Varsayılan metinler
+$defaultTexts = [
+    'tr' => [
+        'home' => 'Ana Sayfa', 'tours' => 'Turlar',
+        'available_vehicles' => 'Mevcut Araçlar', 'choose_vehicle' => 'Bu tur için kullanılabilir araçlar',
+        'passengers' => 'Yolcu', 'luggage' => 'Bagaj', 'child_seats' => 'Çocuk Koltuğu',
+        'gallery' => 'Galeri', 'gallery_desc' => 'Tur görüntüleri',
+        'contact_us' => 'Bizimle İletişime Geçin', 'contact_desc' => 'Bu tur hakkında bilgi almak için bizimle iletişime geçin',
+        'select_vehicle' => 'Seç', 'tour_info_title' => 'Tur Bilgileri',
+        'full_name' => 'Ad Soyad', 'email' => 'E-posta', 'phone' => 'Telefon',
+        'pickup_location' => 'Alınış Yeri', 'pickup_date' => 'Alınış Tarihi', 
+        'pickup_time' => 'Alınış Saati', 'return_time' => 'Dönüş Saati',
+        'adults_count' => 'Yetişkin Sayısı', 'children_count' => 'Çocuk Sayısı', 'child_seat' => 'Çocuk Koltuğu',
+        'notes' => 'Notlar', 'send_inquiry' => 'Bilgi Al',
+        'full_name_placeholder' => 'Adınız ve soyadınız', 'email_placeholder' => 'E-posta adresiniz',
+        'phone_placeholder' => '+90 5XX XXX XX XX', 'notes_placeholder' => 'Varsa sorularınızı yazın',
+        'pickup_location_placeholder' => 'Otel adı veya adres',
+    ],
+    'en' => [
+        'home' => 'Home', 'tours' => 'Tours',
+        'available_vehicles' => 'Available Vehicles', 'choose_vehicle' => 'Vehicles available for this tour',
+        'passengers' => 'Passengers', 'luggage' => 'Luggage', 'child_seats' => 'Child Seat',
+        'gallery' => 'Gallery', 'gallery_desc' => 'Tour images',
+        'contact_us' => 'Contact Us', 'contact_desc' => 'Contact us for information about this tour',
+        'select_vehicle' => 'Select', 'tour_info_title' => 'Tour Information',
+        'full_name' => 'Full Name', 'email' => 'Email', 'phone' => 'Phone',
+        'pickup_location' => 'Pickup Location', 'pickup_date' => 'Pickup Date', 
+        'pickup_time' => 'Pickup Time', 'return_time' => 'Return Time',
+        'adults_count' => 'Number of Adults', 'children_count' => 'Number of Children', 'child_seat' => 'Child Seat',
+        'notes' => 'Notes', 'send_inquiry' => 'Send Inquiry',
+        'full_name_placeholder' => 'Your full name', 'email_placeholder' => 'Your email address',
+        'phone_placeholder' => '+1 XXX XXX XXXX', 'notes_placeholder' => 'Write your questions if any',
+        'pickup_location_placeholder' => 'Hotel name or address',
+    ],
+    'de' => [
+        'home' => 'Startseite', 'tours' => 'Touren',
+        'available_vehicles' => 'Verfügbare Fahrzeuge', 'choose_vehicle' => 'Für diese Tour verfügbare Fahrzeuge',
+        'passengers' => 'Passagiere', 'luggage' => 'Gepäck', 'child_seats' => 'Kindersitz',
+        'gallery' => 'Galerie', 'gallery_desc' => 'Tour-Bilder',
+        'contact_us' => 'Kontaktieren Sie uns', 'contact_desc' => 'Kontaktieren Sie uns für Informationen zu dieser Tour',
+        'select_vehicle' => 'Wählen', 'tour_info_title' => 'Tour-Informationen',
+        'full_name' => 'Vollständiger Name', 'email' => 'E-Mail', 'phone' => 'Telefon',
+        'pickup_location' => 'Abholort', 'pickup_date' => 'Abholdatum', 
+        'pickup_time' => 'Abholzeit', 'return_time' => 'Rückfahrzeit',
+        'adults_count' => 'Anzahl Erwachsene', 'children_count' => 'Anzahl Kinder', 'child_seat' => 'Kindersitz',
+        'notes' => 'Notizen', 'send_inquiry' => 'Anfrage senden',
+        'full_name_placeholder' => 'Ihr vollständiger Name', 'email_placeholder' => 'Ihre E-Mail-Adresse',
+        'phone_placeholder' => '+49 XXX XXX XXXX', 'notes_placeholder' => 'Schreiben Sie Ihre Fragen',
+        'pickup_location_placeholder' => 'Hotelname oder Adresse',
+    ],
+];
+
+$t = $defaultTexts[$lang] ?? $defaultTexts['en'];
 
 require_once INCLUDES_PATH . 'header.php';
 ?>
 
-<div class="page-title dark-background" style="background-image: url(<?= $tour['featured_image'] ? UPLOADS_URL . e($tour['featured_image']) : ASSETS_URL . 'img/page-title-bg.webp' ?>);">
+<!-- Page Title -->
+<div class="page-title dark-background" data-aos="fade" style="background-image: url(<?= !empty($tour['image']) ? getMediaUrl($tour['image']) : ASSETS_URL . 'img/page-title-bg.webp' ?>);">
     <div class="container position-relative">
         <h1><?= e($tour['title']) ?></h1>
-        <div class="tour-meta-header">
-            <span><i class="bi bi-clock"></i> <?= (int)$tour['duration_days'] ?> <?= __('days', 'general') ?></span>
-            <span><i class="bi bi-people"></i> <?= __('max', 'general') ?> <?= (int)$tour['group_size_max'] ?> <?= __('person', 'general') ?></span>
-            <span><i class="bi bi-star-fill"></i> <?= number_format($tour['rating'], 1) ?> (<?= (int)$tour['review_count'] ?>)</span>
-        </div>
+        <?php if (!empty($tour['description'])): ?>
+        <p><?= e($tour['description']) ?></p>
+        <?php endif; ?>
+        <nav class="breadcrumbs">
+            <ol>
+                <li><a href="<?= langUrl('') ?>"><?= $t['home'] ?></a></li>
+                <li><a href="<?= langUrl($toursPrefix) ?>"><?= $t['tours'] ?></a></li>
+                <li class="current"><?= e($tour['title']) ?></li>
+            </ol>
+        </nav>
     </div>
-</div>
+</div><!-- End Page Title -->
 
-<section class="tour-details section">
-    <div class="container">
-        <div class="row">
-            <div class="col-lg-8">
-                <!-- Description -->
-                <div class="tour-description mb-4">
-                    <h3><?= __('description', 'general') ?></h3>
-                    <?php if ($tour['content']): ?>
+<!-- Tour Details Section -->
+<section id="tour-details" class="tour-details section">
+    <div class="container" data-aos="fade-up" data-aos-delay="100">
+
+        <!-- Overview Section -->
+        <?php if (!empty($tour['content']) || !empty($tour['description'])): ?>
+        <div class="tour-overview" data-aos="fade-up" data-aos-delay="200">
+            <div class="row">
+                <div class="col-lg-8 mx-auto">
+                    <?php if (!empty($tour['content'])): ?>
                     <?= $tour['content'] ?>
-                    <?php else: ?>
+                    <?php elseif (!empty($tour['description'])): ?>
                     <p><?= nl2br(e($tour['description'])) ?></p>
                     <?php endif; ?>
                 </div>
-                
-                <!-- Highlights -->
-                <?php if (!empty($highlights)): ?>
-                <div class="tour-highlights mb-4">
-                    <h3><?= __('highlights', 'general') ?></h3>
-                    <ul class="list-unstyled">
-                        <?php foreach ($highlights as $h): ?>
-                        <li><i class="bi bi-check-circle-fill text-success me-2"></i> <?= e($h) ?></li>
-                        <?php endforeach; ?>
-                    </ul>
-                </div>
-                <?php endif; ?>
-                
-                <!-- Itinerary -->
-                <?php if (!empty($itinerary)): ?>
-                <div class="tour-itinerary mb-4">
-                    <h3><?= __('itinerary', 'general') ?></h3>
-                    <div class="accordion" id="itineraryAccordion">
-                        <?php foreach ($itinerary as $i => $day): ?>
-                        <div class="accordion-item">
-                            <h2 class="accordion-header">
-                                <button class="accordion-button <?= $i > 0 ? 'collapsed' : '' ?>" type="button" data-bs-toggle="collapse" data-bs-target="#day<?= $i ?>">
-                                    <strong><?= __('day', 'general') ?> <?= $i + 1 ?>:</strong> <?= e($day['title'] ?? '') ?>
-                                </button>
-                            </h2>
-                            <div id="day<?= $i ?>" class="accordion-collapse collapse <?= $i === 0 ? 'show' : '' ?>" data-bs-parent="#itineraryAccordion">
-                                <div class="accordion-body"><?= e($day['description'] ?? '') ?></div>
-                            </div>
-                        </div>
-                        <?php endforeach; ?>
-                    </div>
-                </div>
-                <?php endif; ?>
-                
-                <!-- Included/Excluded -->
-                <div class="row mb-4">
-                    <?php if (!empty($included)): ?>
-                    <div class="col-md-6">
-                        <h4><?= __('included', 'general') ?></h4>
-                        <ul class="list-unstyled">
-                            <?php foreach ($included as $item): ?>
-                            <li><i class="bi bi-check text-success me-2"></i> <?= e($item) ?></li>
-                            <?php endforeach; ?>
-                        </ul>
-                    </div>
-                    <?php endif; ?>
-                    <?php if (!empty($excluded)): ?>
-                    <div class="col-md-6">
-                        <h4><?= __('excluded', 'general') ?></h4>
-                        <ul class="list-unstyled">
-                            <?php foreach ($excluded as $item): ?>
-                            <li><i class="bi bi-x text-danger me-2"></i> <?= e($item) ?></li>
-                            <?php endforeach; ?>
-                        </ul>
-                    </div>
-                    <?php endif; ?>
-                </div>
-            </div>
-            
-            <!-- Sidebar -->
-            <div class="col-lg-4">
-                <div class="booking-card sticky-top" style="top: 100px;">
-                    <div class="price-box">
-                        <?php if ($tour['sale_price']): ?>
-                        <del class="old-price"><?= $tour['currency'] ?><?= number_format($tour['price'], 0) ?></del>
-                        <span class="current-price"><?= $tour['currency'] ?><?= number_format($tour['sale_price'], 0) ?></span>
-                        <?php else: ?>
-                        <span class="current-price"><?= $tour['currency'] ?><?= number_format($tour['price'], 0) ?></span>
-                        <?php endif; ?>
-                        <span class="per-person">/ <?= __('per_person', 'general') ?></span>
-                    </div>
-                    
-                    <ul class="tour-info-list">
-                        <li><i class="bi bi-clock"></i> <strong><?= __('duration', 'general') ?>:</strong> <?= (int)$tour['duration_days'] ?> <?= __('days', 'general') ?></li>
-                        <li><i class="bi bi-people"></i> <strong><?= __('group_size', 'general') ?>:</strong> <?= (int)$tour['group_size_min'] ?>-<?= (int)$tour['group_size_max'] ?></li>
-                        <li><i class="bi bi-graph-up"></i> <strong><?= __('difficulty', 'general') ?>:</strong> <?= e(ucfirst($tour['difficulty_level'])) ?></li>
-                    </ul>
-                    
-                    <a href="<?= SITE_URL ?>/rezervasyon/<?= e($tour['slug']) ?>" class="btn btn-primary btn-lg w-100">
-                        <i class="bi bi-calendar-check me-2"></i> <?= __('book_now', 'general') ?>
-                    </a>
-                </div>
             </div>
         </div>
+        <?php endif; ?>
+
+        <!-- Vehicle Selection Section -->
+        <?php if (!empty($vehicles)): ?>
+        <div id="booking-section" class="booking-section" data-aos="fade-up" data-aos-delay="300">
+            <div class="section-header">
+                <h2><?= e($tour['title']) ?> - <?= $t['available_vehicles'] ?></h2>
+                <p><?= $t['choose_vehicle'] ?></p>
+            </div>
+            
+            <!-- Vehicle Selection Cards -->
+            <div class="vehicle-selection-list">
+                <?php foreach ($vehicles as $index => $vehicle): 
+                    $services = !empty($vehicle['services']) ? json_decode($vehicle['services'], true) : [];
+                ?>
+                <div class="vehicle-select-card" data-vehicle-id="<?= (int)$vehicle['id'] ?>" 
+                     data-vehicle-name="<?= e($vehicle['brand'] . ' ' . $vehicle['model']) ?>"
+                     data-vehicle-capacity="<?= (int)$vehicle['capacity'] ?>"
+                     data-child-seat-capacity="<?= (int)($vehicle['child_seat_capacity'] ?? 0) ?>"
+                     data-aos="fade-up" data-aos-delay="<?= 100 + ($index * 50) ?>">
+                    <div class="vehicle-select-inner">
+                        <div class="vehicle-select-image">
+                            <?php if (!empty($vehicle['image'])): ?>
+                            <img src="<?= getMediaUrl($vehicle['image']) ?>" alt="<?= e($vehicle['brand'] . ' ' . $vehicle['model']) ?>" loading="lazy">
+                            <?php else: ?>
+                            <img src="<?= ASSETS_URL ?>img/travel/tour-1.webp" alt="<?= e($vehicle['brand'] . ' ' . $vehicle['model']) ?>" loading="lazy">
+                            <?php endif; ?>
+                        </div>
+                        <div class="vehicle-select-info">
+                            <h4 class="vehicle-title"><?= e($vehicle['brand'] . ' ' . $vehicle['model']) ?></h4>
+                            <div class="vehicle-specs">
+                                <span class="spec-item"><i class="bi bi-people-fill"></i> <?= (int)$vehicle['capacity'] ?> <?= $t['passengers'] ?></span>
+                                <span class="spec-item"><i class="bi bi-briefcase-fill"></i> <?= (int)$vehicle['luggage_capacity'] ?> <?= $t['luggage'] ?></span>
+                                <?php if (!empty($vehicle['child_seat_capacity']) && $vehicle['child_seat_capacity'] > 0): ?>
+                                <span class="spec-item"><i class="bi bi-person-arms-up"></i> <?= (int)$vehicle['child_seat_capacity'] ?> <?= $t['child_seats'] ?></span>
+                                <?php endif; ?>
+                            </div>
+                            <?php if (!empty($services)): ?>
+                            <div class="vehicle-services-inline">
+                                <?php foreach ($services as $service): 
+                                    $serviceKey = is_numeric($service) ? (int)$service : $service;
+                                    $serviceInfo = $availableServices[$serviceKey] ?? null;
+                                    if ($serviceInfo && !empty($serviceInfo['label'])):
+                                ?>
+                                <span class="service-tag"><i class="bi <?= e($serviceInfo['icon']) ?>"></i> <?= e($serviceInfo['label']) ?></span>
+                                <?php endif; endforeach; ?>
+                            </div>
+                            <?php endif; ?>
+                        </div>
+                        <div class="vehicle-select-action">
+                            <button type="button" class="btn-select-vehicle">
+                                <i class="bi bi-check-lg"></i> <?= $t['select_vehicle'] ?>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+                <?php endforeach; ?>
+            </div>
+            
+            <!-- Inquiry Form (Hidden by default) -->
+            <div id="inquiry-form-wrapper" class="booking-form-wrapper" style="display: none;">
+                <div class="transfer-info-header">
+                    <div class="transfer-info-left">
+                        <h5 class="transfer-info-title"><?= $t['tour_info_title'] ?></h5>
+                        <span class="tour-name"><?= e($tour['title']) ?></span>
+                    </div>
+                    <div class="transfer-info-right">
+                        <div class="selected-vehicle-compact">
+                            <span id="selected-vehicle-name" class="selected-name"></span>
+                        </div>
+                        <button type="button" class="btn-change-vehicle"><i class="bi bi-arrow-repeat"></i></button>
+                    </div>
+                </div>
+                
+                <form action="<?= langUrl('contact') ?>" method="GET" class="booking-form" id="tourInquiryForm">
+                    <input type="hidden" name="tour_id" value="<?= (int)$tour['id'] ?>">
+                    <input type="hidden" name="tour_name" value="<?= e($tour['title']) ?>">
+                    <input type="hidden" name="vehicle_id" id="selected_vehicle_id" value="">
+                    <input type="hidden" name="vehicle_name" id="selected_vehicle_name_input" value="">
+                    
+                    <div class="row gy-3">
+                        <!-- Row 1: Ad Soyad, E-posta, Telefon -->
+                        <div class="col-lg-4 col-md-6">
+                            <label class="form-label"><?= $t['full_name'] ?> *</label>
+                            <input type="text" name="full_name" class="form-control" required placeholder="<?= $t['full_name_placeholder'] ?>">
+                        </div>
+                        <div class="col-lg-4 col-md-6">
+                            <label class="form-label"><?= $t['email'] ?> *</label>
+                            <input type="email" name="email" class="form-control" required placeholder="<?= $t['email_placeholder'] ?>">
+                        </div>
+                        <div class="col-lg-4 col-md-12">
+                            <label class="form-label"><?= $t['phone'] ?> *</label>
+                            <input type="tel" name="phone" class="form-control" required placeholder="<?= $t['phone_placeholder'] ?>">
+                        </div>
+                        
+                        <!-- Row 2: Alınış Yeri, Tarihi, Saati, Dönüş Saati -->
+                        <div class="col-lg-3 col-md-6">
+                            <label class="form-label"><?= $t['pickup_location'] ?> *</label>
+                            <input type="text" name="pickup_location" class="form-control" required placeholder="<?= $t['pickup_location_placeholder'] ?>">
+                        </div>
+                        <div class="col-lg-3 col-md-6">
+                            <label class="form-label"><?= $t['pickup_date'] ?> *</label>
+                            <input type="date" name="pickup_date" class="form-control" required min="<?= date('Y-m-d') ?>">
+                        </div>
+                        <div class="col-lg-3 col-md-6">
+                            <label class="form-label"><?= $t['pickup_time'] ?> *</label>
+                            <input type="time" name="pickup_time" class="form-control" required>
+                        </div>
+                        <div class="col-lg-3 col-md-6">
+                            <label class="form-label"><?= $t['return_time'] ?></label>
+                            <input type="time" name="return_time" class="form-control">
+                        </div>
+                        
+                        <!-- Row 3: Yetişkin Sayısı, Çocuk Sayısı, Çocuk Koltuğu -->
+                        <div class="col-lg-4 col-md-4">
+                            <label class="form-label"><?= $t['adults_count'] ?> *</label>
+                            <div class="quantity-selector">
+                                <button type="button" class="qty-btn qty-minus" data-target="adults-input"><i class="bi bi-dash"></i></button>
+                                <input type="number" name="adults" id="adults-input" class="form-control qty-input" value="1" min="1" max="16" readonly>
+                                <button type="button" class="qty-btn qty-plus" data-target="adults-input"><i class="bi bi-plus"></i></button>
+                            </div>
+                        </div>
+                        <div class="col-lg-4 col-md-4">
+                            <label class="form-label"><?= $t['children_count'] ?></label>
+                            <div class="quantity-selector">
+                                <button type="button" class="qty-btn qty-minus" data-target="children-input"><i class="bi bi-dash"></i></button>
+                                <input type="number" name="children" id="children-input" class="form-control qty-input" value="0" min="0" max="16" readonly>
+                                <button type="button" class="qty-btn qty-plus" data-target="children-input"><i class="bi bi-plus"></i></button>
+                            </div>
+                        </div>
+                        <div class="col-lg-4 col-md-4">
+                            <label class="form-label"><?= $t['child_seat'] ?></label>
+                            <div class="quantity-selector">
+                                <button type="button" class="qty-btn qty-minus" data-target="child-seat-input"><i class="bi bi-dash"></i></button>
+                                <input type="number" name="child_seat" id="child-seat-input" class="form-control qty-input" value="0" min="0" max="16" readonly>
+                                <button type="button" class="qty-btn qty-plus" data-target="child-seat-input"><i class="bi bi-plus"></i></button>
+                            </div>
+                        </div>
+                        
+                        <!-- Row 4: Notlar -->
+                        <div class="col-12">
+                            <label class="form-label"><?= $t['notes'] ?></label>
+                            <textarea name="notes" class="form-control" rows="3" placeholder="<?= $t['notes_placeholder'] ?>"></textarea>
+                        </div>
+                        
+                        <!-- Submit -->
+                        <div class="col-12 mt-4">
+                            <div class="booking-footer">
+                                <div class="booking-footer-right w-100 text-center">
+                                    <button type="submit" class="btn btn-primary btn-lg btn-submit-booking">
+                                        <i class="bi bi-envelope me-2"></i><?= $t['send_inquiry'] ?>
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </form>
+            </div>
+        </div>
+        <?php endif; ?>
+
+
+
     </div>
-</section>
+</section><!-- /Tour Details Section -->
+
+<!-- destination-detail.css stillerini kullan -->
+<link rel="stylesheet" href="<?= ASSETS_URL ?>css/pages/destination-detail.css">
+
+<style>
+/* Tour Details Additional Styles */
+.tour-details .section-header {
+    text-align: center;
+    margin-bottom: 40px;
+}
+
+.tour-details .section-header h2 {
+    font-size: 2rem;
+    font-weight: 700;
+    color: var(--heading-color);
+    margin-bottom: 10px;
+}
+
+.tour-details .section-header p {
+    color: #666;
+    font-size: 1.1rem;
+}
+
+.tour-overview {
+    margin-bottom: 60px;
+    padding: 40px;
+    background: var(--surface-color);
+    border-radius: 15px;
+    box-shadow: 0 5px 30px rgba(0, 0, 0, 0.08);
+}
+
+.tour-overview p {
+    font-size: 1.1rem;
+    line-height: 1.8;
+    color: #555;
+}
+
+.tour-name {
+    font-size: 14px;
+    color: #666;
+}
+</style>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const vehicleCards = document.querySelectorAll('.vehicle-select-card');
+    const inquiryFormWrapper = document.getElementById('inquiry-form-wrapper');
+    const selectedVehicleId = document.getElementById('selected_vehicle_id');
+    const selectedVehicleName = document.getElementById('selected-vehicle-name');
+    const selectedVehicleNameInput = document.getElementById('selected_vehicle_name_input');
+    const adultsInput = document.getElementById('adults-input');
+    const childrenInput = document.getElementById('children-input');
+    const childSeatInput = document.getElementById('child-seat-input');
+    const changeVehicleBtn = document.querySelector('.btn-change-vehicle');
+    
+    let currentMaxCapacity = 16;
+    let currentChildSeatMax = 0;
+    
+    // Update max values based on total capacity
+    function updateMaxValues() {
+        const adults = parseInt(adultsInput?.value) || 1;
+        const children = parseInt(childrenInput?.value) || 0;
+        const childSeats = parseInt(childSeatInput?.value) || 0;
+        
+        const totalUsed = adults + children + childSeats;
+        
+        // Adults max
+        if (adultsInput) {
+            const maxAdults = currentMaxCapacity - children - childSeats;
+            adultsInput.max = Math.max(1, maxAdults);
+            if (parseInt(adultsInput.value) > maxAdults) {
+                adultsInput.value = Math.max(1, maxAdults);
+            }
+        }
+        
+        // Children max
+        if (childrenInput) {
+            const maxChildren = currentMaxCapacity - adults - childSeats;
+            childrenInput.max = Math.max(0, maxChildren);
+            if (parseInt(childrenInput.value) > maxChildren) {
+                childrenInput.value = Math.max(0, maxChildren);
+            }
+        }
+        
+        // Child seats max
+        if (childSeatInput) {
+            const maxChildSeats = Math.min(currentChildSeatMax, currentMaxCapacity - adults - children);
+            childSeatInput.max = Math.max(0, maxChildSeats);
+            if (parseInt(childSeatInput.value) > maxChildSeats) {
+                childSeatInput.value = Math.max(0, maxChildSeats);
+            }
+        }
+    }
+    
+    // Vehicle selection
+    vehicleCards.forEach(card => {
+        card.addEventListener('click', function() {
+            // Remove selected class from all cards
+            vehicleCards.forEach(c => c.classList.remove('selected'));
+            
+            // Add selected class to clicked card
+            this.classList.add('selected');
+            
+            // Get vehicle data
+            const vehicleId = this.dataset.vehicleId;
+            const vehicleName = this.dataset.vehicleName;
+            const vehicleCapacity = parseInt(this.dataset.vehicleCapacity) || 16;
+            const childSeatCapacity = parseInt(this.dataset.childSeatCapacity) || 0;
+            
+            // Update hidden inputs and display
+            selectedVehicleId.value = vehicleId;
+            selectedVehicleName.textContent = vehicleName;
+            if (selectedVehicleNameInput) {
+                selectedVehicleNameInput.value = vehicleName;
+            }
+            
+            // Update max capacity
+            currentMaxCapacity = vehicleCapacity;
+            currentChildSeatMax = childSeatCapacity;
+            
+            // Reset form values
+            if (adultsInput) adultsInput.value = 1;
+            if (childrenInput) childrenInput.value = 0;
+            if (childSeatInput) childSeatInput.value = 0;
+            
+            updateMaxValues();
+            
+            // Show inquiry form
+            inquiryFormWrapper.style.display = 'block';
+            
+            // Scroll to form
+            setTimeout(() => {
+                inquiryFormWrapper.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            }, 100);
+        });
+    });
+    
+    // Change vehicle button
+    if (changeVehicleBtn) {
+        changeVehicleBtn.addEventListener('click', function() {
+            vehicleCards.forEach(c => c.classList.remove('selected'));
+            inquiryFormWrapper.style.display = 'none';
+            selectedVehicleId.value = '';
+            
+            // Scroll to vehicle list
+            document.getElementById('booking-section').scrollIntoView({ behavior: 'smooth', block: 'start' });
+        });
+    }
+    
+    // Quantity selector for +/- buttons
+    document.querySelectorAll('.qty-btn').forEach(btn => {
+        btn.addEventListener('click', function() {
+            const targetId = this.dataset.target;
+            const input = document.getElementById(targetId);
+            if (!input) return;
+            
+            let value = parseInt(input.value) || 0;
+            const min = parseInt(input.min) || 0;
+            const max = parseInt(input.max) || 16;
+            
+            if (this.classList.contains('qty-minus')) {
+                if (value > min) {
+                    input.value = value - 1;
+                }
+            } else if (this.classList.contains('qty-plus')) {
+                if (value < max) {
+                    input.value = value + 1;
+                }
+            }
+            
+            // Update max values after change
+            updateMaxValues();
+        });
+    });
+    
+    // Form validation
+    const inquiryForm = document.getElementById('tourInquiryForm');
+    if (inquiryForm) {
+        inquiryForm.addEventListener('submit', function(e) {
+            if (!selectedVehicleId.value) {
+                e.preventDefault();
+                alert('<?= $lang == "tr" ? "Lütfen bir araç seçin" : "Please select a vehicle" ?>');
+                document.getElementById('booking-section').scrollIntoView({ behavior: 'smooth', block: 'start' });
+            }
+        });
+    }
+});
+</script>
 
 <?php require_once INCLUDES_PATH . 'footer.php'; ?>

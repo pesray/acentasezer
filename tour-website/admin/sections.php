@@ -331,9 +331,10 @@ $sections = $db->query($sql)->fetchAll();
                             <a href="?action=edit&id=<?= $section['id'] ?>" class="btn btn-sm btn-outline-primary">
                                 <i class="bi bi-pencil"></i>
                             </a>
-                            <a href="?action=delete&id=<?= $section['id'] ?>" class="btn btn-sm btn-outline-danger btn-delete">
+                            <button type="button" class="btn btn-sm btn-outline-danger" 
+                                    data-delete data-entity="sections" data-id="<?= $section['id'] ?>">
                                 <i class="bi bi-trash"></i>
-                            </a>
+                            </button>
                         </td>
                     </tr>
                     <?php endforeach; ?>

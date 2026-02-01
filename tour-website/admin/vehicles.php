@@ -23,59 +23,7 @@ if (!$defaultLang && !empty($languages)) {
     $defaultLang = $languages[0];
 }
 
-// Vehicles tablosunu oluştur
-try {
-    $db->query("
-        CREATE TABLE IF NOT EXISTS vehicles (
-            id INT AUTO_INCREMENT PRIMARY KEY,
-            brand VARCHAR(100) NOT NULL,
-            model VARCHAR(100) NOT NULL,
-            capacity INT NOT NULL DEFAULT 4,
-            luggage_capacity INT DEFAULT 2,
-            child_seat_capacity INT DEFAULT 0,
-            image VARCHAR(255),
-            services TEXT,
-            description TEXT,
-            price_per_km DECIMAL(10,2),
-            base_price DECIMAL(10,2),
-            is_featured TINYINT(1) DEFAULT 0,
-            is_active TINYINT(1) DEFAULT 1,
-            sort_order INT DEFAULT 0,
-            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-            updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
-        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
-    ");
-    
-    // Çocuk koltuğu kapasitesi alanını ekle (mevcut tabloya)
-    try {
-        $db->query("ALTER TABLE vehicles ADD COLUMN child_seat_capacity INT DEFAULT 0 AFTER luggage_capacity");
-    } catch (Exception $e) {}
-} catch (Exception $e) {}
-
-// Araç hizmetleri tablosu
-try {
-    $db->query("
-        CREATE TABLE IF NOT EXISTS vehicle_services (
-            id INT AUTO_INCREMENT PRIMARY KEY,
-            icon VARCHAR(100) NOT NULL DEFAULT 'bi-check-circle',
-            sort_order INT DEFAULT 0,
-            is_active TINYINT(1) DEFAULT 1,
-            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-            updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
-        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
-    ");
-    
-    $db->query("
-        CREATE TABLE IF NOT EXISTS vehicle_service_translations (
-            id INT AUTO_INCREMENT PRIMARY KEY,
-            service_id INT NOT NULL,
-            language_code VARCHAR(5) NOT NULL,
-            name VARCHAR(255) NOT NULL,
-            UNIQUE KEY unique_service_lang (service_id, language_code),
-            FOREIGN KEY (service_id) REFERENCES vehicle_services(id) ON DELETE CASCADE
-        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
-    ");
-} catch (Exception $e) {}
+// Tablolar migration ile oluşturuldu - vehicles, vehicle_services, vehicle_service_translations
 
 // Hizmetleri kaydetme
 if ($action === 'save_services' && $_SERVER['REQUEST_METHOD'] === 'POST') {
@@ -478,9 +426,10 @@ if (empty($availableServices)) {
                             <a href="?action=edit&id=<?= $vehicle['id'] ?>" class="btn btn-sm btn-outline-primary">
                                 <i class="bi bi-pencil"></i>
                             </a>
-                            <a href="?action=delete&id=<?= $vehicle['id'] ?>" class="btn btn-sm btn-outline-danger btn-delete">
+                            <button type="button" class="btn btn-sm btn-outline-danger" 
+                                    data-delete data-entity="vehicles" data-id="<?= $vehicle['id'] ?>">
                                 <i class="bi bi-trash"></i>
-                            </a>
+                            </button>
                         </td>
                     </tr>
                     <?php endforeach; ?>

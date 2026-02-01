@@ -93,21 +93,19 @@ $socialYoutube = getSetting('social_youtube', '');
   <!-- Scroll Top -->
   <a href="#" id="scroll-top" class="scroll-top d-flex align-items-center justify-content-center"><i class="bi bi-arrow-up-short"></i></a>
 
-  <!-- Preloader -->
-  <div id="preloader"></div>
 
   <!-- Vendor JS Files -->
-  <script src="<?= ASSETS_URL ?>vendor/bootstrap/js/bootstrap.bundle.min.js"></script>
-  <script src="<?= ASSETS_URL ?>vendor/php-email-form/validate.js"></script>
-  <script src="<?= ASSETS_URL ?>vendor/aos/aos.js"></script>
-  <script src="<?= ASSETS_URL ?>vendor/purecounter/purecounter_vanilla.js"></script>
-  <script src="<?= ASSETS_URL ?>vendor/swiper/swiper-bundle.min.js"></script>
-  <script src="<?= ASSETS_URL ?>vendor/isotope-layout/isotope.pkgd.min.js"></script>
-  <script src="<?= ASSETS_URL ?>vendor/imagesloaded/imagesloaded.pkgd.min.js"></script>
-  <script src="<?= ASSETS_URL ?>vendor/glightbox/js/glightbox.min.js"></script>
+  <script src="<?= ASSETS_URL ?>vendor/bootstrap/js/bootstrap.bundle.min.js" defer></script>
+  <script src="<?= ASSETS_URL ?>vendor/php-email-form/validate.js" defer></script>
+  <script src="<?= ASSETS_URL ?>vendor/aos/aos.js" defer></script>
+  <script src="<?= ASSETS_URL ?>vendor/purecounter/purecounter_vanilla.js" defer></script>
+  <script src="<?= ASSETS_URL ?>vendor/swiper/swiper-bundle.min.js" defer></script>
+  <script src="<?= ASSETS_URL ?>vendor/isotope-layout/isotope.pkgd.min.js" defer></script>
+  <script src="<?= ASSETS_URL ?>vendor/imagesloaded/imagesloaded.pkgd.min.js" defer></script>
+  <script src="<?= ASSETS_URL ?>vendor/glightbox/js/glightbox.min.js" defer></script>
 
   <!-- Main JS File -->
-  <script src="<?= ASSETS_URL ?>js/main.js"></script>
+  <script src="<?= ASSETS_URL ?>js/main.js" defer></script>
 
   <?php if (isset($extraJs)): ?>
   <?= $extraJs ?>

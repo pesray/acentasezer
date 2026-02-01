@@ -230,9 +230,10 @@ $languages = $db->query("SELECT * FROM languages ORDER BY sort_order")->fetchAll
                                 <i class="bi bi-pencil"></i>
                             </a>
                             <?php if (!$lang['is_default']): ?>
-                            <a href="?action=delete&id=<?= $lang['id'] ?>" class="btn btn-sm btn-outline-danger btn-delete">
+                            <button type="button" class="btn btn-sm btn-outline-danger" 
+                                    data-delete data-entity="languages" data-id="<?= $lang['id'] ?>">
                                 <i class="bi bi-trash"></i>
-                            </a>
+                            </button>
                             <?php endif; ?>
                         </td>
                     </tr>

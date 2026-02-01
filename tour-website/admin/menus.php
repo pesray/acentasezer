@@ -154,7 +154,7 @@ if ($action === 'edit_item' && $itemId) {
                             <td><span class="badge bg-<?= $item['is_active'] ? 'success' : 'secondary' ?>"><?= $item['is_active'] ? 'Aktif' : 'Pasif' ?></span></td>
                             <td>
                                 <a href="?action=edit_item&menu_id=<?= $menuId ?>&item_id=<?= $item['id'] ?>" class="btn btn-sm btn-outline-primary"><i class="bi bi-pencil"></i></a>
-                                <a href="?action=delete_item&item_id=<?= $item['id'] ?>" class="btn btn-sm btn-outline-danger btn-delete"><i class="bi bi-trash"></i></a>
+                                <button type="button" class="btn btn-sm btn-outline-danger" data-delete data-entity="menus" data-id="<?= $item['id'] ?>" data-action="delete_item"><i class="bi bi-trash"></i></button>
                             </td>
                         </tr>
                         <?php endforeach; ?>

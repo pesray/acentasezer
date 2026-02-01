@@ -40,20 +40,20 @@ $siteLogo = getSetting('site_logo', '');
   <link href="<?= ASSETS_URL ?>img/favicon.png" rel="icon">
   <link href="<?= ASSETS_URL ?>img/apple-touch-icon.png" rel="apple-touch-icon">
 
-  <!-- Fonts -->
+  <!-- Fonts - Sadece kullanılan ağırlıklar -->
   <link href="https://fonts.googleapis.com" rel="preconnect">
   <link href="https://fonts.gstatic.com" rel="preconnect" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Roboto:ital,wght@0,100;0,300;0,400;0,500;0,700;0,900;1,100;1,300;1,400;1,500;1,700;1,900&family=Poppins:ital,wght@0,100;0,200;0,300;0,400;0,500;0,600;0,700;0,800;0,900;1,100;1,200;1,300;1,400;1,500;1,600;1,700;1,800;1,900&family=Raleway:ital,wght@0,100;0,200;0,300;0,400;0,500;0,600;0,700;0,800;0,900;1,100;1,200;1,300;1,400;1,500;1,600;1,700;1,800;1,900&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&family=Poppins:wght@400;500;600;700&family=Raleway:wght@400;500;600;700&display=swap" rel="stylesheet">
 
-  <!-- Vendor CSS Files -->
+  <!-- Kritik CSS - Bootstrap ve Ana CSS -->
   <link href="<?= ASSETS_URL ?>vendor/bootstrap/css/bootstrap.min.css" rel="stylesheet">
-  <link href="<?= ASSETS_URL ?>vendor/bootstrap-icons/bootstrap-icons.css" rel="stylesheet">
-  <link href="<?= ASSETS_URL ?>vendor/aos/aos.css" rel="stylesheet">
-  <link href="<?= ASSETS_URL ?>vendor/swiper/swiper-bundle.min.css" rel="stylesheet">
-  <link href="<?= ASSETS_URL ?>vendor/glightbox/css/glightbox.min.css" rel="stylesheet">
-
-  <!-- Main CSS File -->
   <link href="<?= ASSETS_URL ?>css/main.css" rel="stylesheet">
+  
+  <!-- Non-kritik CSS - Async yükle -->
+  <link href="<?= ASSETS_URL ?>vendor/bootstrap-icons/bootstrap-icons.css" rel="stylesheet" media="print" onload="this.media='all'">
+  <link href="<?= ASSETS_URL ?>vendor/aos/aos.css" rel="stylesheet" media="print" onload="this.media='all'">
+  <link href="<?= ASSETS_URL ?>vendor/swiper/swiper-bundle.min.css" rel="stylesheet" media="print" onload="this.media='all'">
+  <link href="<?= ASSETS_URL ?>vendor/glightbox/css/glightbox.min.css" rel="stylesheet" media="print" onload="this.media='all'">
 
   <?php if (isset($extraCss)): ?>
   <?= $extraCss ?>
@@ -102,17 +102,33 @@ $siteLogo = getSetting('site_logo', '');
           </li>
           <?php endif; ?>
           <?php endforeach; ?>
+          
+          <!-- Mobil Dil Seçici (sadece mobilde görünür) -->
+          <li class="dropdown d-xl-none mobile-language-switcher">
+            <a href="#" class="mobile-lang-toggle"><span><?php 
+              $currentLangData = array_filter($languages, fn($l) => $l['code'] === $currentLang);
+              $currentLangData = reset($currentLangData);
+              echo $currentLangData ? $currentLangData['flag'] . ' ' . e($currentLangData['native_name']) : strtoupper($currentLang);
+            ?></span> <i class="bi bi-chevron-down toggle-dropdown"></i></a>
+            <ul class="mobile-lang-dropdown">
+              <?php foreach ($languages as $lang): ?>
+              <li>
+                <a href="<?= e(getAlternateLanguageUrl($lang['code'])) ?>" class="<?= $lang['code'] === $currentLang ? 'active' : '' ?>">
+                  <?= e($lang['flag']) ?> <?= e($lang['native_name']) ?>
+                </a>
+              </li>
+              <?php endforeach; ?>
+            </ul>
+          </li>
         </ul>
         <i class="mobile-nav-toggle d-xl-none bi bi-list"></i>
       </nav>
 
-      <!-- Dil Seçici -->
-      <div class="language-switcher dropdown me-3">
-        <button class="btn btn-sm dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false">
+      <!-- Dil Seçici (btn-getstarted stili - sadece masaüstünde görünür) -->
+      <div class="language-switcher dropdown d-none d-xl-block">
+        <button class="btn-getstarted dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false">
           <?php 
-          $currentLangData = array_filter($languages, fn($l) => $l['code'] === $currentLang);
-          $currentLangData = reset($currentLangData);
-          echo $currentLangData ? $currentLangData['flag'] . ' ' . strtoupper($currentLangData['code']) : strtoupper($currentLang);
+          echo $currentLangData ? $currentLangData['flag'] . ' ' . e($currentLangData['native_name']) : strtoupper($currentLang);
           ?>
         </button>
         <ul class="dropdown-menu dropdown-menu-end">
@@ -126,8 +142,6 @@ $siteLogo = getSetting('site_logo', '');
           <?php endforeach; ?>
         </ul>
       </div>
-
-      <a class="btn-getstarted" href="<?= langUrl('transferler') ?>"><?= __('btn_get_started', 'header') ?></a>
 
     </div>
   </header>

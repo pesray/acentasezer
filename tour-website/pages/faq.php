@@ -12,24 +12,35 @@ $bodyClass = 'faq-page';
 $lang = getCurrentLang();
 $db = getDB();
 
-// Kategorileri ve FAQ'ları getir
-$categories = $db->query("SELECT * FROM faq_categories ORDER BY sort_order")->fetchAll();
-
+// Kategorileri ve FAQ'ları tek sorguda al (optimize edildi)
 $stmt = $db->prepare("
-    SELECT f.*, COALESCE(ft.question, f.question) as question, COALESCE(ft.answer, f.answer) as answer
+    SELECT f.*, 
+           COALESCE(ft.question, f.question) as question, 
+           COALESCE(ft.answer, f.answer) as answer,
+           fc.id as cat_id, fc.name as cat_name, fc.sort_order as cat_sort
     FROM faqs f
     LEFT JOIN faq_translations ft ON f.id = ft.faq_id AND ft.language_code = ?
+    LEFT JOIN faq_categories fc ON f.category_id = fc.id
     WHERE f.is_active = 1
-    ORDER BY f.category_id, f.sort_order
+    ORDER BY fc.sort_order, f.sort_order
 ");
 $stmt->execute([$lang]);
 $faqs = $stmt->fetchAll();
 
-// Kategorilere göre grupla
+// Kategorilere göre grupla ve kategori bilgilerini çıkar
 $faqsByCategory = [];
+$categories = [];
 foreach ($faqs as $faq) {
     $catId = $faq['category_id'] ?: 0;
     $faqsByCategory[$catId][] = $faq;
+    
+    // Kategori bilgisini kaydet (ilk karşılaşmada)
+    if ($catId > 0 && !isset($categories[$catId])) {
+        $categories[$catId] = [
+            'id' => $faq['cat_id'],
+            'name' => $faq['cat_name']
+        ];
+    }
 }
 
 require_once INCLUDES_PATH . 'header.php';

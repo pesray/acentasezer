@@ -40,7 +40,11 @@
    * Hide mobile nav on same-page/hash links
    */
   document.querySelectorAll('#navmenu a').forEach(navmenu => {
-    navmenu.addEventListener('click', () => {
+    navmenu.addEventListener('click', function(e) {
+      // Mobil dil seçici toggle'ına tıklandığında menüyü kapatma
+      if (this.classList.contains('mobile-lang-toggle')) {
+        return;
+      }
       if (document.querySelector('.mobile-nav-active')) {
         mobileNavToogle();
       }
@@ -61,14 +65,39 @@
   });
 
   /**
-   * Preloader
+   * Mobile language switcher - tüm butona tıklayınca dropdown açılsın
    */
-  const preloader = document.querySelector('#preloader');
-  if (preloader) {
-    window.addEventListener('load', () => {
-      preloader.remove();
+  const mobileLangToggle = document.querySelector('.mobile-lang-toggle');
+  if (mobileLangToggle) {
+    mobileLangToggle.addEventListener('click', function(e) {
+      e.preventDefault();
+      e.stopImmediatePropagation();
+      const parent = this.closest('.mobile-language-switcher');
+      const dropdown = parent.querySelector('.mobile-lang-dropdown');
+      parent.classList.toggle('active');
+      if (dropdown) {
+        dropdown.classList.toggle('dropdown-active');
+      }
     });
   }
+
+  /**
+   * Link Prefetch - Hover'da sayfaları önceden yükle (instant page transitions)
+   */
+  document.querySelectorAll('a[href]').forEach(link => {
+    // Sadece internal linkler için
+    if (link.hostname === window.location.hostname && !link.href.includes('#')) {
+      link.addEventListener('mouseenter', function() {
+        // Prefetch link oluştur
+        const prefetchLink = document.createElement('link');
+        prefetchLink.rel = 'prefetch';
+        prefetchLink.href = this.href;
+        if (!document.querySelector(`link[href="${this.href}"]`)) {
+          document.head.appendChild(prefetchLink);
+        }
+      }, { once: true });
+    }
+  });
 
   /**
    * Scroll top button

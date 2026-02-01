@@ -126,7 +126,7 @@ $users = $db->query("SELECT * FROM users ORDER BY created_at DESC")->fetchAll();
                     <td>
                         <a href="?action=edit&id=<?= $u['id'] ?>" class="btn btn-sm btn-outline-primary"><i class="bi bi-pencil"></i></a>
                         <?php if ($u['id'] != $_SESSION['admin_id']): ?>
-                        <a href="?action=delete&id=<?= $u['id'] ?>" class="btn btn-sm btn-outline-danger btn-delete"><i class="bi bi-trash"></i></a>
+                        <button type="button" class="btn btn-sm btn-outline-danger" data-delete data-entity="users" data-id="<?= $u['id'] ?>"><i class="bi bi-trash"></i></button>
                         <?php endif; ?>
                     </td>
                 </tr>

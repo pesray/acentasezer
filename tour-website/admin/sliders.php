@@ -251,7 +251,7 @@ $sliders = $db->query("SELECT * FROM sliders ORDER BY location, sort_order")->fe
                     <td><span class="badge bg-<?= $slider['is_active'] ? 'success' : 'secondary' ?>"><?= $slider['is_active'] ? 'Aktif' : 'Pasif' ?></span></td>
                     <td>
                         <a href="?action=edit&id=<?= $slider['id'] ?>" class="btn btn-sm btn-outline-primary"><i class="bi bi-pencil"></i></a>
-                        <a href="?action=delete&id=<?= $slider['id'] ?>" class="btn btn-sm btn-outline-danger btn-delete"><i class="bi bi-trash"></i></a>
+                        <button type="button" class="btn btn-sm btn-outline-danger" data-delete data-entity="sliders" data-id="<?= $slider['id'] ?>"><i class="bi bi-trash"></i></button>
                     </td>
                 </tr>
                 <?php endforeach; ?>

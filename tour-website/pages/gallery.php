@@ -11,8 +11,25 @@ $bodyClass = 'gallery-page';
 
 $db = getDB();
 
-$categories = $db->query("SELECT * FROM gallery_categories ORDER BY sort_order")->fetchAll();
-$gallery = $db->query("SELECT g.*, gc.slug as category_slug FROM gallery g LEFT JOIN gallery_categories gc ON g.category_id = gc.id ORDER BY g.sort_order")->fetchAll();
+// Tek sorguda galeri ve kategorileri al (optimize edildi)
+$gallery = $db->query("
+    SELECT g.*, gc.slug as category_slug, gc.name as category_name, gc.id as cat_id
+    FROM gallery g 
+    LEFT JOIN gallery_categories gc ON g.category_id = gc.id 
+    ORDER BY g.sort_order
+")->fetchAll();
+
+// Kategorileri galeri sonuçlarından çıkar (ayrı sorgu yerine)
+$categories = [];
+foreach ($gallery as $item) {
+    if (!empty($item['cat_id']) && !isset($categories[$item['cat_id']])) {
+        $categories[$item['cat_id']] = [
+            'id' => $item['cat_id'],
+            'slug' => $item['category_slug'],
+            'name' => $item['category_name']
+        ];
+    }
+}
 
 require_once INCLUDES_PATH . 'header.php';
 ?>
@@ -40,7 +57,7 @@ require_once INCLUDES_PATH . 'header.php';
             <?php foreach ($gallery as $item): ?>
             <div class="col-lg-3 col-md-4 col-6 gallery-item <?= e($item['category_slug'] ?? '') ?>">
                 <a href="<?= UPLOADS_URL . e($item['image']) ?>" class="glightbox" data-gallery="gallery">
-                    <img src="<?= UPLOADS_URL . e($item['thumbnail'] ?: $item['image']) ?>" alt="<?= e($item['title']) ?>" class="img-fluid">
+                    <img src="<?= UPLOADS_URL . e($item['thumbnail'] ?: $item['image']) ?>" alt="<?= e($item['title']) ?>" class="img-fluid" loading="lazy">
                     <?php if ($item['title']): ?>
                     <div class="gallery-overlay">
                         <span><?= e($item['title']) ?></span>

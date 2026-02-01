@@ -2,6 +2,7 @@
 /**
  * Ana Router / Ana Sayfa
  * Dil ön eki destekli URL yapısı: /tr/transferler, /en/transfers
+ * Tüm slug'lar admin panelden yönetilir (page_settings tablosu)
  */
 
 require_once __DIR__ . '/config/config.php';
@@ -31,108 +32,103 @@ if ($fullPath === 'admin' || strpos($fullPath, 'admin/') === 0) {
     }
 }
 
-// Dil ön eki yoksa ve admin değilse, varsayılan dile yönlendir
+// Dil ön eki yoksa ve admin değilse
 $urlLang = extractLangFromUrl();
 if ($urlLang === null && !empty($fullPath)) {
-    // Dil ön eki ekleyerek yönlendir
-    header('Location: ' . langUrl($fullPath, DEFAULT_LANG));
+    // Tarayıcı diline göre yönlendir
+    $browserLang = detectBrowserLanguage();
+    header('Location: ' . langUrl($fullPath, $browserLang));
     exit;
 }
 
-// Boş path ve dil ön eki yoksa tarayıcı diline göre yönlendir
+// Boş path (sadece site URL'si) - tarayıcı diline göre yönlendir
 if (empty($fullPath)) {
-    // Her zaman tarayıcı dilini algıla (ana sayfaya geldiğinde)
     $browserLang = detectBrowserLanguage();
     header('Location: ' . langUrl('', $browserLang));
     exit;
 }
 
+// URL'de dil var - kullanıcı tercihini cookie'ye kaydet
+if ($urlLang) {
+    saveLanguagePreference($urlLang);
+}
+
 // Veritabanı bağlantısı
 $db = getDB();
 
-// Tüm dillerdeki sayfa slug'larını al ve route'ları oluştur
-$routes = [];
+// Sayfa slug'larını cache'li olarak al (page_settings tablosundan)
+function getPageSlugs($lang) {
+    static $cache = [];
+    if (isset($cache[$lang])) {
+        return $cache[$lang];
+    }
+    
+    $slugs = [];
+    try {
+        $db = getDB();
+        $stmt = $db->prepare("
+            SELECT ps.page_key, pst.slug 
+            FROM page_settings ps
+            LEFT JOIN page_setting_translations pst ON ps.id = pst.page_setting_id AND pst.language_code = ?
+            WHERE pst.slug IS NOT NULL AND pst.slug != ''
+        ");
+        $stmt->execute([$lang]);
+        
+        while ($row = $stmt->fetch()) {
+            $slugs[$row['page_key']] = $row['slug'];
+        }
+    } catch (Exception $e) {}
+    
+    $cache[$lang] = $slugs;
+    return $slugs;
+}
 
-// Statik route'lar (varsayılan)
-$defaultRoutes = [
-    'turlar' => 'pages/tours.php',
+// Sayfa slug'larını al
+$pageSlugs = getPageSlugs($lang);
+
+// Listeleme sayfaları için dinamik route eşleştirme
+$listingPages = [
+    'destinations' => 'pages/destinations.php',
     'tours' => 'pages/tours.php',
     'blog' => 'pages/blog.php',
-    'galeri' => 'pages/gallery.php',
     'gallery' => 'pages/gallery.php',
-    'sss' => 'pages/faq.php',
     'faq' => 'pages/faq.php',
-    'iletisim' => 'pages/contact.php',
     'contact' => 'pages/contact.php',
-    'rezervasyon' => 'pages/booking.php',
     'booking' => 'pages/booking.php',
-    'arama' => 'pages/search.php',
     'search' => 'pages/search.php',
 ];
-$routes = array_merge($routes, $defaultRoutes);
 
-// Sayfa ayarlarından dinamik slug'ları al (mevcut dil için)
-try {
-    $stmt = $db->prepare("
-        SELECT ps.page_key, pst.slug 
-        FROM page_settings ps
-        LEFT JOIN page_setting_translations pst ON ps.id = pst.page_setting_id AND pst.language_code = ?
-    ");
-    $stmt->execute([$lang]);
-    
-    while ($row = $stmt->fetch()) {
-        if (!empty($row['slug'])) {
-            if ($row['page_key'] === 'destinations') {
-                $routes[$row['slug']] = 'pages/destinations.php';
-            }
-        }
+// Mevcut path'in hangi sayfaya ait olduğunu bul
+foreach ($listingPages as $pageKey => $pageFile) {
+    $pageSlug = $pageSlugs[$pageKey] ?? null;
+    if ($pageSlug && $path === $pageSlug) {
+        require_once ROOT_PATH . $pageFile;
+        exit;
     }
-} catch (Exception $e) {}
+}
 
-// Varsayılan transfer slug'larını ekle
-$routes['transferler'] = 'pages/destinations.php';
-$routes['transfers'] = 'pages/destinations.php';
+// Detay sayfaları: /liste-slug/detay-slug formatı
+// Transfer detay: /transferler/side-transfer
+$destinationsSlug = $pageSlugs['destinations'] ?? null;
+if ($destinationsSlug && preg_match('#^' . preg_quote($destinationsSlug, '#') . '/([a-z0-9-]+)$#i', $path, $matches)) {
+    $_GET['slug'] = $matches[1];
+    require_once ROOT_PATH . 'pages/destination-detail.php';
+    exit;
+}
 
-// Dinamik route'lar (slug içerenler)
-if (preg_match('#^tur/([a-z0-9-]+)$#', $path, $matches)) {
+// Tur detay: /turlar/kapadokya-turu
+$toursSlug = $pageSlugs['tours'] ?? null;
+if ($toursSlug && preg_match('#^' . preg_quote($toursSlug, '#') . '/([a-z0-9-]+)$#i', $path, $matches)) {
     $_GET['slug'] = $matches[1];
     require_once ROOT_PATH . 'pages/tour-detail.php';
     exit;
 }
 
-// Transfer detay sayfası için dinamik slug'ları al
-$transferDetailPrefixes = ['transfer', 'destinasyon', 'destination', 'transferler', 'transfers'];
-try {
-    $prefixStmt = $db->prepare("
-        SELECT pst.slug 
-        FROM page_settings ps
-        LEFT JOIN page_setting_translations pst ON ps.id = pst.page_setting_id AND pst.language_code = ?
-        WHERE ps.page_key = 'destinations' AND pst.slug IS NOT NULL
-    ");
-    $prefixStmt->execute([$lang]);
-    while ($prefixRow = $prefixStmt->fetch()) {
-        if (!empty($prefixRow['slug']) && !in_array($prefixRow['slug'], $transferDetailPrefixes)) {
-            $transferDetailPrefixes[] = $prefixRow['slug'];
-        }
-    }
-} catch (Exception $e) {}
-
-$transferPrefixPattern = implode('|', array_map('preg_quote', $transferDetailPrefixes));
-if (preg_match('#^(' . $transferPrefixPattern . ')/([a-z0-9-]+)$#', $path, $matches)) {
-    $_GET['slug'] = $matches[2];
-    require_once ROOT_PATH . 'pages/destination-detail.php';
-    exit;
-}
-
-if (preg_match('#^blog/([a-z0-9-]+)$#', $path, $matches)) {
+// Blog detay: /blog/makale-slug
+$blogSlug = $pageSlugs['blog'] ?? 'blog';
+if (preg_match('#^' . preg_quote($blogSlug, '#') . '/([a-z0-9-]+)$#i', $path, $matches)) {
     $_GET['slug'] = $matches[1];
     require_once ROOT_PATH . 'pages/blog-detail.php';
-    exit;
-}
-
-// Statik route'lar
-if (isset($routes[$path])) {
-    require_once ROOT_PATH . $routes[$path];
     exit;
 }
 

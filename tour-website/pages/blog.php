@@ -40,7 +40,7 @@ require_once INCLUDES_PATH . 'header.php';
             <div class="col-lg-4 col-md-6">
                 <article class="blog-card">
                     <div class="blog-image">
-                        <img src="<?= $post['featured_image'] ? UPLOADS_URL . e($post['featured_image']) : ASSETS_URL . 'img/blog/blog-1.webp' ?>" alt="<?= e($post['title']) ?>" class="img-fluid">
+                        <img src="<?= $post['featured_image'] ? UPLOADS_URL . e($post['featured_image']) : ASSETS_URL . 'img/blog/blog-1.webp' ?>" alt="<?= e($post['title']) ?>" class="img-fluid" loading="lazy">
                     </div>
                     <div class="blog-content">
                         <div class="blog-meta">

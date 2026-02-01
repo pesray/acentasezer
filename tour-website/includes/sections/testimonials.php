@@ -54,7 +54,7 @@ $testimonials = getTestimonials($limit);
               <span><?= e($testimonial['content']) ?></span>
               <i class="bi bi-quote quote-icon-right"></i>
             </p>
-            <img src="<?= $testimonial['customer_image'] ? UPLOADS_URL . e($testimonial['customer_image']) : ASSETS_URL . 'img/person/person-m-9.webp' ?>" class="testimonial-img" alt="<?= e($testimonial['customer_name']) ?>">
+            <img src="<?= $testimonial['customer_image'] ? UPLOADS_URL . e($testimonial['customer_image']) : ASSETS_URL . 'img/person/person-m-9.webp' ?>" class="testimonial-img" alt="<?= e($testimonial['customer_name']) ?>" loading="lazy">
             <h3><?= e($testimonial['customer_name']) ?></h3>
             <h4><?= e($testimonial['customer_title']) ?></h4>
           </div>
