@@ -2,4 +2,6 @@
 deployment:
   tasks:
     - export DEPLOYPATH=/home/ahmetkes/sunlineviptransfer.com
-    - /bin/rsync -av --delete --exclude=".git" tour-website/ $DEPLOYPATH/
+    - /bin/rm -rf $DEPLOYPATH/*
+    - /bin/cp -R tour-website/* $DEPLOYPATH/
+
