@@ -2,6 +2,8 @@
 deployment:
   tasks:
     - export DEPLOYPATH=/home/ahmetkes/sunlineviptransfer.com
+    - /bin/echo "DEPLOY START $(/bin/date)" >> $DEPLOYPATH/deploy.log
     - /bin/rm -rf $DEPLOYPATH/*
-    - /bin/cp -R tour-website/* $DEPLOYPATH/
-
+    - /bin/mkdir -p $DEPLOYPATH
+    - /bin/cp -a tour-website/. $DEPLOYPATH/
+    - /bin/echo "DEPLOY DONE $(/bin/date)" >> $DEPLOYPATH/deploy.log
