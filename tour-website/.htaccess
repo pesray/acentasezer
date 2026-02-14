@@ -33,10 +33,12 @@ ErrorDocument 500 /pages/500.php
 Options -Indexes
 
 # Protect sensitive files
-<FilesMatch "^(\.htaccess|\.htpasswd|\.env|composer\.json|composer\.lock)$">
-    Order Allow,Deny
-    Deny from all
+<FilesMatch "^(\.htaccess|\.htpasswd|\.env|\.env\.example|composer\.json|composer\.lock|package\.json|package-lock\.json|yarn\.lock)$">
+  Require all denied
 </FilesMatch>
+
+# Block access to config and migrations
+RewriteRule ^(config|migrations)/ - [F,L]
 
 # Block access to config and migrations
 <FilesMatch "\.(sql|php)$">
@@ -63,7 +65,4 @@ Options -Indexes
     AddOutputFilterByType DEFLATE text/html text/plain text/xml text/css application/javascript application/json
 </IfModule>
 
-# Block access to sensitive files
-<FilesMatch "^(\.env|\.env\.example|composer\.json|composer\.lock|package\.json|package-lock\.json|yarn\.lock)$">
-  Require all denied
-</FilesMatch>
+

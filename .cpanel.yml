@@ -4,6 +4,6 @@ deployment:
     - export DEPLOYPATH=/home/ahmetkes/sunlineviptransfer.com/app
     - /bin/mkdir -p $DEPLOYPATH
     # app içini komple temizle (senkron için)
-    - /bin/rm -rf $DEPLOYPATH/*
+    - /usr/bin/find $DEPLOYPATH -mindepth 1 -maxdepth 1 ! -name ".env" -exec /bin/rm -rf {} +
     # tour-website içeriğini birebir bas (gizli dosyalar dahil)
     - /bin/cp -a tour-website/. $DEPLOYPATH/
