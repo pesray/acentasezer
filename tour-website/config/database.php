@@ -3,17 +3,11 @@
  * Veritabanı Bağlantı Ayarları
  */
 
-// Veritabanı bilgileri
-$db_host = '5.2.85.141';
-$db_name = 'ahmetkes_agency';
-$db_user = 'ahmetkes_sezer';
-$db_pass = 'Szr4569*-';
-
-define('DB_HOST', $db_host);
-define('DB_NAME', $db_name);
-define('DB_USER', $db_user);
-define('DB_PASS', $db_pass);
-define('DB_CHARSET', 'utf8mb4');
+define('DB_HOST', env('DB_HOST', 'localhost'));
+define('DB_NAME', env('DB_NAME', 'tour'));
+define('DB_USER', env('DB_USER', 'root'));
+define('DB_PASS', env('DB_PASS', ''));
+define('DB_CHARSET', env('DB_CHARSET', 'utf8mb4'));
 
 // PDO bağlantısı
 function getDB() {

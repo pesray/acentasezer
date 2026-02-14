@@ -20,6 +20,15 @@ if (BASE_PATH && strpos($fullPath, BASE_PATH) === 0) {
 }
 $fullPath = trim($fullPath, '/');
 
+// API endpoints - dil ön eki olmadan çalışsın
+if (strpos($fullPath, 'api/') === 0) {
+    $apiFile = ROOT_PATH . $fullPath . (substr($fullPath, -4) === '.php' ? '' : '.php');
+    if (file_exists($apiFile)) {
+        require_once $apiFile;
+        exit;
+    }
+}
+
 // Admin panel - dil ön eki olmadan çalışsın
 if ($fullPath === 'admin' || strpos($fullPath, 'admin/') === 0) {
     $adminFile = ROOT_PATH . $fullPath . (substr($fullPath, -4) === '.php' ? '' : '.php');

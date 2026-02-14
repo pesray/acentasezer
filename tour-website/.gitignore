@@ -1,0 +1,14 @@
+# Ortam değişkenleri (hassas bilgiler)
+.env
+
+# IDE
+.vscode/
+.idea/
+
+# OS
+Thumbs.db
+.DS_Store
+
+# Uploads (isteğe bağlı)
+# uploads/*
+# !uploads/.gitkeep

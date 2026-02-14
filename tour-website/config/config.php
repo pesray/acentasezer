@@ -3,9 +3,17 @@
  * Ana Konfigürasyon Dosyası
  */
 
-// Hata raporlama (geliştirme için)
-error_reporting(E_ALL);
-ini_set('display_errors', 1);
+// Ortam değişkenlerini yükle (en başta)
+require_once __DIR__ . '/env.php';
+
+// Hata raporlama
+if (env('APP_DEBUG', true)) {
+    error_reporting(E_ALL);
+    ini_set('display_errors', 1);
+} else {
+    error_reporting(0);
+    ini_set('display_errors', 0);
+}
 
 // Zaman dilimi
 date_default_timezone_set('Europe/Istanbul');
@@ -19,8 +27,8 @@ if (session_status() === PHP_SESSION_NONE) {
 require_once __DIR__ . '/database.php';
 
 // Site sabitleri
-define('SITE_NAME', 'Tour');
-define('SITE_URL', 'http://localhost/transfer');
+define('SITE_NAME', env('SITE_NAME', 'Tour'));
+define('SITE_URL', rtrim(env('SITE_URL', 'http://localhost/transfer'), '/'));
 define('ADMIN_URL', SITE_URL . '/admin');
 
 // Dizin sabitleri

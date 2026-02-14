@@ -121,10 +121,19 @@ $defaultTexts = [
         'pickup_location' => 'Alınış Yeri', 'pickup_date' => 'Alınış Tarihi', 
         'pickup_time' => 'Alınış Saati', 'return_time' => 'Dönüş Saati',
         'adults_count' => 'Yetişkin Sayısı', 'children_count' => 'Çocuk Sayısı', 'child_seat' => 'Çocuk Koltuğu',
-        'notes' => 'Notlar', 'send_inquiry' => 'Bilgi Al',
+        'notes' => 'Notlar', 'send_inquiry' => 'Rezervasyon Yap',
         'full_name_placeholder' => 'Adınız ve soyadınız', 'email_placeholder' => 'E-posta adresiniz',
         'phone_placeholder' => '+90 5XX XXX XX XX', 'notes_placeholder' => 'Varsa sorularınızı yazın',
         'pickup_location_placeholder' => 'Otel adı veya adres',
+        'return_transfer' => 'Dönüş Transferi İstiyorum',
+        'return_flight_date' => 'Dönüş Uçuş Tarihi', 'return_flight_time' => 'Dönüş Uçuş Saati',
+        'return_flight_number' => 'Dönüş Uçuş Numarası', 'return_pickup_time' => 'Dönüş Alınış Saati',
+        'return_hotel_address' => 'Dönüş İçin Alınacak Otel / Adres',
+        'hotel_address' => 'Varış Otel Adı / Adresi', 'hotel_placeholder' => 'Otel adı veya tam adres',
+        'return_hotel_placeholder' => 'Dönüşte alınacak otel adı veya adres',
+        'flight_number_placeholder' => 'Örn: TK1234',
+        'booking_success' => 'Rezervasyonunuz başarıyla alındı! En kısa sürede sizinle iletişime geçeceğiz.',
+        'booking_error' => 'Rezervasyon gönderilirken bir hata oluştu. Lütfen tekrar deneyin.',
     ],
     'en' => [
         'home' => 'Home', 'tours' => 'Tours',
@@ -137,10 +146,19 @@ $defaultTexts = [
         'pickup_location' => 'Pickup Location', 'pickup_date' => 'Pickup Date', 
         'pickup_time' => 'Pickup Time', 'return_time' => 'Return Time',
         'adults_count' => 'Number of Adults', 'children_count' => 'Number of Children', 'child_seat' => 'Child Seat',
-        'notes' => 'Notes', 'send_inquiry' => 'Send Inquiry',
+        'notes' => 'Notes', 'send_inquiry' => 'Book Now',
         'full_name_placeholder' => 'Your full name', 'email_placeholder' => 'Your email address',
         'phone_placeholder' => '+1 XXX XXX XXXX', 'notes_placeholder' => 'Write your questions if any',
         'pickup_location_placeholder' => 'Hotel name or address',
+        'return_transfer' => 'I Want Return Transfer',
+        'return_flight_date' => 'Return Flight Date', 'return_flight_time' => 'Return Flight Time',
+        'return_flight_number' => 'Return Flight Number', 'return_pickup_time' => 'Return Pickup Time',
+        'return_hotel_address' => 'Return Pickup Hotel / Address',
+        'hotel_address' => 'Arrival Hotel Name / Address', 'hotel_placeholder' => 'Hotel name or full address',
+        'return_hotel_placeholder' => 'Hotel name or address for return pickup',
+        'flight_number_placeholder' => 'E.g: TK1234',
+        'booking_success' => 'Your booking has been received! We will contact you shortly.',
+        'booking_error' => 'An error occurred while sending your booking. Please try again.',
     ],
     'de' => [
         'home' => 'Startseite', 'tours' => 'Touren',
@@ -153,10 +171,19 @@ $defaultTexts = [
         'pickup_location' => 'Abholort', 'pickup_date' => 'Abholdatum', 
         'pickup_time' => 'Abholzeit', 'return_time' => 'Rückfahrzeit',
         'adults_count' => 'Anzahl Erwachsene', 'children_count' => 'Anzahl Kinder', 'child_seat' => 'Kindersitz',
-        'notes' => 'Notizen', 'send_inquiry' => 'Anfrage senden',
+        'notes' => 'Notizen', 'send_inquiry' => 'Jetzt buchen',
         'full_name_placeholder' => 'Ihr vollständiger Name', 'email_placeholder' => 'Ihre E-Mail-Adresse',
         'phone_placeholder' => '+49 XXX XXX XXXX', 'notes_placeholder' => 'Schreiben Sie Ihre Fragen',
         'pickup_location_placeholder' => 'Hotelname oder Adresse',
+        'return_transfer' => 'Rücktransfer gewünscht',
+        'return_flight_date' => 'Rückflugdatum', 'return_flight_time' => 'Rückflugzeit',
+        'return_flight_number' => 'Rückflugnummer', 'return_pickup_time' => 'Rück-Abholzeit',
+        'return_hotel_address' => 'Rück-Abholhotel / Adresse',
+        'hotel_address' => 'Ankunftshotel / Adresse', 'hotel_placeholder' => 'Hotelname oder vollständige Adresse',
+        'return_hotel_placeholder' => 'Hotelname oder Adresse für die Rückabholung',
+        'flight_number_placeholder' => 'z.B: TK1234',
+        'booking_success' => 'Ihre Buchung wurde erfolgreich empfangen! Wir werden uns in Kürze bei Ihnen melden.',
+        'booking_error' => 'Beim Senden Ihrer Buchung ist ein Fehler aufgetreten. Bitte versuchen Sie es erneut.',
     ],
 ];
 
@@ -216,6 +243,8 @@ require_once INCLUDES_PATH . 'header.php';
                 ?>
                 <div class="vehicle-select-card" data-vehicle-id="<?= (int)$vehicle['id'] ?>" 
                      data-vehicle-name="<?= e($vehicle['brand'] . ' ' . $vehicle['model']) ?>"
+                     data-vehicle-price-raw="<?= (float)$vehicle['price'] ?>"
+                     data-vehicle-currency="<?= e($vehicle['currency'] ?? 'TRY') ?>"
                      data-vehicle-capacity="<?= (int)$vehicle['capacity'] ?>"
                      data-child-seat-capacity="<?= (int)($vehicle['child_seat_capacity'] ?? 0) ?>"
                      data-aos="fade-up" data-aos-delay="<?= 100 + ($index * 50) ?>">
@@ -273,9 +302,12 @@ require_once INCLUDES_PATH . 'header.php';
                     </div>
                 </div>
                 
-                <form action="<?= langUrl('contact') ?>" method="GET" class="booking-form" id="tourInquiryForm">
+                <!-- AJAX mesaj alanı -->
+                <div id="booking-alert" style="display:none;"></div>
+                
+                <form class="booking-form" id="tourInquiryForm">
+                    <input type="hidden" name="booking_type" value="tour">
                     <input type="hidden" name="tour_id" value="<?= (int)$tour['id'] ?>">
-                    <input type="hidden" name="tour_name" value="<?= e($tour['title']) ?>">
                     <input type="hidden" name="vehicle_id" id="selected_vehicle_id" value="">
                     <input type="hidden" name="vehicle_name" id="selected_vehicle_name_input" value="">
                     
@@ -338,7 +370,52 @@ require_once INCLUDES_PATH . 'header.php';
                             </div>
                         </div>
                         
-                        <!-- Row 4: Notlar -->
+                        <!-- Varış Otel Adresi -->
+                        <div class="col-12">
+                            <label class="form-label"><?= $t['hotel_address'] ?> *</label>
+                            <input type="text" name="hotel_address" class="form-control" required placeholder="<?= $t['hotel_placeholder'] ?>">
+                        </div>
+                        
+                        <!-- Dönüş Transferi Checkbox -->
+                        <div class="col-12">
+                            <div class="form-check return-transfer-check">
+                                <input type="checkbox" class="form-check-input" name="return_transfer" id="return-transfer-checkbox" value="1">
+                                <label class="form-check-label" for="return-transfer-checkbox">
+                                    <i class="bi bi-arrow-repeat me-1"></i> <?= $t['return_transfer'] ?>
+                                </label>
+                            </div>
+                        </div>
+                        
+                        <!-- Return Transfer Fields (Hidden by default) -->
+                        <div id="return-transfer-fields" class="col-12" style="display: none;">
+                            <div class="return-transfer-section">
+                                <h5 class="return-section-title"><i class="bi bi-arrow-repeat me-2"></i><?= $t['return_transfer'] ?></h5>
+                                <div class="row gy-3">
+                                    <div class="col-lg-3 col-md-6">
+                                        <label class="form-label"><?= $t['return_flight_date'] ?> *</label>
+                                        <input type="date" name="return_flight_date" class="form-control" min="<?= date('Y-m-d') ?>">
+                                    </div>
+                                    <div class="col-lg-3 col-md-6">
+                                        <label class="form-label"><?= $t['return_flight_time'] ?> *</label>
+                                        <input type="time" name="return_flight_time" class="form-control">
+                                    </div>
+                                    <div class="col-lg-3 col-md-6">
+                                        <label class="form-label"><?= $t['return_flight_number'] ?></label>
+                                        <input type="text" name="return_flight_number" class="form-control" placeholder="<?= $t['flight_number_placeholder'] ?>">
+                                    </div>
+                                    <div class="col-lg-3 col-md-6">
+                                        <label class="form-label"><?= $t['return_pickup_time'] ?> *</label>
+                                        <input type="time" name="return_pickup_time" class="form-control">
+                                    </div>
+                                    <div class="col-12">
+                                        <label class="form-label"><?= $t['return_hotel_address'] ?> *</label>
+                                        <input type="text" name="return_hotel_address" class="form-control" placeholder="<?= $t['return_hotel_placeholder'] ?>">
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Notlar -->
                         <div class="col-12">
                             <label class="form-label"><?= $t['notes'] ?></label>
                             <textarea name="notes" class="form-control" rows="3" placeholder="<?= $t['notes_placeholder'] ?>"></textarea>
@@ -421,6 +498,8 @@ document.addEventListener('DOMContentLoaded', function() {
     
     let currentMaxCapacity = 16;
     let currentChildSeatMax = 0;
+    let currentPriceRaw = 0;
+    let currentCurrencyCode = 'TRY';
     
     // Update max values based on total capacity
     function updateMaxValues() {
@@ -472,6 +551,8 @@ document.addEventListener('DOMContentLoaded', function() {
             const vehicleName = this.dataset.vehicleName;
             const vehicleCapacity = parseInt(this.dataset.vehicleCapacity) || 16;
             const childSeatCapacity = parseInt(this.dataset.childSeatCapacity) || 0;
+            currentPriceRaw = parseFloat(this.dataset.vehiclePriceRaw) || 0;
+            currentCurrencyCode = this.dataset.vehicleCurrency || 'TRY';
             
             // Update hidden inputs and display
             selectedVehicleId.value = vehicleId;
@@ -513,6 +594,21 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
     
+    // Return transfer checkbox toggle
+    const returnCheckbox = document.getElementById('return-transfer-checkbox');
+    const returnFields = document.getElementById('return-transfer-fields');
+    if (returnCheckbox && returnFields) {
+        returnCheckbox.addEventListener('change', function() {
+            returnFields.style.display = this.checked ? 'block' : 'none';
+            // Toggle required on return fields
+            returnFields.querySelectorAll('input').forEach(inp => {
+                if (inp.name !== 'return_flight_number') {
+                    inp.required = this.checked;
+                }
+            });
+        });
+    }
+    
     // Quantity selector for +/- buttons
     document.querySelectorAll('.qty-btn').forEach(btn => {
         btn.addEventListener('click', function() {
@@ -539,16 +635,66 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     });
     
-    // Form validation
+    // AJAX Form Submit
     const inquiryForm = document.getElementById('tourInquiryForm');
+    const bookingAlert = document.getElementById('booking-alert');
+    const API_URL = '<?= SITE_URL ?>/api/booking';
+    
     if (inquiryForm) {
         inquiryForm.addEventListener('submit', function(e) {
+            e.preventDefault();
+            
+            // Araç seçimi kontrolü
             if (!selectedVehicleId.value) {
-                e.preventDefault();
-                alert('<?= $lang == "tr" ? "Lütfen bir araç seçin" : "Please select a vehicle" ?>');
+                showAlert('warning', '<?= $lang == "tr" ? "Lütfen bir araç seçin." : ($lang == "de" ? "Bitte wählen Sie ein Fahrzeug." : "Please select a vehicle.") ?>');
                 document.getElementById('booking-section').scrollIntoView({ behavior: 'smooth', block: 'start' });
+                return;
             }
+            
+            const submitBtn = inquiryForm.querySelector('.btn-submit-booking');
+            const originalText = submitBtn.innerHTML;
+            submitBtn.disabled = true;
+            submitBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span><?= $lang == "tr" ? "Gönderiliyor..." : ($lang == "de" ? "Wird gesendet..." : "Sending...") ?>';
+            
+            const formData = new FormData(inquiryForm);
+            const isReturnChecked = document.getElementById('return-transfer-checkbox')?.checked;
+            const priceToSend = isReturnChecked ? (currentPriceRaw * 2) : currentPriceRaw;
+            formData.append('total_price', priceToSend);
+            formData.append('currency', currentCurrencyCode);
+            
+            fetch(API_URL, {
+                method: 'POST',
+                body: formData
+            })
+            .then(res => res.json())
+            .then(data => {
+                if (data.success) {
+                    let msg = data.message + '<br><strong><?= $lang == "tr" ? "Rezervasyon No" : "Booking No" ?>: ' + data.booking_number + '</strong>';
+                    if (data.return_booking_number) {
+                        msg += '<br><strong><?= $lang == "tr" ? "Dönüş Rezervasyon No" : "Return Booking No" ?>: ' + data.return_booking_number + '</strong>';
+                    }
+                    showAlert('success', msg);
+                    inquiryForm.style.display = 'none';
+                } else {
+                    showAlert('danger', data.message || '<?= $t['booking_error'] ?>');
+                    submitBtn.disabled = false;
+                    submitBtn.innerHTML = originalText;
+                }
+            })
+            .catch(err => {
+                showAlert('danger', '<?= $t['booking_error'] ?>');
+                submitBtn.disabled = false;
+                submitBtn.innerHTML = originalText;
+            });
         });
+    }
+    
+    function showAlert(type, message) {
+        bookingAlert.style.display = 'block';
+        bookingAlert.className = 'alert alert-' + type + ' d-flex align-items-center';
+        const icons = { success: 'bi-check-circle-fill', danger: 'bi-exclamation-triangle-fill', warning: 'bi-exclamation-circle-fill' };
+        bookingAlert.innerHTML = '<i class="bi ' + (icons[type] || 'bi-info-circle-fill') + ' me-2 fs-4"></i><div>' + message + '</div>';
+        bookingAlert.scrollIntoView({ behavior: 'smooth', block: 'center' });
     }
 });
 </script>

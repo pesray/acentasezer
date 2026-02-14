@@ -287,6 +287,8 @@ require_once INCLUDES_PATH . 'header.php';
                 <div class="vehicle-select-card" data-vehicle-id="<?= (int)$vehicle['id'] ?>" 
                      data-vehicle-name="<?= e($vehicle['brand'] . ' ' . $vehicle['model']) ?>"
                      data-vehicle-price="<?= $currencySymbol ?><?= number_format($vehicle['price'], 0) ?>"
+                     data-vehicle-price-raw="<?= (float)$vehicle['price'] ?>"
+                     data-vehicle-currency="<?= e($vehicle['currency'] ?? 'TRY') ?>"
                      data-vehicle-capacity="<?= (int)$vehicle['capacity'] ?>"
                      data-child-seat-capacity="<?= (int)($vehicle['child_seat_capacity'] ?? 0) ?>"
                      data-aos="fade-up" data-aos-delay="<?= 100 + ($index * 50) ?>">
@@ -359,7 +361,11 @@ require_once INCLUDES_PATH . 'header.php';
                     </div>
                 </div>
                 
-                <form action="<?= langUrl('booking') ?>" method="GET" class="booking-form" id="reservationForm">
+                <!-- AJAX mesaj alanı -->
+                <div id="booking-alert" style="display:none;"></div>
+                
+                <form class="booking-form" id="reservationForm">
+                    <input type="hidden" name="booking_type" value="transfer">
                     <input type="hidden" name="transfer_id" value="<?= (int)$destination['id'] ?>">
                     <input type="hidden" name="vehicle_id" id="selected_vehicle_id" value="">
                     
@@ -661,6 +667,7 @@ document.addEventListener('DOMContentLoaded', function() {
     let currentBasePrice = '';
     let currentPriceNumeric = 0;
     let currentCurrencySymbol = '';
+    let currentCurrencyCode = 'TRY';
     
     // Vehicle selection
     vehicleCards.forEach(card => {
@@ -679,6 +686,7 @@ document.addEventListener('DOMContentLoaded', function() {
             
             // Store base price for return transfer calculation
             currentBasePrice = vehiclePrice;
+            currentCurrencyCode = this.dataset.vehicleCurrency || 'TRY';
             // Extract numeric value and currency symbol
             const priceMatch = vehiclePrice.match(/([^\d]*)(\d[\d,.]*)/);
             if (priceMatch) {
@@ -896,16 +904,67 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
     
-    // Form validation
+    // AJAX Form Submit
     const reservationForm = document.getElementById('reservationForm');
+    const bookingAlert = document.getElementById('booking-alert');
+    const API_URL = '<?= SITE_URL ?>/api/booking';
+    
     if (reservationForm) {
         reservationForm.addEventListener('submit', function(e) {
+            e.preventDefault();
+            
+            // Araç seçimi kontrolü
             if (!selectedVehicleId.value) {
-                e.preventDefault();
-                alert('<?= $lang == "tr" ? "Lütfen bir araç seçin" : "Please select a vehicle" ?>');
+                showAlert('warning', '<?= $lang == "tr" ? "Lütfen bir araç seçin." : ($lang == "de" ? "Bitte wählen Sie ein Fahrzeug." : "Please select a vehicle.") ?>');
                 document.getElementById('booking-section').scrollIntoView({ behavior: 'smooth', block: 'start' });
+                return;
             }
+            
+            const submitBtn = document.getElementById('submit-booking-btn');
+            const originalText = submitBtn.innerHTML;
+            submitBtn.disabled = true;
+            submitBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span><?= $lang == "tr" ? "Gönderiliyor..." : ($lang == "de" ? "Wird gesendet..." : "Sending...") ?>';
+            
+            const formData = new FormData(reservationForm);
+            // Fiyat bilgisini ekle (raw numeric değeri kullan, display text'ten parse etme)
+            const isReturnChecked = document.getElementById('return-transfer-checkbox')?.checked;
+            const priceToSend = isReturnChecked ? (currentPriceNumeric * 2) : currentPriceNumeric;
+            formData.append('total_price', priceToSend || 0);
+            formData.append('currency', currentCurrencyCode);
+            
+            fetch(API_URL, {
+                method: 'POST',
+                body: formData
+            })
+            .then(res => res.json())
+            .then(data => {
+                if (data.success) {
+                    let msg = data.message + '<br><strong><?= $lang == "tr" ? "Rezervasyon No" : "Booking No" ?>: ' + data.booking_number + '</strong>';
+                    if (data.return_booking_number) {
+                        msg += '<br><strong><?= $lang == "tr" ? "Dönüş Rezervasyon No" : "Return Booking No" ?>: ' + data.return_booking_number + '</strong>';
+                    }
+                    showAlert('success', msg);
+                    reservationForm.style.display = 'none';
+                } else {
+                    showAlert('danger', data.message || '<?= $lang == "tr" ? "Bir hata oluştu." : "An error occurred." ?>');
+                    submitBtn.disabled = false;
+                    submitBtn.innerHTML = originalText;
+                }
+            })
+            .catch(err => {
+                showAlert('danger', '<?= $lang == "tr" ? "Bir hata oluştu. Lütfen tekrar deneyin." : "An error occurred. Please try again." ?>');
+                submitBtn.disabled = false;
+                submitBtn.innerHTML = originalText;
+            });
         });
+    }
+    
+    function showAlert(type, message) {
+        bookingAlert.style.display = 'block';
+        bookingAlert.className = 'alert alert-' + type + ' d-flex align-items-center';
+        const icons = { success: 'bi-check-circle-fill', danger: 'bi-exclamation-triangle-fill', warning: 'bi-exclamation-circle-fill' };
+        bookingAlert.innerHTML = '<i class="bi ' + (icons[type] || 'bi-info-circle-fill') + ' me-2 fs-4"></i><div>' + message + '</div>';
+        bookingAlert.scrollIntoView({ behavior: 'smooth', block: 'center' });
     }
 });
 </script>

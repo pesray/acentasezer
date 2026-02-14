@@ -99,6 +99,11 @@ $adminName = $_SESSION['admin_name'] ?? 'Admin';
             width: 1.25rem;
         }
         
+        .sidebar-nav .nav-sub-link {
+            padding-left: 3rem !important;
+            font-size: 0.9rem;
+        }
+        
         /* Main Content */
         .main-content {
             margin-left: var(--sidebar-width);
@@ -219,9 +224,18 @@ $adminName = $_SESSION['admin_name'] ?? 'Admin';
         <a href="<?= ADMIN_URL ?>/vehicles.php" class="nav-link <?= $currentPage === 'vehicles' ? 'active' : '' ?>">
             <i class="bi bi-car-front"></i> Araçlar
         </a>
-        <a href="<?= ADMIN_URL ?>/bookings.php" class="nav-link <?= $currentPage === 'bookings' ? 'active' : '' ?>">
-            <i class="bi bi-calendar-check"></i> Rezervasyonlar
+        <a href="#bookingsSubmenu" class="nav-link d-flex justify-content-between align-items-center <?= $currentPage === 'bookings' ? 'active' : '' ?>" data-bs-toggle="collapse" role="button" aria-expanded="<?= $currentPage === 'bookings' ? 'true' : 'false' ?>">
+            <span><i class="bi bi-calendar-check"></i> Rezervasyonlar</span>
+            <i class="bi bi-chevron-down" style="font-size:0.7rem;"></i>
         </a>
+        <div class="collapse <?= $currentPage === 'bookings' ? 'show' : '' ?>" id="bookingsSubmenu">
+            <a href="<?= ADMIN_URL ?>/bookings.php?view=arrival" class="nav-link nav-sub-link <?= ($currentPage === 'bookings' && ($_GET['view'] ?? '') === 'arrival') ? 'active' : '' ?>">
+                <i class="bi bi-box-arrow-in-down-right"></i> Geliş Rezervasyonları
+            </a>
+            <a href="<?= ADMIN_URL ?>/bookings.php?view=return" class="nav-link nav-sub-link <?= ($currentPage === 'bookings' && ($_GET['view'] ?? '') === 'return') ? 'active' : '' ?>">
+                <i class="bi bi-box-arrow-up-right"></i> Dönüş Rezervasyonları
+            </a>
+        </div>
         
         <div class="nav-section">Blog & Medya</div>
         <a href="<?= ADMIN_URL ?>/media.php" class="nav-link <?= $currentPage === 'media' ? 'active' : '' ?>">
