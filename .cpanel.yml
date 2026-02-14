@@ -3,4 +3,7 @@ deployment:
   tasks:
     - export DEPLOYPATH=/home/ahmetkes/sunlineviptransfer.com/app
     - /bin/mkdir -p $DEPLOYPATH
+    # app içini komple temizle (senkron için)
+    - /bin/rm -rf $DEPLOYPATH/*
+    # tour-website içeriğini birebir bas (gizli dosyalar dahil)
     - /bin/cp -a tour-website/. $DEPLOYPATH/
