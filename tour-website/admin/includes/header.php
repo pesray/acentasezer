@@ -229,11 +229,14 @@ $adminName = $_SESSION['admin_name'] ?? 'Admin';
             <i class="bi bi-chevron-down" style="font-size:0.7rem;"></i>
         </a>
         <div class="collapse <?= $currentPage === 'bookings' ? 'show' : '' ?>" id="bookingsSubmenu">
-            <a href="<?= ADMIN_URL ?>/bookings.php?view=arrival" class="nav-link nav-sub-link <?= ($currentPage === 'bookings' && ($_GET['view'] ?? '') === 'arrival') ? 'active' : '' ?>">
+            <a href="<?= ADMIN_URL ?>/bookings.php?view=arrival" class="nav-link nav-sub-link <?= ($currentPage === 'bookings' && ($_GET['view'] ?? 'arrival') === 'arrival') ? 'active' : '' ?>">
                 <i class="bi bi-box-arrow-in-down-right"></i> Geliş Rezervasyonları
             </a>
             <a href="<?= ADMIN_URL ?>/bookings.php?view=return" class="nav-link nav-sub-link <?= ($currentPage === 'bookings' && ($_GET['view'] ?? '') === 'return') ? 'active' : '' ?>">
                 <i class="bi bi-box-arrow-up-right"></i> Dönüş Rezervasyonları
+            </a>
+            <a href="<?= ADMIN_URL ?>/bookings.php?view=all" class="nav-link nav-sub-link <?= ($currentPage === 'bookings' && ($_GET['view'] ?? '') === 'all') ? 'active' : '' ?>">
+                <i class="bi bi-list-ul"></i> Tüm Rezervasyonlar
             </a>
         </div>
         

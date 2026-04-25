@@ -3,19 +3,34 @@
  * Bookings API - AJAX CRUD işlemleri
  */
 
+// Yolcuları kaydet (insert) — booking_id ve booking_number gerekli
+function savePassengers($db, $bookingId, $bookingNumber, $adultNames, $childNames) {
+    $db->prepare("DELETE FROM booking_passengers WHERE booking_id = ?")->execute([$bookingId]);
+    $ins = $db->prepare("INSERT INTO booking_passengers (booking_id, booking_number, passenger_type, full_name, sort_order) VALUES (?, ?, ?, ?, ?)");
+    $i = 0;
+    foreach ($adultNames as $name) {
+        $name = trim($name);
+        if ($name === '') continue;
+        $ins->execute([$bookingId, $bookingNumber, 'adult', $name, $i++]);
+    }
+    $i = 0;
+    foreach ($childNames as $name) {
+        $name = trim($name);
+        if ($name === '') continue;
+        $ins->execute([$bookingId, $bookingNumber, 'child', $name, $i++]);
+    }
+}
+
 switch ($action) {
 
     // === Rezervasyon Oluştur (Manuel) ===
     case 'create':
         try {
             $destinationId = (int)($_POST['destination_id'] ?? 0);
-            $vehicleId = (int)($_POST['vehicle_id'] ?? 0);
-            $bookingDirection = ($_POST['booking_direction'] ?? 'outbound') === 'return' ? 'return' : 'outbound';
+            $vehicleId     = (int)($_POST['vehicle_id'] ?? 0);
+            $hasReturn     = !empty($_POST['has_return']);
 
-            $prefix = 'TRF';
-            $bookingNumber = $prefix . '-' . date('Ymd') . '-' . str_pad(mt_rand(1, 9999), 4, '0', STR_PAD_LEFT);
-
-            $stmt = $db->prepare("
+            $insertBooking = $db->prepare("
                 INSERT INTO bookings (
                     booking_number, booking_type, booking_status, booking_direction,
                     destination_id, vehicle_id,
@@ -34,26 +49,70 @@ switch ($action) {
                     ?, ?, NOW()
                 )
             ");
-            $stmt->execute([
-                $bookingNumber, $bookingDirection,
+
+            $commonFields = [
                 $destinationId ?: null, $vehicleId ?: null,
                 trim($_POST['customer_name'] ?? ''),
                 trim($_POST['customer_email'] ?? ''),
                 trim($_POST['customer_phone'] ?? ''),
-                ($_POST['flight_date'] ?? '') ?: null,
-                ($_POST['flight_time'] ?? '') ?: null,
-                trim($_POST['flight_number'] ?? '') ?: null,
-                trim($_POST['hotel_address'] ?? '') ?: null,
-                ($_POST['pickup_time'] ?? '') ?: null,
+            ];
+            $passengerFields = [
                 (int)($_POST['adults'] ?? 1),
                 (int)($_POST['children'] ?? 0),
                 (int)($_POST['child_seat'] ?? 0),
-                (float)($_POST['total_price'] ?? 0),
-                trim($_POST['currency'] ?? 'TRY'),
+            ];
+            $noteFields = [
                 trim($_POST['notes'] ?? '') ?: null,
                 trim($_POST['admin_notes'] ?? '') ?: null,
-            ]);
-            jsonResponse(true, 'Rezervasyon oluşturuldu: #' . $bookingNumber, ['booking_number' => $bookingNumber]);
+            ];
+
+            // Geliş kaydı
+            $numOutbound = 'TRF-' . date('Ymd') . '-' . str_pad(mt_rand(1, 9999), 4, '0', STR_PAD_LEFT);
+            $insertBooking->execute(array_merge(
+                [$numOutbound, 'outbound'],
+                $commonFields,
+                [
+                    ($_POST['flight_date'] ?? '') ?: null,
+                    ($_POST['flight_time'] ?? '') ?: null,
+                    trim($_POST['flight_number'] ?? '') ?: null,
+                    trim($_POST['hotel_address'] ?? '') ?: null,
+                    null, // pickup_time geliş için yok
+                ],
+                $passengerFields,
+                [(float)($_POST['total_price'] ?? 0), trim($_POST['currency'] ?? 'TRY')],
+                $noteFields
+            ));
+
+            $outboundId = (int)$db->lastInsertId();
+            $adultNames = $_POST['passenger_adult_name'] ?? [];
+            $childNames = $_POST['passenger_child_name'] ?? [];
+            savePassengers($db, $outboundId, $numOutbound, $adultNames, $childNames);
+
+            $message = 'Geliş rezervasyonu oluşturuldu: #' . $numOutbound;
+
+            // Dönüş kaydı (isteğe bağlı)
+            if ($hasReturn) {
+                $numReturn = 'TRF-' . date('Ymd') . '-' . str_pad(mt_rand(1, 9999), 4, '0', STR_PAD_LEFT);
+                $insertBooking->execute(array_merge(
+                    [$numReturn, 'return'],
+                    $commonFields,
+                    [
+                        ($_POST['return_flight_date'] ?? '') ?: null,
+                        ($_POST['return_flight_time'] ?? '') ?: null,
+                        trim($_POST['return_flight_number'] ?? '') ?: null,
+                        trim($_POST['return_hotel_address'] ?? '') ?: null,
+                        ($_POST['return_pickup_time'] ?? '') ?: null,
+                    ],
+                    $passengerFields,
+                    [(float)($_POST['return_total_price'] ?? 0), trim($_POST['return_currency'] ?? $_POST['currency'] ?? 'TRY')],
+                    $noteFields
+                ));
+                $returnId = (int)$db->lastInsertId();
+                savePassengers($db, $returnId, $numReturn, $adultNames, $childNames);
+                $message .= ' | Dönüş: #' . $numReturn;
+            }
+
+            jsonResponse(true, $message);
         } catch (Exception $e) {
             jsonResponse(false, 'Hata: ' . $e->getMessage());
         }
@@ -99,6 +158,14 @@ switch ($action) {
                 $_POST['booking_status'] ?? 'pending',
                 $id
             ]);
+            // Yolcuları güncelle
+            $numStmt = $db->prepare("SELECT booking_number FROM bookings WHERE id = ?");
+            $numStmt->execute([$id]);
+            $bookingNum = $numStmt->fetchColumn() ?: '';
+            $adultNames = $_POST['passenger_adult_name'] ?? [];
+            $childNames = $_POST['passenger_child_name'] ?? [];
+            savePassengers($db, $id, $bookingNum, $adultNames, $childNames);
+
             jsonResponse(true, 'Rezervasyon güncellendi.');
         } catch (Exception $e) {
             jsonResponse(false, 'Hata: ' . $e->getMessage());
@@ -153,6 +220,39 @@ switch ($action) {
             jsonResponse(true, 'Okundu olarak işaretlendi');
         } catch (Exception $e) {
             jsonResponse(false, 'Güncelleme hatası: ' . $e->getMessage());
+        }
+        break;
+
+    // === Yolcuları Getir ===
+    case 'get_passengers':
+        $id = (int)($_POST['id'] ?? 0);
+        if (!$id) jsonResponse(false, 'Geçersiz ID');
+        try {
+            $stmt = $db->prepare("SELECT passenger_type, full_name, sort_order FROM booking_passengers WHERE booking_id = ? ORDER BY passenger_type DESC, sort_order ASC");
+            $stmt->execute([$id]);
+            jsonResponse(true, 'OK', ['passengers' => $stmt->fetchAll(PDO::FETCH_ASSOC)]);
+        } catch (Exception $e) {
+            jsonResponse(false, 'Hata: ' . $e->getMessage());
+        }
+        break;
+
+    // === Operasyonel Alan Güncelle ===
+    case 'update_ops':
+        $id    = (int)($_POST['id']    ?? 0);
+        $field = $_POST['field'] ?? '';
+        $value = $_POST['value'] ?? '';
+
+        $allowed = ['is_completed', 'is_outsourced', 'outsource_price'];
+        if (!$id || !in_array($field, $allowed)) jsonResponse(false, 'Geçersiz parametre');
+
+        try {
+            $val = $field === 'outsource_price'
+                ? ($value === '' ? null : (float)$value)
+                : (int)(bool)$value;
+            $db->prepare("UPDATE bookings SET $field = ?, updated_at = NOW() WHERE id = ?")->execute([$val, $id]);
+            jsonResponse(true, 'Güncellendi');
+        } catch (Exception $e) {
+            jsonResponse(false, 'Hata: ' . $e->getMessage());
         }
         break;
 
