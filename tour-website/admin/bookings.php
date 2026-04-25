@@ -11,11 +11,8 @@ $db = getDB();
 $view = $_GET['view'] ?? 'arrival';
 if (!in_array($view, ['arrival', 'return', 'all'])) $view = 'arrival';
 
-$viewTitle = match($view) {
-    'return' => 'Dönüş Rezervasyonları',
-    'all'    => 'Tüm Rezervasyonlar',
-    default  => 'Geliş Rezervasyonları',
-};
+$viewTitleMap = ['return' => 'Dönüş Rezervasyonları', 'all' => 'Tüm Rezervasyonlar'];
+$viewTitle = $viewTitleMap[$view] ?? 'Geliş Rezervasyonları';
 
 $statusLabels = [
     'pending'   => ['Onay Bekliyor', 'warning', 'bi-hourglass-split'],
@@ -29,11 +26,13 @@ $directionLabels = [
 ];
 
 // WHERE koşulu view'a göre
-$dirWhere = match($view) {
-    'return' => "AND COALESCE(b.booking_direction,'outbound') = 'return'",
-    'all'    => '',
-    default  => "AND COALESCE(b.booking_direction,'outbound') = 'outbound'",
-};
+if ($view === 'return') {
+    $dirWhere = "AND COALESCE(b.booking_direction,'outbound') = 'return'";
+} elseif ($view === 'all') {
+    $dirWhere = '';
+} else {
+    $dirWhere = "AND COALESCE(b.booking_direction,'outbound') = 'outbound'";
+}
 
 // Onay bekleyen rezervasyonlar
 $pendingBookings = $db->query("
@@ -367,16 +366,16 @@ require_once __DIR__ . '/includes/header.php';
                         <div class="form-check mb-1">
                             <input type="checkbox" class="form-check-input ops-check" id="comp-<?= $out['id'] ?>"
                                    data-id="<?= $out['id'] ?>" data-field="is_completed"
-                                   <?= $out['is_completed'] ? 'checked' : '' ?>>
+                                   <?= !empty($out['is_completed']) ? 'checked' : '' ?>>
                             <label class="form-check-label small" for="comp-<?= $out['id'] ?>">İş yapıldı</label>
                         </div>
                         <div class="form-check">
                             <input type="checkbox" class="form-check-input ops-check ops-out-check" id="out-<?= $out['id'] ?>"
                                    data-id="<?= $out['id'] ?>" data-field="is_outsourced"
-                                   <?= $out['is_outsourced'] ? 'checked' : '' ?>>
+                                   <?= !empty($out['is_outsourced']) ? 'checked' : '' ?>>
                             <label class="form-check-label small" for="out-<?= $out['id'] ?>">Dışarıya verildi</label>
                         </div>
-                        <div class="ops-price-wrap mt-1" <?= $out['is_outsourced'] ? '' : 'style="display:none;"' ?>>
+                        <div class="ops-price-wrap mt-1" <?= !empty($out['is_outsourced']) ? '' : 'style="display:none;"' ?>>
                             <input type="number" class="form-control form-control-sm ops-price-input"
                                    data-id="<?= $out['id'] ?>"
                                    value="<?= e($out['outsource_price'] ?? '') ?>"
@@ -390,16 +389,16 @@ require_once __DIR__ . '/includes/header.php';
                         <div class="form-check mb-1">
                             <input type="checkbox" class="form-check-input ops-check" id="comp-<?= $ret['id'] ?>"
                                    data-id="<?= $ret['id'] ?>" data-field="is_completed"
-                                   <?= $ret['is_completed'] ? 'checked' : '' ?>>
+                                   <?= !empty($ret['is_completed']) ? 'checked' : '' ?>>
                             <label class="form-check-label small" for="comp-<?= $ret['id'] ?>">İş yapıldı</label>
                         </div>
                         <div class="form-check">
                             <input type="checkbox" class="form-check-input ops-check ops-out-check" id="out-<?= $ret['id'] ?>"
                                    data-id="<?= $ret['id'] ?>" data-field="is_outsourced"
-                                   <?= $ret['is_outsourced'] ? 'checked' : '' ?>>
+                                   <?= !empty($ret['is_outsourced']) ? 'checked' : '' ?>>
                             <label class="form-check-label small" for="out-<?= $ret['id'] ?>">Dışarıya verildi</label>
                         </div>
-                        <div class="ops-price-wrap mt-1" <?= $ret['is_outsourced'] ? '' : 'style="display:none;"' ?>>
+                        <div class="ops-price-wrap mt-1" <?= !empty($ret['is_outsourced']) ? '' : 'style="display:none;"' ?>>
                             <input type="number" class="form-control form-control-sm ops-price-input"
                                    data-id="<?= $ret['id'] ?>"
                                    value="<?= e($ret['outsource_price'] ?? '') ?>"
