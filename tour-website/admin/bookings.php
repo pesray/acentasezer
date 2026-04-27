@@ -141,6 +141,10 @@ require_once __DIR__ . '/includes/header.php';
 .return-section { background:#f0f7ff; border:1px solid #b8d4f0; border-radius:.5rem; padding:1rem 1.25rem; }
 .view-tab.active { font-weight:600; }
 
+/* Ops cell compact */
+.ops-price-input { width: 60px !important; font-size: .72rem !important; padding: 1px 4px !important; height: auto !important; }
+.ops-name-display { font-size: .72rem !important; line-height: 1.3; }
+
 /* Passenger steppers */
 .pax-stepper { width: 130px; }
 .pax-stepper .form-control { max-width: 44px; min-width: 44px; text-align: center; padding: 0; font-weight: 600; }
@@ -370,6 +374,7 @@ require_once __DIR__ . '/includes/header.php';
                         <div class="form-check">
                             <input type="checkbox" class="form-check-input ops-check ops-out-check" id="out-<?= $out['id'] ?>"
                                    data-id="<?= $out['id'] ?>" data-field="is_outsourced"
+                                   data-outsource-name="<?= e($out['outsource_name'] ?? '') ?>"
                                    <?= !empty($out['is_outsourced']) ? 'checked' : '' ?>>
                             <label class="form-check-label small" for="out-<?= $out['id'] ?>">Dışarıya verildi</label>
                         </div>
@@ -378,6 +383,11 @@ require_once __DIR__ . '/includes/header.php';
                                    data-id="<?= $out['id'] ?>"
                                    value="<?= e($out['outsource_price'] ?? '') ?>"
                                    placeholder="Tutar..." min="0" step="0.01" style="width:90px;">
+                            <?php if (!empty($out['outsource_name'])): ?>
+                            <small class="ops-name-display text-muted d-block mt-1"><?= e($out['outsource_name']) ?></small>
+                            <?php else: ?>
+                            <small class="ops-name-display text-muted d-block mt-1" style="display:none!important;"></small>
+                            <?php endif; ?>
                         </div>
                     </div>
                 <?php else: ?>-<?php endif; ?></td>
@@ -393,6 +403,7 @@ require_once __DIR__ . '/includes/header.php';
                         <div class="form-check">
                             <input type="checkbox" class="form-check-input ops-check ops-out-check" id="out-<?= $ret['id'] ?>"
                                    data-id="<?= $ret['id'] ?>" data-field="is_outsourced"
+                                   data-outsource-name="<?= e($ret['outsource_name'] ?? '') ?>"
                                    <?= !empty($ret['is_outsourced']) ? 'checked' : '' ?>>
                             <label class="form-check-label small" for="out-<?= $ret['id'] ?>">Dışarıya verildi</label>
                         </div>
@@ -401,6 +412,11 @@ require_once __DIR__ . '/includes/header.php';
                                    data-id="<?= $ret['id'] ?>"
                                    value="<?= e($ret['outsource_price'] ?? '') ?>"
                                    placeholder="Tutar..." min="0" step="0.01" style="width:90px;">
+                            <?php if (!empty($ret['outsource_name'])): ?>
+                            <small class="ops-name-display text-muted d-block mt-1"><?= e($ret['outsource_name']) ?></small>
+                            <?php else: ?>
+                            <small class="ops-name-display text-muted d-block mt-1" style="display:none!important;"></small>
+                            <?php endif; ?>
                         </div>
                     </div>
                 <?php else: ?>-<?php endif; ?></td>
@@ -446,6 +462,9 @@ require_once __DIR__ . '/includes/header.php';
                             <button type="button" class="btn btn-outline-primary" style="padding:2px 6px;font-size:.7rem;" onclick="openBookingModal(<?= $out['id'] ?>)" title="Geliş Detayı">
                                 <i class="bi bi-box-arrow-in-down-right"></i>
                             </button>
+                            <button type="button" class="btn btn-outline-secondary" style="padding:2px 6px;font-size:.7rem;" onclick="openOpsStatus(<?= $out['id'] ?>)" title="İş Durumu">
+                                <i class="bi bi-clipboard-check"></i>
+                            </button>
                             <button type="button" class="btn btn-outline-danger" style="padding:2px 6px;font-size:.7rem;" onclick="deleteBooking(<?= $out['id'] ?>)" title="Geliş Sil">
                                 <i class="bi bi-trash"></i>
                             </button>
@@ -455,6 +474,9 @@ require_once __DIR__ . '/includes/header.php';
                         <div class="btn-group" style="width:fit-content;">
                             <button type="button" class="btn btn-outline-info" style="padding:2px 6px;font-size:.7rem;" onclick="openBookingModal(<?= $ret['id'] ?>)" title="Dönüş Detayı">
                                 <i class="bi bi-box-arrow-up-right"></i>
+                            </button>
+                            <button type="button" class="btn btn-outline-secondary" style="padding:2px 6px;font-size:.7rem;" onclick="openOpsStatus(<?= $ret['id'] ?>)" title="İş Durumu">
+                                <i class="bi bi-clipboard-check"></i>
                             </button>
                             <button type="button" class="btn btn-outline-danger" style="padding:2px 6px;font-size:.7rem;" onclick="deleteBooking(<?= $ret['id'] ?>)" title="Dönüş Sil">
                                 <i class="bi bi-trash"></i>
@@ -531,6 +553,9 @@ require_once __DIR__ . '/includes/header.php';
                         <div class="btn-group btn-group-sm">
                             <button type="button" class="btn btn-outline-primary" onclick="openBookingModal(<?= $b['id'] ?>)" title="Detay / Düzenle">
                                 <i class="bi bi-eye"></i>
+                            </button>
+                            <button type="button" class="btn btn-outline-secondary" onclick="openOpsStatus(<?= $b['id'] ?>)" title="İş Durumu">
+                                <i class="bi bi-clipboard-check"></i>
                             </button>
                             <button type="button" class="btn btn-outline-danger" onclick="deleteBooking(<?= $b['id'] ?>)" title="Sil">
                                 <i class="bi bi-trash"></i>
@@ -984,6 +1009,113 @@ require_once __DIR__ . '/includes/header.php';
     </div>
 </div>
 
+<!-- ===================== DIŞARIYA VERME MODALı ===================== -->
+<div class="modal fade" id="outsourceModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header" style="background:linear-gradient(135deg,#f6c23e,#d4a017);color:#fff;">
+                <h5 class="modal-title"><i class="bi bi-person-check me-2"></i>Dışarıya Verildi</h5>
+                <button type="button" class="btn-close" style="filter:brightness(0) invert(1);" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <input type="hidden" id="outsource-booking-id">
+
+                <!-- Rezervasyon özeti -->
+                <div class="rounded p-3 mb-4" style="background:#fffbf0;border:1px solid #f6c23e;">
+                    <div class="row g-2 mb-2">
+                        <div class="col-6 col-md-3">
+                            <div class="text-muted" style="font-size:.72rem;text-transform:uppercase;letter-spacing:.4px;">Rezervasyon No</div>
+                            <div class="fw-bold text-primary" id="ob-number">—</div>
+                        </div>
+                        <div class="col-6 col-md-3">
+                            <div class="text-muted" style="font-size:.72rem;text-transform:uppercase;letter-spacing:.4px;">Müşteri</div>
+                            <div class="fw-semibold" id="ob-customer">—</div>
+                        </div>
+                        <div class="col-6 col-md-3">
+                            <div class="text-muted" style="font-size:.72rem;text-transform:uppercase;letter-spacing:.4px;">Tarih</div>
+                            <div class="fw-semibold" id="ob-date">—</div>
+                        </div>
+                        <div class="col-6 col-md-3">
+                            <div class="text-muted" style="font-size:.72rem;text-transform:uppercase;letter-spacing:.4px;">Saat</div>
+                            <div class="fw-semibold" id="ob-time">—</div>
+                        </div>
+                        <div class="col-6 col-md-3">
+                            <div class="text-muted" style="font-size:.72rem;text-transform:uppercase;letter-spacing:.4px;">Otel / Adres</div>
+                            <div class="fw-semibold" id="ob-hotel">—</div>
+                        </div>
+                        <div class="col-6 col-md-3" id="ob-pickup-wrap" style="display:none;">
+                            <div class="text-muted" style="font-size:.72rem;text-transform:uppercase;letter-spacing:.4px;">Otelden Alış Saati</div>
+                            <div class="fw-bold" style="color:#1c4b56;" id="ob-pickup-time">—</div>
+                        </div>
+                        <div class="col-6 col-md-3">
+                            <div class="text-muted" style="font-size:.72rem;text-transform:uppercase;letter-spacing:.4px;">Araç</div>
+                            <div class="fw-semibold" id="ob-vehicle">—</div>
+                        </div>
+                        <div class="col-6 col-md-3">
+                            <div class="text-muted" style="font-size:.72rem;text-transform:uppercase;letter-spacing:.4px;">Kişi</div>
+                            <div class="fw-semibold" id="ob-pax">—</div>
+                        </div>
+                        <div class="col-6 col-md-3">
+                            <div class="text-muted" style="font-size:.72rem;text-transform:uppercase;letter-spacing:.4px;">Uçuş No</div>
+                            <div class="fw-semibold" id="ob-flight">—</div>
+                        </div>
+                    </div>
+                    <div class="pt-2 mt-1" style="border-top:1px dashed #f6c23e;">
+                        <span class="text-muted" style="font-size:.75rem;">Rezervasyon Tutarı</span>
+                        <span id="ob-price" class="fw-bold ms-2" style="font-size:1.5rem;color:#1c4b56;letter-spacing:.5px;">—</span>
+                    </div>
+                </div>
+
+                <!-- Inputlar yan yana -->
+                <div class="row g-3">
+                    <div class="col-md-5">
+                        <label class="form-label fw-semibold">Ad Soyad / Firma</label>
+                        <input type="text" id="outsource-name-input" class="form-control" placeholder="Kişi veya firma adı...">
+                    </div>
+                    <div class="col-md-3" id="outsource-pickup-wrap" style="display:none;">
+                        <label class="form-label fw-semibold">Otelden Alış Saati</label>
+                        <input type="time" id="outsource-pickup-input" class="form-control">
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label fw-semibold">Tutar</label>
+                        <input type="number" id="outsource-price-input" class="form-control" min="0" step="0.01" placeholder="0.00">
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">İptal</button>
+                <button type="button" class="btn btn-warning fw-bold" id="outsource-save-btn">
+                    <i class="bi bi-check-lg me-1"></i>Kaydet
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- ===================== İŞ DURUMU MODALı ===================== -->
+<div class="modal fade" id="opsStatusModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header" style="background:linear-gradient(135deg,#1cc88a,#13855c);color:#fff;">
+                <h5 class="modal-title"><i class="bi bi-clipboard-check me-2"></i>İş Durumu</h5>
+                <button type="button" class="btn-close" style="filter:brightness(0) invert(1);" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <!-- Rezervasyon Bilgileri -->
+                <div class="rounded p-3 mb-4" style="background:#f0f7ff;border:1px solid #b8d4f0;">
+                    <div class="row g-2" id="ops-booking-info">
+                        <div class="col-12 text-center py-2"><span class="spinner-border spinner-border-sm"></span></div>
+                    </div>
+                </div>
+                <!-- İş Durumu -->
+                <div id="ops-status-body">
+                    <div class="text-center py-3"><span class="spinner-border spinner-border-sm"></span></div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
 <script>
 const bookingsData = <?= json_encode(array_map(function($b) {
     return [
@@ -1358,28 +1490,261 @@ function updateOps(id, field, value) {
         .catch(() => showToast('Bir hata oluştu.', false));
 }
 
-// "Dışarıya verildi" checkbox → fiyat inputunu göster/gizle + kaydet
+// Ops checkbox değişimi
+var outsourceSaved    = false;
+var outsourceChkRef   = null;
+
 document.addEventListener('change', function(e) {
     if (!e.target.classList.contains('ops-check')) return;
     const id    = e.target.dataset.id;
     const field = e.target.dataset.field;
-    const value = e.target.checked ? 1 : 0;
 
     if (field === 'is_outsourced') {
-        const wrap = e.target.closest('.ops-cell').querySelector('.ops-price-wrap');
-        if (wrap) wrap.style.display = e.target.checked ? '' : 'none';
-        if (!e.target.checked) {
-            const priceInput = e.target.closest('.ops-cell').querySelector('.ops-price-input');
-            if (priceInput) { priceInput.value = ''; updateOps(id, 'outsource_price', ''); }
+        if (e.target.checked) {
+            // Modal aç, mevcut değerleri doldur
+            outsourceSaved  = false;
+            outsourceChkRef = e.target;
+            document.getElementById('outsource-booking-id').value  = id;
+            document.getElementById('outsource-name-input').value  = e.target.dataset.outsourceName || '';
+            const priceInp = e.target.closest('.ops-cell').querySelector('.ops-price-input');
+            document.getElementById('outsource-price-input').value = priceInp ? priceInp.value : '';
+
+            // Rezervasyon özeti doldur
+            var bData = bookingsData.find(function(x) { return x.id == id; });
+            if (bData) {
+                document.getElementById('ob-number').textContent  = '#' + bData.booking_number;
+                document.getElementById('ob-customer').textContent = bData.customer_name || '—';
+                document.getElementById('ob-hotel').textContent   = bData.hotel_address || '—';
+                document.getElementById('ob-vehicle').textContent = bData.vehicle_name  || '—';
+                document.getElementById('ob-flight').textContent  = bData.flight_number || '—';
+
+                var adults = (bData.adults || 1);
+                var children = (bData.children || 0);
+                var paxStr = adults + ' Yetişkin' + (children > 0 ? ' + ' + children + ' Çocuk' : '');
+                document.getElementById('ob-pax').textContent = paxStr;
+
+                var rawDate = bData.flight_date || bData.pickup_date || '';
+                if (rawDate) {
+                    var d2 = new Date(rawDate);
+                    rawDate = d2.toLocaleDateString('tr-TR', {day:'2-digit', month:'2-digit', year:'numeric'});
+                }
+                document.getElementById('ob-date').textContent = rawDate || '—';
+
+                var rawTime = bData.flight_time || '';
+                if (rawTime) rawTime = rawTime.substring(0, 5);
+                document.getElementById('ob-time').textContent = rawTime || '—';
+
+                var priceVal = bData.total_price > 0
+                    ? (parseFloat(bData.total_price).toLocaleString('tr-TR', {minimumFractionDigits:2}) + ' ' + (bData.currency || 'EUR'))
+                    : '—';
+                document.getElementById('ob-price').textContent = priceVal;
+
+                // Dönüş rezervasyonu: alış saati alanlarını göster
+                var isReturn = bData.booking_direction === 'return';
+                document.getElementById('ob-pickup-wrap').style.display      = isReturn ? '' : 'none';
+                document.getElementById('outsource-pickup-wrap').style.display = isReturn ? '' : 'none';
+                if (isReturn) {
+                    var pickupVal = bData.pickup_time ? bData.pickup_time.substring(0, 5) : '';
+                    document.getElementById('ob-pickup-time').textContent      = pickupVal || '—';
+                    document.getElementById('outsource-pickup-input').value    = pickupVal;
+                } else {
+                    document.getElementById('outsource-pickup-input').value = '';
+                }
+            }
+
+            new bootstrap.Modal(document.getElementById('outsourceModal')).show();
+        } else {
+            // Temizle
+            const cell = e.target.closest('.ops-cell');
+            const wrap = cell.querySelector('.ops-price-wrap');
+            const priceInp = cell.querySelector('.ops-price-input');
+            const nameDisp = cell.querySelector('.ops-name-display');
+            if (wrap) wrap.style.display = 'none';
+            if (priceInp) priceInp.value = '';
+            if (nameDisp) { nameDisp.textContent = ''; nameDisp.style.display = 'none'; }
+            e.target.dataset.outsourceName = '';
+            updateOps(id, 'is_outsourced', 0);
+            updateOps(id, 'outsource_price', '');
+            updateOps(id, 'outsource_name', '');
         }
+        return;
     }
 
-    updateOps(id, field, value);
+    updateOps(id, field, e.target.checked ? 1 : 0);
 });
 
-// Dışarıya verildi fiyat inputu → blur'da kaydet
+// Modal iptal → checkbox'ı geri al
+document.getElementById('outsourceModal').addEventListener('hide.bs.modal', function() {
+    if (!outsourceSaved && outsourceChkRef) {
+        outsourceChkRef.checked = false;
+    }
+    outsourceChkRef = null;
+});
+
+// Dışarıya verme kaydet
+document.getElementById('outsource-save-btn').addEventListener('click', function() {
+    const id         = document.getElementById('outsource-booking-id').value;
+    const name       = document.getElementById('outsource-name-input').value.trim();
+    const price      = document.getElementById('outsource-price-input').value;
+    const pickupWrap = document.getElementById('outsource-pickup-wrap');
+    const pickupTime = (pickupWrap && pickupWrap.style.display !== 'none')
+                       ? document.getElementById('outsource-pickup-input').value
+                       : '';
+    const btn   = this;
+
+    const fd = new FormData();
+    fd.append('action', 'save_outsource');
+    fd.append('id', id);
+    fd.append('outsource_name', name);
+    fd.append('outsource_price', price);
+    if (pickupTime) fd.append('outsource_pickup_time', pickupTime);
+    fd.append('csrf_token', csrfToken);
+
+    btn.disabled = true;
+    btn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span>Kaydediliyor...';
+
+    fetch(apiUrl, {method:'POST', body:fd})
+        .then(function(r) { return r.json(); })
+        .then(function(d) {
+            showToast(d.message, d.success);
+            if (d.success) {
+                outsourceSaved = true;
+                // Tablodaki price input ve name display'i güncelle
+                const priceInp = document.querySelector('.ops-price-input[data-id="' + id + '"]');
+                if (priceInp) {
+                    priceInp.value = price;
+                    const wrap = priceInp.closest('.ops-price-wrap');
+                    if (wrap) wrap.style.display = '';
+                    const nameDisp = wrap ? wrap.querySelector('.ops-name-display') : null;
+                    if (nameDisp) {
+                        nameDisp.textContent = name;
+                        nameDisp.style.removeProperty('display');
+                    }
+                }
+                // Checkbox data attribute güncelle
+                const chk = document.querySelector('.ops-check[data-field="is_outsourced"][data-id="' + id + '"]');
+                if (chk) chk.dataset.outsourceName = name;
+                bootstrap.Modal.getInstance(document.getElementById('outsourceModal')).hide();
+            }
+        })
+        .catch(function() { showToast('Bir hata oluştu.', false); })
+        .finally(function() {
+            btn.disabled = false;
+            btn.innerHTML = '<i class="bi bi-check-lg me-1"></i>Kaydet';
+        });
+});
+
+// Fiyat inputu blur'da kaydet
 document.addEventListener('blur', function(e) {
     if (!e.target.classList.contains('ops-price-input')) return;
     updateOps(e.target.dataset.id, 'outsource_price', e.target.value);
 }, true);
+
+// ─── İş Durumu Modalı ─────────────────────────────────────────────────────────
+function openOpsStatus(id) {
+    const body    = document.getElementById('ops-status-body');
+    const infoBox = document.getElementById('ops-booking-info');
+    body.innerHTML    = '<div class="text-center py-3"><span class="spinner-border spinner-border-sm"></span></div>';
+    infoBox.innerHTML = '<div class="col-12 text-center py-2"><span class="spinner-border spinner-border-sm"></span></div>';
+    new bootstrap.Modal(document.getElementById('opsStatusModal')).show();
+
+    // Rezervasyon bilgilerini bookingsData'dan hemen doldur
+    var bData = bookingsData.find(function(x) { return x.id == id; });
+    if (bData) {
+        var rawDate = bData.flight_date || bData.pickup_date || '';
+        if (rawDate) {
+            var d2 = new Date(rawDate);
+            rawDate = d2.toLocaleDateString('tr-TR', {day:'2-digit', month:'2-digit', year:'numeric'});
+        }
+        var rawTime = bData.flight_time ? bData.flight_time.substring(0, 5) : '—';
+        var paxStr  = (bData.adults || 1) + ' Yetişkin' + ((bData.children || 0) > 0 ? ' + ' + bData.children + ' Çocuk' : '');
+        var priceVal = bData.total_price > 0
+            ? (parseFloat(bData.total_price).toLocaleString('tr-TR', {minimumFractionDigits:2}) + ' ' + (bData.currency || 'EUR'))
+            : '—';
+        var isReturn = bData.booking_direction === 'return';
+
+        function infoCell(label, value, bold) {
+            return '<div class="col-6 col-md-3">'
+                + '<div class="text-muted" style="font-size:.72rem;text-transform:uppercase;letter-spacing:.4px;">' + label + '</div>'
+                + '<div class="' + (bold ? 'fw-bold' : 'fw-semibold') + '">' + (value || '—') + '</div>'
+                + '</div>';
+        }
+
+        var infoHtml = infoCell('Rezervasyon No', '<span class="text-primary">#' + bData.booking_number + '</span>', true)
+            + infoCell('Müşteri', bData.customer_name)
+            + infoCell('Tarih', rawDate || '—')
+            + infoCell('Uçuş Saati', rawTime);
+
+        if (isReturn && bData.pickup_time) {
+            infoHtml += infoCell('Alış Saati', '<span style="color:#1c4b56;">' + bData.pickup_time.substring(0, 5) + '</span>', true);
+        }
+
+        infoHtml += infoCell('Otel / Adres', bData.hotel_address)
+            + infoCell('Araç', bData.vehicle_name)
+            + infoCell('Kişi', paxStr)
+            + infoCell('Uçuş No', bData.flight_number);
+
+        infoHtml += '<div class="col-12 mt-2 pt-2" style="border-top:1px dashed #b8d4f0;">'
+            + '<span class="text-muted" style="font-size:.75rem;">Rezervasyon Tutarı</span>'
+            + '<span class="fw-bold ms-2" style="font-size:1.4rem;color:#1c4b56;">' + priceVal + '</span>'
+            + '</div>';
+
+        infoBox.innerHTML = infoHtml;
+    }
+
+    // Operasyonel durumu AJAX ile çek
+    const fd = new FormData();
+    fd.append('action', 'get_ops');
+    fd.append('id', id);
+    fd.append('csrf_token', csrfToken);
+
+    fetch(apiUrl, {method:'POST', body:fd})
+        .then(function(r) { return r.json(); })
+        .then(function(d) {
+            if (!d.success) { body.innerHTML = '<p class="text-danger mb-0">Veri alınamadı.</p>'; return; }
+            const ops = d.data;
+            const yesNo = function(val, yesColor, noColor) {
+                return val
+                    ? '<span class="badge bg-' + yesColor + '">Evet</span>'
+                    : '<span class="badge bg-' + noColor + '">Hayır</span>';
+            };
+
+            var html = '<h6 class="fw-bold mb-3"><i class="bi bi-clipboard-check me-2 text-success"></i>Operasyon Durumu</h6>'
+                + '<div class="d-flex flex-column gap-3">'
+                + '<div class="d-flex justify-content-between align-items-center">'
+                + '<span><i class="bi bi-check-circle text-success me-1"></i><strong>İş Yapıldı</strong></span>'
+                + yesNo(ops.is_completed, 'success', 'secondary')
+                + '</div>'
+                + '<div class="d-flex justify-content-between align-items-center">'
+                + '<span><i class="bi bi-people text-warning me-1"></i><strong>Dışarıya Verildi</strong></span>'
+                + yesNo(ops.is_outsourced, 'warning text-dark', 'secondary')
+                + '</div>';
+
+            if (ops.is_outsourced == 1) {
+                html += '<div class="rounded p-3 mt-1" style="background:#fffbf0;border:1px solid #f6c23e;">'
+                    + '<div class="row g-2">';
+
+                html += '<div class="col-6"><div class="text-muted" style="font-size:.72rem;text-transform:uppercase;">Kime</div>'
+                    + '<div class="fw-semibold">' + (ops.outsource_name || '<em class="text-muted">—</em>') + '</div></div>';
+
+                if (ops.outsource_pickup_time) {
+                    html += '<div class="col-6"><div class="text-muted" style="font-size:.72rem;text-transform:uppercase;">Alış Saati</div>'
+                        + '<div class="fw-bold">' + ops.outsource_pickup_time.substring(0, 5) + '</div></div>';
+                }
+
+                if (ops.outsource_price) {
+                    html += '<div class="col-12 mt-1 pt-1" style="border-top:1px dashed #f6c23e;">'
+                        + '<span class="text-muted" style="font-size:.75rem;">Verilen Tutar</span>'
+                        + '<span class="fw-bold ms-2 text-danger fs-5">' + parseFloat(ops.outsource_price).toFixed(2) + '</span>'
+                        + '</div>';
+                }
+
+                html += '</div></div>';
+            }
+
+            html += '</div>';
+            body.innerHTML = html;
+        })
+        .catch(function() { body.innerHTML = '<p class="text-danger mb-0">Bağlantı hatası.</p>'; });
+}
 </script>

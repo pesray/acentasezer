@@ -242,15 +242,51 @@ switch ($action) {
         $field = $_POST['field'] ?? '';
         $value = $_POST['value'] ?? '';
 
-        $allowed = ['is_completed', 'is_outsourced', 'outsource_price'];
+        $allowed = ['is_completed', 'is_outsourced', 'outsource_price', 'outsource_name'];
         if (!$id || !in_array($field, $allowed)) jsonResponse(false, 'Geçersiz parametre');
 
         try {
-            $val = $field === 'outsource_price'
-                ? ($value === '' ? null : (float)$value)
+            $val = in_array($field, ['outsource_price', 'outsource_name'])
+                ? ($value === '' ? null : ($field === 'outsource_price' ? (float)$value : $value))
                 : (int)(bool)$value;
             $db->prepare("UPDATE bookings SET $field = ?, updated_at = NOW() WHERE id = ?")->execute([$val, $id]);
             jsonResponse(true, 'Güncellendi');
+        } catch (Exception $e) {
+            jsonResponse(false, 'Hata: ' . $e->getMessage());
+        }
+        break;
+
+    // === Dışarıya Verme Detaylarını Kaydet ===
+    case 'save_outsource':
+        $id         = (int)($_POST['id'] ?? 0);
+        $name       = trim($_POST['outsource_name'] ?? '');
+        $price      = ($_POST['outsource_price'] ?? '') !== '' ? (float)$_POST['outsource_price'] : null;
+        $pickupTime = ($_POST['outsource_pickup_time'] ?? '') ?: null;
+        if (!$id) jsonResponse(false, 'Geçersiz ID');
+        try {
+            if ($pickupTime !== null) {
+                $db->prepare("UPDATE bookings SET is_outsourced = 1, outsource_name = ?, outsource_price = ?, outsource_pickup_time = ?, updated_at = NOW() WHERE id = ?")
+                   ->execute([$name ?: null, $price, $pickupTime, $id]);
+            } else {
+                $db->prepare("UPDATE bookings SET is_outsourced = 1, outsource_name = ?, outsource_price = ?, updated_at = NOW() WHERE id = ?")
+                   ->execute([$name ?: null, $price, $id]);
+            }
+            jsonResponse(true, 'Kaydedildi.', ['outsource_name' => $name, 'outsource_price' => $price]);
+        } catch (Exception $e) {
+            jsonResponse(false, 'Hata: ' . $e->getMessage());
+        }
+        break;
+
+    // === İş Durumunu Getir ===
+    case 'get_ops':
+        $id = (int)($_POST['id'] ?? 0);
+        if (!$id) jsonResponse(false, 'Geçersiz ID');
+        try {
+            $stmt = $db->prepare("SELECT is_completed, is_outsourced, outsource_name, outsource_price, outsource_pickup_time FROM bookings WHERE id = ?");
+            $stmt->execute([$id]);
+            $row = $stmt->fetch(PDO::FETCH_ASSOC);
+            if (!$row) jsonResponse(false, 'Bulunamadı');
+            jsonResponse(true, 'OK', $row);
         } catch (Exception $e) {
             jsonResponse(false, 'Hata: ' . $e->getMessage());
         }

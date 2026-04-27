@@ -18,9 +18,36 @@
 
 <script>
 $(document).ready(function() {
-    // Sidebar toggle for mobile
+    // ── Sidebar collapse toggle ──────────────────────────────
+    var sidebar     = document.getElementById('mainSidebar');
+    var mainContent = document.getElementById('mainContent');
+    var isMobile    = function() { return window.innerWidth <= 768; };
+
+    // Restore saved state
+    if (!isMobile() && localStorage.getItem('sidebarCollapsed') === '1') {
+        sidebar.classList.add('collapsed');
+        mainContent.classList.add('sidebar-collapsed');
+    }
+
     $('#sidebarToggle').on('click', function() {
-        $('.sidebar').toggleClass('show');
+        if (isMobile()) {
+            sidebar.classList.toggle('show');
+            return;
+        }
+        var collapsed = sidebar.classList.toggle('collapsed');
+        mainContent.classList.toggle('sidebar-collapsed', collapsed);
+        localStorage.setItem('sidebarCollapsed', collapsed ? '1' : '0');
+    });
+
+    // Flyout vertical positioning
+    document.querySelectorAll('.nav-item-group').forEach(function(group) {
+        var flyout = group.querySelector('.submenu-flyout');
+        if (!flyout) return;
+        group.addEventListener('mouseenter', function() {
+            if (!sidebar.classList.contains('collapsed')) return;
+            var rect = group.getBoundingClientRect();
+            flyout.style.top = rect.top + 'px';
+        });
     });
     
     // DataTables default config
