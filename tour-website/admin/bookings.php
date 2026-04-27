@@ -392,6 +392,7 @@ require_once __DIR__ . '/includes/header.php';
                             <input type="checkbox" class="form-check-input ops-check ops-out-check" id="out-<?= $out['id'] ?>"
                                    data-id="<?= $out['id'] ?>" data-field="is_outsourced"
                                    data-outsource-name="<?= e($out['outsource_name'] ?? '') ?>"
+                                   data-outsource-partner-id="<?= (int)($out['outsource_partner_id'] ?? 0) ?>"
                                    <?= !empty($out['is_outsourced']) ? 'checked' : '' ?>>
                             <label class="form-check-label small" for="out-<?= $out['id'] ?>">Dışarıya verildi</label>
                         </div>
@@ -892,14 +893,22 @@ require_once __DIR__ . '/includes/header.php';
                     <div class="row mb-3">
                         <div class="col-md-12">
                             <label class="form-label">Otel / Adres</label>
-                            <select name="hotel_address" id="add-hotel-address" class="form-select hotel-select">
-                                <option value=""></option>
-                                <?php foreach ($hotelOptions as $ho): ?>
-                                <option value="<?= e($ho['name'] . ($ho['address'] ? ' — ' . $ho['address'] : '')) ?>">
-                                    <?= e($ho['name']) ?><?= $ho['distance_km'] !== null ? ' (' . number_format((float)$ho['distance_km'], 0) . ' km)' : '' ?>
-                                </option>
-                                <?php endforeach; ?>
-                            </select>
+                            <div class="d-flex gap-2">
+                                <div class="flex-grow-1">
+                                    <select name="hotel_address" id="add-hotel-address" class="form-select hotel-select">
+                                        <option value=""></option>
+                                        <?php foreach ($hotelOptions as $ho): ?>
+                                        <option value="<?= e($ho['name'] . ($ho['address'] ? ' — ' . $ho['address'] : '')) ?>">
+                                            <?= e($ho['name']) ?><?= $ho['distance_km'] !== null ? ' (' . number_format((float)$ho['distance_km'], 0) . ' km)' : '' ?>
+                                        </option>
+                                        <?php endforeach; ?>
+                                    </select>
+                                </div>
+                                <button type="button" class="btn btn-outline-success btn-quick-hotel flex-shrink-0"
+                                        data-target="add-hotel-address" title="Hızlı Otel Ekle" style="height:38px;">
+                                    <i class="bi bi-plus-lg"></i>
+                                </button>
+                            </div>
                         </div>
                     </div>
                     <hr>
@@ -933,14 +942,22 @@ require_once __DIR__ . '/includes/header.php';
                         <div class="row mb-3">
                             <div class="col-md-9">
                                 <label class="form-label">Otel / Adres</label>
-                                <select name="return_hotel_address" id="add-return-hotel-address" class="form-select hotel-select">
-                                    <option value=""></option>
-                                    <?php foreach ($hotelOptions as $ho): ?>
-                                    <option value="<?= e($ho['name'] . ($ho['address'] ? ' — ' . $ho['address'] : '')) ?>">
-                                        <?= e($ho['name']) ?><?= $ho['distance_km'] !== null ? ' (' . number_format((float)$ho['distance_km'], 0) . ' km)' : '' ?>
-                                    </option>
-                                    <?php endforeach; ?>
-                                </select>
+                                <div class="d-flex gap-2">
+                                    <div class="flex-grow-1">
+                                        <select name="return_hotel_address" id="add-return-hotel-address" class="form-select hotel-select">
+                                            <option value=""></option>
+                                            <?php foreach ($hotelOptions as $ho): ?>
+                                            <option value="<?= e($ho['name'] . ($ho['address'] ? ' — ' . $ho['address'] : '')) ?>">
+                                                <?= e($ho['name']) ?><?= $ho['distance_km'] !== null ? ' (' . number_format((float)$ho['distance_km'], 0) . ' km)' : '' ?>
+                                            </option>
+                                            <?php endforeach; ?>
+                                        </select>
+                                    </div>
+                                    <button type="button" class="btn btn-outline-success btn-quick-hotel flex-shrink-0"
+                                            data-target="add-return-hotel-address" title="Hızlı Otel Ekle" style="height:38px;">
+                                        <i class="bi bi-plus-lg"></i>
+                                    </button>
+                                </div>
                             </div>
                             <div class="col-md-3">
                                 <label class="form-label">Otelden Alış Saati</label>
@@ -1080,7 +1097,16 @@ require_once __DIR__ . '/includes/header.php';
                 <div class="row g-3">
                     <div class="col-md-5">
                         <label class="form-label fw-semibold">Ad Soyad / Firma</label>
-                        <input type="text" id="outsource-name-input" class="form-control" placeholder="Kişi veya firma adı...">
+                        <div class="d-flex gap-2">
+                            <div class="flex-grow-1">
+                                <select id="outsource-name-input" class="form-select">
+                                    <option value=""></option>
+                                </select>
+                            </div>
+                            <button type="button" class="btn btn-outline-success flex-shrink-0" id="btn-add-partner" title="Yeni kişi/firma ekle" style="height:38px;">
+                                <i class="bi bi-plus-lg"></i>
+                            </button>
+                        </div>
                     </div>
                     <div class="col-md-3" id="outsource-pickup-wrap" style="display:none;">
                         <label class="form-label fw-semibold">Otelden Alış Saati</label>
@@ -1096,6 +1122,73 @@ require_once __DIR__ . '/includes/header.php';
                 <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">İptal</button>
                 <button type="button" class="btn btn-warning fw-bold" id="outsource-save-btn">
                     <i class="bi bi-check-lg me-1"></i>Kaydet
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- ===================== HIZLI OTEL EKLEME MODALı ===================== -->
+<div class="modal fade" id="quickHotelModal" tabindex="-1">
+    <div class="modal-dialog modal-md">
+        <div class="modal-content">
+            <div class="modal-header" style="background:linear-gradient(135deg,#1cc88a,#13855c);color:#fff;">
+                <h5 class="modal-title"><i class="bi bi-building-add me-2"></i>Hızlı Otel Ekle</h5>
+                <button type="button" class="btn-close" style="filter:brightness(0) invert(1);" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <input type="hidden" id="quick-hotel-target">
+                <div class="mb-3">
+                    <label class="form-label fw-semibold">Otel Adı <span class="text-danger">*</span></label>
+                    <input type="text" id="quick-hotel-name" class="form-control" placeholder="Otel adı...">
+                </div>
+                <div class="mb-3">
+                    <label class="form-label fw-semibold">Adres <small class="text-muted fw-normal">(isteğe bağlı)</small></label>
+                    <input type="text" id="quick-hotel-address" class="form-control" placeholder="Mahalle, bölge, ilçe...">
+                </div>
+                <div class="row g-3">
+                    <div class="col-md-6">
+                        <label class="form-label fw-semibold">Mesafe (km) <small class="text-muted fw-normal">(isteğe bağlı)</small></label>
+                        <input type="number" id="quick-hotel-distance" class="form-control" min="0" step="0.1" placeholder="0">
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label fw-semibold">Telefon <small class="text-muted fw-normal">(isteğe bağlı)</small></label>
+                        <input type="text" id="quick-hotel-phone" class="form-control" placeholder="+90...">
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">İptal</button>
+                <button type="button" class="btn btn-success fw-bold" id="quick-hotel-save-btn">
+                    <i class="bi bi-plus-lg me-1"></i>Ekle ve Seç
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- ===================== HIZLI PARTNER EKLEME MODALı ===================== -->
+<div class="modal fade" id="quickPartnerModal" tabindex="-1">
+    <div class="modal-dialog modal-sm">
+        <div class="modal-content">
+            <div class="modal-header" style="background:linear-gradient(135deg,#f6c23e,#d4a017);color:#fff;">
+                <h5 class="modal-title"><i class="bi bi-person-plus me-2"></i>Yeni Kişi / Firma</h5>
+                <button type="button" class="btn-close" style="filter:brightness(0) invert(1);" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div class="mb-3">
+                    <label class="form-label fw-semibold">Ad Soyad / Firma <span class="text-danger">*</span></label>
+                    <input type="text" id="quick-partner-name" class="form-control" placeholder="Ad soyad veya firma...">
+                </div>
+                <div class="mb-2">
+                    <label class="form-label fw-semibold">Telefon <small class="text-muted fw-normal">(isteğe bağlı)</small></label>
+                    <input type="text" id="quick-partner-phone" class="form-control" placeholder="+90...">
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">İptal</button>
+                <button type="button" class="btn btn-warning fw-bold btn-sm" id="quick-partner-save-btn">
+                    <i class="bi bi-plus-lg me-1"></i>Ekle ve Seç
                 </button>
             </div>
         </div>
@@ -1154,9 +1247,11 @@ const bookingsData = <?= json_encode(array_map(function($b) {
         'vehicle_capacity'  => (int)($b['vehicle_capacity'] ?? 20),
         'total_price'       => (float)$b['total_price'],
         'currency'          => $b['currency'],
-        'notes'             => $b['notes'],
-        'admin_notes'       => $b['admin_notes'],
-        'created_at'        => $b['created_at'],
+        'notes'                => $b['notes'],
+        'admin_notes'          => $b['admin_notes'],
+        'outsource_partner_id' => (int)($b['outsource_partner_id'] ?? 0),
+        'outsource_name'       => $b['outsource_name'] ?? '',
+        'created_at'           => $b['created_at'],
     ];
 }, $allBookings), JSON_UNESCAPED_UNICODE) ?>;
 
@@ -1522,8 +1617,10 @@ function updateOps(id, field, value) {
 }
 
 // Ops checkbox değişimi
-var outsourceSaved    = false;
-var outsourceChkRef   = null;
+var outsourceSaved            = false;
+var outsourceChkRef           = null;
+var outsourceModalCurrentName = '';
+var outsourceModalCurrentPid  = 0;
 
 document.addEventListener('change', function(e) {
     if (!e.target.classList.contains('ops-check')) return;
@@ -1535,8 +1632,9 @@ document.addEventListener('change', function(e) {
             // Modal aç, mevcut değerleri doldur
             outsourceSaved  = false;
             outsourceChkRef = e.target;
-            document.getElementById('outsource-booking-id').value  = id;
-            document.getElementById('outsource-name-input').value  = e.target.dataset.outsourceName || '';
+            document.getElementById('outsource-booking-id').value = id;
+            outsourceModalCurrentName = e.target.dataset.outsourceName    || '';
+            outsourceModalCurrentPid  = parseInt(e.target.dataset.outsourcePartnerId) || 0;
             const priceInp = e.target.closest('.ops-cell').querySelector('.ops-price-input');
             document.getElementById('outsource-price-input').value = priceInp ? priceInp.value : '';
 
@@ -1594,9 +1692,14 @@ document.addEventListener('change', function(e) {
             if (priceInp) priceInp.value = '';
             if (nameDisp) { nameDisp.textContent = ''; nameDisp.style.display = 'none'; }
             e.target.dataset.outsourceName = '';
-            updateOps(id, 'is_outsourced', 0);
-            updateOps(id, 'outsource_price', '');
-            updateOps(id, 'outsource_name', '');
+            var fdClear = new FormData();
+            fdClear.append('action', 'clear_outsource');
+            fdClear.append('id', id);
+            fdClear.append('csrf_token', csrfToken);
+            fetch(apiUrl, {method:'POST', body:fdClear})
+                .then(function(r) { return r.json(); })
+                .then(function(d) { showToast(d.message, d.success); })
+                .catch(function() { showToast('Bir hata oluştu.', false); });
         }
         return;
     }
@@ -1615,7 +1718,12 @@ document.getElementById('outsourceModal').addEventListener('hide.bs.modal', func
 // Dışarıya verme kaydet
 document.getElementById('outsource-save-btn').addEventListener('click', function() {
     const id         = document.getElementById('outsource-booking-id').value;
-    const name       = document.getElementById('outsource-name-input').value.trim();
+    const selVal     = $('#outsource-name-input').val() || '';
+    const isNumeric  = /^\d+$/.test(selVal.trim());
+    const partnerId  = isNumeric ? selVal.trim() : '';
+    const name       = isNumeric
+        ? ($('#outsource-name-input option:selected').data('name') || selVal).trim()
+        : selVal.trim();
     const price      = document.getElementById('outsource-price-input').value;
     const pickupWrap = document.getElementById('outsource-pickup-wrap');
     const pickupTime = (pickupWrap && pickupWrap.style.display !== 'none')
@@ -1627,6 +1735,7 @@ document.getElementById('outsource-save-btn').addEventListener('click', function
     fd.append('action', 'save_outsource');
     fd.append('id', id);
     fd.append('outsource_name', name);
+    fd.append('outsource_partner_id', partnerId);
     fd.append('outsource_price', price);
     if (pickupTime) fd.append('outsource_pickup_time', pickupTime);
     fd.append('csrf_token', csrfToken);
@@ -1654,7 +1763,10 @@ document.getElementById('outsource-save-btn').addEventListener('click', function
                 }
                 // Checkbox data attribute güncelle
                 const chk = document.querySelector('.ops-check[data-field="is_outsourced"][data-id="' + id + '"]');
-                if (chk) chk.dataset.outsourceName = name;
+                if (chk) {
+                    chk.dataset.outsourceName      = name;
+                    chk.dataset.outsourcePartnerId = partnerId;
+                }
                 bootstrap.Modal.getInstance(document.getElementById('outsourceModal')).hide();
             }
         })
@@ -1755,8 +1867,12 @@ function openOpsStatus(id) {
                 html += '<div class="rounded p-3 mt-1" style="background:#fffbf0;border:1px solid #f6c23e;">'
                     + '<div class="row g-2">';
 
+                var partnerHtml = ops.outsource_name || '<em class="text-muted">—</em>';
+                if (ops.outsource_phone) {
+                    partnerHtml += '<br><small class="text-muted"><i class="bi bi-telephone me-1"></i>' + ops.outsource_phone + '</small>';
+                }
                 html += '<div class="col-6"><div class="text-muted" style="font-size:.72rem;text-transform:uppercase;">Kime</div>'
-                    + '<div class="fw-semibold">' + (ops.outsource_name || '<em class="text-muted">—</em>') + '</div></div>';
+                    + '<div class="fw-semibold">' + partnerHtml + '</div></div>';
 
                 if (ops.outsource_pickup_time) {
                     html += '<div class="col-6"><div class="text-muted" style="font-size:.72rem;text-transform:uppercase;">Alış Saati</div>'
@@ -1778,4 +1894,166 @@ function openOpsStatus(id) {
         })
         .catch(function() { body.innerHTML = '<p class="text-danger mb-0">Bağlantı hatası.</p>'; });
 }
+
+// ─── Outsource Partner Select2 ───────────────────────────────────────────────
+var partnerApiUrl = window.ADMIN_URL + '/api/handler.php?entity=outsource_partners';
+
+function initPartnerSelect(currentPid, currentName) {
+    var $sel = $('#outsource-name-input');
+    if ($sel.hasClass('select2-hidden-accessible')) {
+        $sel.select2('destroy');
+    }
+    $sel.empty().append('<option value=""></option>');
+
+    var fd = new FormData();
+    fd.append('action', 'list');
+    fd.append('csrf_token', csrfToken);
+    fetch(partnerApiUrl, {method:'POST', body:fd})
+        .then(function(r) { return r.json(); })
+        .then(function(d) {
+            if (!d.success) return;
+            (d.data.partners || []).forEach(function(p) {
+                var selected = currentPid ? (p.id == currentPid) : false;
+                var opt = new Option(p.name, p.id, false, selected);
+                opt.dataset.name  = p.name;
+                opt.dataset.phone = p.phone || '';
+                $sel.append(opt);
+            });
+            // Eğer ID eşleşmedi ama isim varsa (eski kayıt / elle yazılmış) tag olarak ekle
+            if (!currentPid && currentName) {
+                var tagOpt = new Option(currentName, currentName, true, true);
+                $sel.append(tagOpt);
+            }
+            $sel.select2({
+                theme: 'bootstrap-5',
+                width: '100%',
+                placeholder: 'Kişi veya firma seçin...',
+                allowClear: true,
+                tags: true,
+                dropdownParent: $('#outsourceModal'),
+                createTag: function(params) {
+                    return {id: params.term, text: params.term, newTag: true};
+                }
+            });
+        })
+        .catch(function() {});
+}
+
+// Outsource modal açılınca partner listesini yükle (mevcut değeri seç)
+document.getElementById('outsourceModal').addEventListener('show.bs.modal', function() {
+    initPartnerSelect(outsourceModalCurrentPid, outsourceModalCurrentName);
+});
+
+// + butonu
+document.getElementById('btn-add-partner').addEventListener('click', function() {
+    document.getElementById('quick-partner-name').value  = '';
+    document.getElementById('quick-partner-phone').value = '';
+    new bootstrap.Modal(document.getElementById('quickPartnerModal')).show();
+    setTimeout(function() { document.getElementById('quick-partner-name').focus(); }, 400);
+});
+
+// Partner kaydet
+document.getElementById('quick-partner-save-btn').addEventListener('click', function() {
+    var name  = document.getElementById('quick-partner-name').value.trim();
+    var phone = document.getElementById('quick-partner-phone').value.trim();
+    if (!name) {
+        document.getElementById('quick-partner-name').classList.add('is-invalid');
+        document.getElementById('quick-partner-name').focus();
+        return;
+    }
+    document.getElementById('quick-partner-name').classList.remove('is-invalid');
+
+    var btn = this;
+    btn.disabled = true;
+    btn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span>Ekleniyor...';
+
+    var fd = new FormData();
+    fd.append('action', 'create');
+    fd.append('name', name);
+    fd.append('phone', phone);
+    fd.append('csrf_token', csrfToken);
+
+    fetch(partnerApiUrl, {method:'POST', body:fd})
+        .then(function(r) { return r.json(); })
+        .then(function(d) {
+            if (!d.success) { showToast(d.message, false); return; }
+            showToast('Partner eklendi: ' + name, true);
+            bootstrap.Modal.getInstance(document.getElementById('quickPartnerModal')).hide();
+            initPartnerSelect(d.data.id, name);
+        })
+        .catch(function() { showToast('Bir hata oluştu.', false); })
+        .finally(function() {
+            btn.disabled = false;
+            btn.innerHTML = '<i class="bi bi-plus-lg me-1"></i>Ekle ve Seç';
+        });
+});
+
+// ─── Hızlı Otel Ekleme ────────────────────────────────────────────────────────
+document.addEventListener('click', function(e) {
+    var btn = e.target.closest('.btn-quick-hotel');
+    if (!btn) return;
+    var targetId = btn.dataset.target;
+    document.getElementById('quick-hotel-target').value = targetId || '';
+    document.getElementById('quick-hotel-name').value     = '';
+    document.getElementById('quick-hotel-address').value  = '';
+    document.getElementById('quick-hotel-distance').value = '';
+    document.getElementById('quick-hotel-phone').value    = '';
+    new bootstrap.Modal(document.getElementById('quickHotelModal')).show();
+    setTimeout(function() { document.getElementById('quick-hotel-name').focus(); }, 400);
+});
+
+document.getElementById('quick-hotel-save-btn').addEventListener('click', function() {
+    var name     = document.getElementById('quick-hotel-name').value.trim();
+    var address  = document.getElementById('quick-hotel-address').value.trim();
+    var distance = document.getElementById('quick-hotel-distance').value;
+    var phone    = document.getElementById('quick-hotel-phone').value.trim();
+    var targetId = document.getElementById('quick-hotel-target').value;
+
+    if (!name) {
+        document.getElementById('quick-hotel-name').focus();
+        document.getElementById('quick-hotel-name').classList.add('is-invalid');
+        return;
+    }
+    document.getElementById('quick-hotel-name').classList.remove('is-invalid');
+
+    var btn = this;
+    btn.disabled = true;
+    btn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span>Ekleniyor...';
+
+    var fd = new FormData();
+    fd.append('action', 'create');
+    fd.append('name', name);
+    fd.append('address', address);
+    fd.append('distance_km', distance);
+    fd.append('phone', phone);
+    fd.append('is_active', '1');
+    fd.append('csrf_token', csrfToken);
+
+    fetch(window.ADMIN_URL + '/api/handler.php?entity=hotels', {method:'POST', body:fd})
+        .then(function(r) { return r.json(); })
+        .then(function(d) {
+            if (!d.success) { showToast(d.message, false); return; }
+            showToast('Otel eklendi: ' + name, true);
+
+            // Oluşturulan otel değerini al (ad — adres formatı)
+            var optVal  = name + (address ? ' — ' + address : '');
+            var optText = name + (distance ? ' (' + Math.round(parseFloat(distance)) + ' km)' : '');
+
+            // Tüm hotel-select'lere yeni option ekle ve hedef select'te seç
+            document.querySelectorAll('.hotel-select').forEach(function(sel) {
+                var opt = new Option(optText, optVal, false, sel.id === targetId);
+                $(sel).append(opt);
+                if (sel.id === targetId) {
+                    $(sel).val(optVal).trigger('change');
+                }
+            });
+
+            bootstrap.Modal.getInstance(document.getElementById('quickHotelModal')).hide();
+        })
+        .catch(function() { showToast('Bir hata oluştu.', false); })
+        .finally(function() {
+            btn.disabled = false;
+            btn.innerHTML = '<i class="bi bi-plus-lg me-1"></i>Ekle ve Seç';
+        });
+});
 </script>

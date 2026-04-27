@@ -229,6 +229,9 @@ $adminName = $_SESSION['admin_name'] ?? 'Admin';
         <a href="<?= ADMIN_URL ?>/hotels.php" class="nav-link <?= $currentPage === 'hotels' ? 'active' : '' ?>" title="Oteller">
             <i class="bi bi-building"></i> <span class="nav-link-text">Oteller</span>
         </a>
+        <a href="<?= ADMIN_URL ?>/outsource_partners.php" class="nav-link <?= $currentPage === 'outsource_partners' ? 'active' : '' ?>" title="Dış Partnerler">
+            <i class="bi bi-people"></i> <span class="nav-link-text">Dış Partnerler</span>
+        </a>
 
         <div class="nav-section">İçerik Yönetimi</div>
         <a href="<?= ADMIN_URL ?>/homepage.php" class="nav-link <?= $currentPage === 'homepage' ? 'active' : '' ?>" title="Anasayfa">

@@ -242,15 +242,40 @@ switch ($action) {
         $field = $_POST['field'] ?? '';
         $value = $_POST['value'] ?? '';
 
-        $allowed = ['is_completed', 'is_outsourced', 'outsource_price', 'outsource_name'];
+        $allowed = ['is_completed', 'is_outsourced', 'outsource_price', 'outsource_name', 'outsource_partner_id'];
         if (!$id || !in_array($field, $allowed)) jsonResponse(false, 'Geçersiz parametre');
 
         try {
-            $val = in_array($field, ['outsource_price', 'outsource_name'])
-                ? ($value === '' ? null : ($field === 'outsource_price' ? (float)$value : $value))
-                : (int)(bool)$value;
+            if ($field === 'outsource_partner_id') {
+                $val = ($value === '' || $value === '0') ? null : (int)$value;
+            } elseif (in_array($field, ['outsource_price', 'outsource_name'])) {
+                $val = $value === '' ? null : ($field === 'outsource_price' ? (float)$value : $value);
+            } else {
+                $val = (int)(bool)$value;
+            }
             $db->prepare("UPDATE bookings SET $field = ?, updated_at = NOW() WHERE id = ?")->execute([$val, $id]);
             jsonResponse(true, 'Güncellendi');
+        } catch (Exception $e) {
+            jsonResponse(false, 'Hata: ' . $e->getMessage());
+        }
+        break;
+
+    // === Dışarıya Verme Temizle ===
+    case 'clear_outsource':
+        $id = (int)($_POST['id'] ?? 0);
+        if (!$id) jsonResponse(false, 'Geçersiz ID');
+        try {
+            $db->prepare("
+                UPDATE bookings
+                SET is_outsourced = 0,
+                    outsource_name = NULL,
+                    outsource_partner_id = NULL,
+                    outsource_price = NULL,
+                    outsource_pickup_time = NULL,
+                    updated_at = NOW()
+                WHERE id = ?
+            ")->execute([$id]);
+            jsonResponse(true, 'Temizlendi');
         } catch (Exception $e) {
             jsonResponse(false, 'Hata: ' . $e->getMessage());
         }
@@ -260,17 +285,21 @@ switch ($action) {
     case 'save_outsource':
         $id         = (int)($_POST['id'] ?? 0);
         $name       = trim($_POST['outsource_name'] ?? '');
+        $partnerId  = ($_POST['outsource_partner_id'] ?? '') !== '' ? (int)$_POST['outsource_partner_id'] : null;
         $price      = ($_POST['outsource_price'] ?? '') !== '' ? (float)$_POST['outsource_price'] : null;
         $pickupTime = ($_POST['outsource_pickup_time'] ?? '') ?: null;
         if (!$id) jsonResponse(false, 'Geçersiz ID');
         try {
-            if ($pickupTime !== null) {
-                $db->prepare("UPDATE bookings SET is_outsourced = 1, outsource_name = ?, outsource_price = ?, outsource_pickup_time = ?, updated_at = NOW() WHERE id = ?")
-                   ->execute([$name ?: null, $price, $pickupTime, $id]);
-            } else {
-                $db->prepare("UPDATE bookings SET is_outsourced = 1, outsource_name = ?, outsource_price = ?, updated_at = NOW() WHERE id = ?")
-                   ->execute([$name ?: null, $price, $id]);
-            }
+            $db->prepare("
+                UPDATE bookings
+                SET is_outsourced = 1,
+                    outsource_partner_id = ?,
+                    outsource_name = ?,
+                    outsource_price = ?,
+                    outsource_pickup_time = COALESCE(?, outsource_pickup_time),
+                    updated_at = NOW()
+                WHERE id = ?
+            ")->execute([$partnerId, $name ?: null, $price, $pickupTime, $id]);
             jsonResponse(true, 'Kaydedildi.', ['outsource_name' => $name, 'outsource_price' => $price]);
         } catch (Exception $e) {
             jsonResponse(false, 'Hata: ' . $e->getMessage());
@@ -282,7 +311,17 @@ switch ($action) {
         $id = (int)($_POST['id'] ?? 0);
         if (!$id) jsonResponse(false, 'Geçersiz ID');
         try {
-            $stmt = $db->prepare("SELECT is_completed, is_outsourced, outsource_name, outsource_price, outsource_pickup_time FROM bookings WHERE id = ?");
+            $stmt = $db->prepare("
+                SELECT b.is_completed, b.is_outsourced, b.outsource_name, b.outsource_price, b.outsource_pickup_time,
+                       op.phone AS outsource_phone
+                FROM bookings b
+                LEFT JOIN outsource_partners op ON (
+                    (b.outsource_partner_id IS NOT NULL AND op.id = b.outsource_partner_id)
+                    OR
+                    (b.outsource_partner_id IS NULL AND op.name = b.outsource_name AND op.is_active = 1)
+                )
+                WHERE b.id = ?
+            ");
             $stmt->execute([$id]);
             $row = $stmt->fetch(PDO::FETCH_ASSOC);
             if (!$row) jsonResponse(false, 'Bulunamadı');
@@ -290,6 +329,7 @@ switch ($action) {
                 'is_completed'          => (int)$row['is_completed'],
                 'is_outsourced'         => (int)$row['is_outsourced'],
                 'outsource_name'        => $row['outsource_name'],
+                'outsource_phone'       => $row['outsource_phone'],
                 'outsource_price'       => $row['outsource_price'],
                 'outsource_pickup_time' => $row['outsource_pickup_time'],
             ]);

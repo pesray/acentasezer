@@ -74,6 +74,9 @@ try {
         case 'media':
             require_once __DIR__ . '/media_api.php';
             break;
+        case 'outsource_partners':
+            require_once __DIR__ . '/outsource_partners.php';
+            break;
         default:
             jsonResponse(false, 'Geçersiz entity: ' . $entity);
     }
