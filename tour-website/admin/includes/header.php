@@ -224,6 +224,9 @@ $adminName = $_SESSION['admin_name'] ?? 'Admin';
         <a href="<?= ADMIN_URL ?>/vehicles.php" class="nav-link <?= $currentPage === 'vehicles' ? 'active' : '' ?>">
             <i class="bi bi-car-front"></i> Araçlar
         </a>
+        <a href="<?= ADMIN_URL ?>/hotels.php" class="nav-link <?= $currentPage === 'hotels' ? 'active' : '' ?>">
+            <i class="bi bi-building"></i> Oteller
+        </a>
         <a href="#bookingsSubmenu" class="nav-link d-flex justify-content-between align-items-center <?= $currentPage === 'bookings' ? 'active' : '' ?>" data-bs-toggle="collapse" role="button" aria-expanded="<?= $currentPage === 'bookings' ? 'true' : 'false' ?>">
             <span><i class="bi bi-calendar-check"></i> Rezervasyonlar</span>
             <i class="bi bi-chevron-down" style="font-size:0.7rem;"></i>

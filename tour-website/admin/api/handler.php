@@ -53,6 +53,9 @@ try {
         case 'bookings':
             require_once __DIR__ . '/bookings.php';
             break;
+        case 'hotels':
+            require_once __DIR__ . '/hotels.php';
+            break;
         case 'sections':
             require_once __DIR__ . '/sections.php';
             break;

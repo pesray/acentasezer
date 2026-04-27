@@ -64,7 +64,7 @@ $allBookings = $db->query("
     ORDER BY b.created_at DESC
 ")->fetchAll();
 
-// Transferler ve araçları (yeni rezervasyon modalı için)
+// Transferler (yeni rezervasyon modalı için)
 $destinations = $db->query("
     SELECT d.id, COALESCE(dt.title, d.title) AS title
     FROM destinations d
@@ -73,23 +73,21 @@ $destinations = $db->query("
     ORDER BY d.sort_order, d.title
 ")->fetchAll();
 
-$destinationVehicles = [];
-foreach ($db->query("
-    SELECT dv.destination_id, dv.vehicle_id, dv.price, dv.currency,
-           CONCAT(v.brand,' ',v.model) AS vehicle_name, v.capacity
-    FROM destination_vehicles dv
-    JOIN vehicles v ON dv.vehicle_id = v.id
-    WHERE dv.language_code = 'tr' AND v.is_active = 1
-    ORDER BY v.sort_order, dv.price ASC
-")->fetchAll() as $dv) {
-    $destinationVehicles[$dv['destination_id']][] = [
-        'vehicle_id'   => (int)$dv['vehicle_id'],
-        'vehicle_name' => $dv['vehicle_name'],
-        'capacity'     => (int)$dv['capacity'],
-        'price'        => (float)$dv['price'],
-        'currency'     => $dv['currency'],
-    ];
-}
+// Tüm aktif araçlar (transfere bağlı değil)
+$allVehicles = $db->query("
+    SELECT id, CONCAT(brand,' ',model) AS vehicle_name, capacity
+    FROM vehicles
+    WHERE is_active = 1
+    ORDER BY sort_order, brand, model
+")->fetchAll();
+
+// Aktif oteller (otel adresi select için)
+$hotelOptions = $db->query("
+    SELECT name, address, distance_km
+    FROM hotels
+    WHERE is_active = 1
+    ORDER BY name ASC
+")->fetchAll();
 
 // Tüm Rezervasyonlar: geliş-dönüş çiftlerini eşleştir
 $tripGroups = [];
@@ -747,8 +745,8 @@ require_once __DIR__ . '/includes/header.php';
                     <h6 class="mb-3"><i class="bi bi-geo-alt me-2"></i>Transfer & Araç Seçimi</h6>
                     <div class="row mb-4">
                         <div class="col-md-4">
-                            <label class="form-label">Transfer *</label>
-                            <select name="destination_id" id="add-destination" class="form-select" required>
+                            <label class="form-label">Transfer</label>
+                            <select name="destination_id" id="add-destination" class="form-select">
                                 <option value="">-- Transfer Seçin --</option>
                                 <?php foreach ($destinations as $dest): ?>
                                 <option value="<?= $dest['id'] ?>"><?= e($dest['title']) ?></option>
@@ -756,9 +754,12 @@ require_once __DIR__ . '/includes/header.php';
                             </select>
                         </div>
                         <div class="col-md-4">
-                            <label class="form-label">Araç *</label>
-                            <select name="vehicle_id" id="add-vehicle" class="form-select" required disabled>
-                                <option value="">-- Önce transfer seçin --</option>
+                            <label class="form-label">Araç</label>
+                            <select name="vehicle_id" id="add-vehicle" class="form-select">
+                                <option value="">-- Araç Seçin --</option>
+                                <?php foreach ($allVehicles as $v): ?>
+                                <option value="<?= $v['id'] ?>"><?= e($v['vehicle_name']) ?> (<?= (int)$v['capacity'] ?> kişi)</option>
+                                <?php endforeach; ?>
                             </select>
                         </div>
                         <div class="col-md-4">
@@ -766,7 +767,7 @@ require_once __DIR__ . '/includes/header.php';
                             <div class="input-group">
                                 <select name="currency" id="add-currency" class="form-select" style="max-width:90px;">
                                     <option value="TRY">₺ TRY</option>
-                                    <option value="EUR">€ EUR</option>
+                                    <option value="EUR" selected>€ EUR</option>
                                     <option value="USD">$ USD</option>
                                     <option value="GBP">£ GBP</option>
                                 </select>
@@ -782,7 +783,7 @@ require_once __DIR__ . '/includes/header.php';
                     <div class="row mb-4">
                         <div class="col-md-4">
                             <label class="form-label">Ad Soyad *</label>
-                            <input type="text" name="customer_name" class="form-control" required>
+                            <input type="text" name="customer_name" id="add-customer-name" class="form-control" required>
                         </div>
                         <div class="col-md-4">
                             <label class="form-label">E-posta</label>
@@ -814,8 +815,15 @@ require_once __DIR__ . '/includes/header.php';
                     </div>
                     <div class="row mb-3">
                         <div class="col-md-12">
-                            <label class="form-label">Otel Adresi</label>
-                            <input type="text" name="hotel_address" class="form-control">
+                            <label class="form-label">Otel / Adres</label>
+                            <select name="hotel_address" id="add-hotel-address" class="form-select hotel-select">
+                                <option value=""></option>
+                                <?php foreach ($hotelOptions as $ho): ?>
+                                <option value="<?= e($ho['name'] . ($ho['address'] ? ' — ' . $ho['address'] : '')) ?>">
+                                    <?= e($ho['name']) ?><?= $ho['distance_km'] !== null ? ' (' . number_format((float)$ho['distance_km'], 0) . ' km)' : '' ?>
+                                </option>
+                                <?php endforeach; ?>
+                            </select>
                         </div>
                     </div>
                     <hr>
@@ -848,8 +856,15 @@ require_once __DIR__ . '/includes/header.php';
                         </div>
                         <div class="row mb-3">
                             <div class="col-md-9">
-                                <label class="form-label">Otelden Alış Adresi</label>
-                                <input type="text" name="return_hotel_address" class="form-control">
+                                <label class="form-label">Otel / Adres</label>
+                                <select name="return_hotel_address" id="add-return-hotel-address" class="form-select hotel-select">
+                                    <option value=""></option>
+                                    <?php foreach ($hotelOptions as $ho): ?>
+                                    <option value="<?= e($ho['name'] . ($ho['address'] ? ' — ' . $ho['address'] : '')) ?>">
+                                        <?= e($ho['name']) ?><?= $ho['distance_km'] !== null ? ' (' . number_format((float)$ho['distance_km'], 0) . ' km)' : '' ?>
+                                    </option>
+                                    <?php endforeach; ?>
+                                </select>
                             </div>
                             <div class="col-md-3">
                                 <label class="form-label">Otelden Alış Saati</label>
@@ -862,7 +877,7 @@ require_once __DIR__ . '/includes/header.php';
                                 <div class="input-group">
                                     <select name="return_currency" id="add-return-currency" class="form-select" style="max-width:90px;">
                                         <option value="TRY">₺ TRY</option>
-                                        <option value="EUR">€ EUR</option>
+                                        <option value="EUR" selected>€ EUR</option>
                                         <option value="USD">$ USD</option>
                                         <option value="GBP">£ GBP</option>
                                     </select>
@@ -962,7 +977,6 @@ const bookingsData = <?= json_encode(array_map(function($b) {
     ];
 }, $allBookings), JSON_UNESCAPED_UNICODE) ?>;
 
-const destinationVehicles = <?= json_encode($destinationVehicles, JSON_UNESCAPED_UNICODE) ?>;
 const currentView = '<?= $view ?>';
 </script>
 
@@ -997,59 +1011,44 @@ $(document).ready(function() {
         table.draw();
     });
     table.draw();
+
+    // ─── Otel Select2 ─────────────────────────────────────────────────────────
+    $('.hotel-select').select2({
+        theme: 'bootstrap-5',
+        width: '100%',
+        placeholder: 'Otel seçin veya yazın...',
+        allowClear: true,
+        tags: true,
+        dropdownParent: $('#addBookingModal'),
+        createTag: function(params) {
+            return { id: params.term, text: params.term, newTag: true };
+        }
+    });
 });
-
-// ─── Transfer → Araç cascading ───────────────────────────────────────────────
-(function() {
-    const destSel    = document.getElementById('add-destination');
-    const vehSel     = document.getElementById('add-vehicle');
-    const priceIn    = document.getElementById('add-total-price');
-    const curSel     = document.getElementById('add-currency');
-    const retPriceIn = document.getElementById('add-return-price');
-
-    destSel.addEventListener('change', function() {
-        const id = this.value;
-        vehSel.innerHTML = '';
-        priceIn.value = '';
-        if (retPriceIn) retPriceIn.value = '';
-        if (!id || !destinationVehicles[id]) {
-            vehSel.innerHTML = '<option value="">-- Önce transfer seçin --</option>';
-            vehSel.disabled = true;
-            return;
-        }
-        vehSel.disabled = false;
-        vehSel.innerHTML = '<option value="">-- Araç Seçin --</option>';
-        destinationVehicles[id].forEach(function(v) {
-            const o = document.createElement('option');
-            o.value = v.vehicle_id;
-            o.textContent = v.vehicle_name + ' (' + v.capacity + ' kişi) - ' +
-                new Intl.NumberFormat('tr-TR').format(v.price) + ' ' + v.currency;
-            o.dataset.price    = v.price;
-            o.dataset.currency = v.currency;
-            o.dataset.capacity = v.capacity;
-            vehSel.appendChild(o);
-        });
-    });
-
-    vehSel.addEventListener('change', function() {
-        const sel = this.options[this.selectedIndex];
-        if (sel && sel.dataset.price) {
-            priceIn.value = sel.dataset.price;
-            curSel.value  = sel.dataset.currency || 'TRY';
-            if (retPriceIn) retPriceIn.value = sel.dataset.price;
-        } else {
-            priceIn.value = '';
-            if (retPriceIn) retPriceIn.value = '';
-        }
-        // Kapasite limiti güncelle
-        const cap = sel && sel.dataset.capacity ? parseInt(sel.dataset.capacity) : 20;
-        document.getElementById('add-pax-capacity').value = cap;
-    });
-})();
 
 // ─── Dönüş toggle ────────────────────────────────────────────────────────────
 document.getElementById('add-has-return').addEventListener('change', function() {
     document.getElementById('return-section').style.display = this.checked ? 'block' : 'none';
+    // Dönüş açılınca otel adresini otomatik kopyala
+    if (this.checked) {
+        var gelisVal = $('#add-hotel-address').val();
+        if (gelisVal && !$('#add-return-hotel-address').val()) {
+            $('#add-return-hotel-address').val(gelisVal).trigger('change');
+        }
+    }
+});
+
+// ─── Müşteri adı → 1. yolcu ismi ──────────────────────────────────────────────
+document.getElementById('add-customer-name').addEventListener('input', function() {
+    var firstPax = document.querySelector('#add-passenger-names input[name="passenger_adult_name[]"]');
+    if (firstPax) firstPax.value = this.value;
+});
+
+// ─── Geliş otel adresi → dönüş otel adresi (dönüş açıksa) ────────────────────
+$('#add-hotel-address').on('change', function() {
+    if (document.getElementById('add-has-return').checked) {
+        $('#add-return-hotel-address').val($(this).val()).trigger('change');
+    }
 });
 
 // ─── Detay Modalı ─────────────────────────────────────────────────────────────
