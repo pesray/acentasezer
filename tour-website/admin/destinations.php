@@ -734,7 +734,7 @@ try {
                 <tbody>
                     <?php foreach ($destinations as $dest): 
                         // Bu destinasyon için araç sayısını al
-                        $vehicleCountStmt = $db->prepare("SELECT COUNT(*) FROM destination_vehicles WHERE destination_id = ?");
+                        $vehicleCountStmt = $db->prepare("SELECT COUNT(DISTINCT vehicle_id) FROM destination_vehicles WHERE destination_id = ?");
                         $vehicleCountStmt->execute([$dest['id']]);
                         $vehicleCount = $vehicleCountStmt->fetchColumn();
                     ?>
