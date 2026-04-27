@@ -271,11 +271,22 @@ require_once __DIR__ . '/includes/header.php';
     <div class="card-header bg-white py-3">
         <div class="d-flex justify-content-between align-items-center flex-wrap gap-2">
             <h6 class="mb-0 fw-bold"><i class="bi bi-list-ul me-2"></i><?= $viewTitle ?></h6>
-            <div class="d-flex gap-2 align-items-center flex-wrap">
-                <div class="input-group input-group-sm" style="width:180px;">
+
+            <!-- Tarih navigasyonu (ortalanmış) -->
+            <div class="d-flex align-items-center gap-1">
+                <button type="button" id="date-prev" class="btn btn-sm btn-outline-primary" title="Önceki Gün">
+                    <i class="bi bi-chevron-left"></i>
+                </button>
+                <div class="input-group input-group-sm" style="width:170px;">
                     <span class="input-group-text"><i class="bi bi-calendar"></i></span>
                     <input type="date" id="filter-date" class="form-control">
                 </div>
+                <button type="button" id="date-next" class="btn btn-sm btn-outline-primary" title="Sonraki Gün">
+                    <i class="bi bi-chevron-right"></i>
+                </button>
+            </div>
+
+            <div class="d-flex gap-2 align-items-center">
                 <select id="filter-status" class="form-select form-select-sm" style="width:160px;">
                     <option value="">Tüm Durumlar</option>
                     <option value="Onay Bekliyor">Onay Bekliyor</option>
@@ -1176,7 +1187,28 @@ $(document).ready(function() {
         return true;
     });
 
+    // Bugünü default olarak set et
+    var today = new Date();
+    var todayStr = today.getFullYear() + '-'
+        + String(today.getMonth() + 1).padStart(2, '0') + '-'
+        + String(today.getDate()).padStart(2, '0');
+    $('#filter-date').val(todayStr);
+
     $('#filter-date, #filter-status').on('change', function() { table.draw(); });
+
+    // Önceki / Sonraki gün butonları
+    function shiftDate(days) {
+        var cur = $('#filter-date').val();
+        var d = cur ? new Date(cur + 'T00:00:00') : new Date();
+        d.setDate(d.getDate() + days);
+        var newVal = d.getFullYear() + '-'
+            + String(d.getMonth() + 1).padStart(2, '0') + '-'
+            + String(d.getDate()).padStart(2, '0');
+        $('#filter-date').val(newVal).trigger('change');
+    }
+    $('#date-prev').on('click', function() { shiftDate(-1); });
+    $('#date-next').on('click', function() { shiftDate(1); });
+
     $('#filter-clear').on('click', function() {
         $('#filter-date').val('');
         $('#filter-status').val('');
