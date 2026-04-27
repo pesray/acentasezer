@@ -286,7 +286,13 @@ switch ($action) {
             $stmt->execute([$id]);
             $row = $stmt->fetch(PDO::FETCH_ASSOC);
             if (!$row) jsonResponse(false, 'Bulunamadı');
-            jsonResponse(true, 'OK', $row);
+            jsonResponse(true, 'OK', [
+                'is_completed'          => (int)$row['is_completed'],
+                'is_outsourced'         => (int)$row['is_outsourced'],
+                'outsource_name'        => $row['outsource_name'],
+                'outsource_price'       => $row['outsource_price'],
+                'outsource_pickup_time' => $row['outsource_pickup_time'],
+            ]);
         } catch (Exception $e) {
             jsonResponse(false, 'Hata: ' . $e->getMessage());
         }

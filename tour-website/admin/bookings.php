@@ -181,6 +181,11 @@ require_once __DIR__ . '/includes/header.php';
 <!-- View Tabları -->
 <ul class="nav nav-tabs mb-4">
     <li class="nav-item">
+        <a class="nav-link view-tab <?= $view === 'all' ? 'active' : '' ?>" href="?view=all">
+            <i class="bi bi-list-ul me-1"></i>Tüm Rezervasyonlar
+        </a>
+    </li>
+    <li class="nav-item">
         <a class="nav-link view-tab <?= $view === 'arrival' ? 'active' : '' ?>" href="?view=arrival">
             <i class="bi bi-box-arrow-in-down-right me-1"></i>Geliş Rezervasyonları
         </a>
@@ -188,11 +193,6 @@ require_once __DIR__ . '/includes/header.php';
     <li class="nav-item">
         <a class="nav-link view-tab <?= $view === 'return' ? 'active' : '' ?>" href="?view=return">
             <i class="bi bi-box-arrow-up-right me-1"></i>Dönüş Rezervasyonları
-        </a>
-    </li>
-    <li class="nav-item">
-        <a class="nav-link view-tab <?= $view === 'all' ? 'active' : '' ?>" href="?view=all">
-            <i class="bi bi-list-ul me-1"></i>Tüm Rezervasyonlar
         </a>
     </li>
 </ul>
@@ -290,6 +290,12 @@ require_once __DIR__ . '/includes/header.php';
     </div>
     <div class="card-body">
 
+    <style>
+#bookingsTable {
+    zoom: 0.95;
+}
+    </style>
+
     <?php if ($view === 'all'): ?>
     <!-- Tüm Rezervasyonlar: geliş+dönüş çifti tek satırda -->
     <table id="bookingsTable" class="table table-hover datatable">
@@ -309,7 +315,7 @@ require_once __DIR__ . '/includes/header.php';
                 <th>Geliş Durumu</th>
                 <th>Dönüş Durumu</th>
                 <th>Durum</th>
-                <th width="130">İşlem</th>
+                <th >İşlem</th>
             </tr>
         </thead>
         <tbody>
@@ -422,16 +428,13 @@ require_once __DIR__ . '/includes/header.php';
                 <?php else: ?>-<?php endif; ?></td>
                 <td>
                     <div class="d-flex flex-column gap-1" style="width:fit-content;">
-                    <?php if ($out): ?>
-                        <span class="badge bg-<?= $statusLabels[$out['booking_status']][1] ?>" title="Geliş: <?= $statusLabels[$out['booking_status']][0] ?>">
-                            <i class="bi <?= $statusLabels[$out['booking_status']][2] ?>"></i>
-                        </span>
-                    <?php endif; ?>
-                    <?php if ($ret): ?>
-                        <span class="badge bg-<?= $statusLabels[$ret['booking_status']][1] ?>" title="Dönüş: <?= $statusLabels[$ret['booking_status']][0] ?>">
-                            <i class="bi <?= $statusLabels[$ret['booking_status']][2] ?>"></i>
-                        </span>
-                    <?php endif; ?>
+                    
+                    <button type="button" class="btn btn-outline-primary" style="padding:2px 6px;" onclick="openOpsStatus(<?= $out['id'] ?>)" title="Geliş iş Durumu">
+                                <i class="bi bi-box-arrow-in-down-right"></i>
+                    </button>
+                    <button type="button" class="btn btn-outline-info" style="padding:2px 6px;" onclick="openOpsStatus(<?= $ret['id'] ?>)" title="Dönüş İş Durumu">
+                                <i class="bi bi-box-arrow-up-right"></i>
+                    </button>
                     </div>
                 </td>
                 <td>
@@ -442,45 +445,41 @@ require_once __DIR__ . '/includes/header.php';
                         $vParams = implode('&', $vParts);
                     ?>
                     <div class="d-flex flex-column gap-1">
-                    <!-- Voucher -->
-                    <div class="btn-group" style="width:fit-content;">
-                        <a href="voucher.php?<?= $vParams ?>&lang=tr" target="_blank" class="btn btn-outline-success" style="padding:2px 6px;font-size:.7rem;" title="Voucher (TR)">
-                            <i class="bi bi-file-earmark-pdf"></i>
-                        </a>
-                        <button type="button" class="btn btn-outline-success dropdown-toggle dropdown-toggle-split" style="padding:2px 4px;font-size:.7rem;" data-bs-toggle="dropdown">
-                            <span class="visually-hidden">Dil Seç</span>
-                        </button>
-                        <ul class="dropdown-menu dropdown-menu-end">
-                            <li><a class="dropdown-item small" href="voucher.php?<?= $vParams ?>&lang=tr" target="_blank">🇹🇷 Türkçe</a></li>
-                            <li><a class="dropdown-item small" href="voucher.php?<?= $vParams ?>&lang=en" target="_blank">🇬🇧 English</a></li>
-                            <li><a class="dropdown-item small" href="voucher.php?<?= $vParams ?>&lang=de" target="_blank">🇩🇪 Deutsch</a></li>
-                            <li><a class="dropdown-item small" href="voucher.php?<?= $vParams ?>&lang=ru" target="_blank">🇷🇺 Русский</a></li>
-                        </ul>
-                    </div>
                     <?php if ($out): ?>
                         <div class="btn-group" style="width:fit-content;">
-                            <button type="button" class="btn btn-outline-primary" style="padding:2px 6px;font-size:.7rem;" onclick="openBookingModal(<?= $out['id'] ?>)" title="Geliş Detayı">
+                            <button type="button" class="btn btn-outline-primary" style="padding:2px 6px;" onclick="openBookingModal(<?= $out['id'] ?>)" title="Geliş Detayı">
                                 <i class="bi bi-box-arrow-in-down-right"></i>
                             </button>
-                            <button type="button" class="btn btn-outline-secondary" style="padding:2px 6px;font-size:.7rem;" onclick="openOpsStatus(<?= $out['id'] ?>)" title="İş Durumu">
-                                <i class="bi bi-clipboard-check"></i>
-                            </button>
-                            <button type="button" class="btn btn-outline-danger" style="padding:2px 6px;font-size:.7rem;" onclick="deleteBooking(<?= $out['id'] ?>)" title="Geliş Sil">
+                            
+                            <button type="button" class="btn btn-outline-danger" style="padding:2px 6px;" onclick="deleteBooking(<?= $out['id'] ?>)" title="Geliş Sil">
                                 <i class="bi bi-trash"></i>
                             </button>
                         </div>
                     <?php endif; ?>
                     <?php if ($ret): ?>
                         <div class="btn-group" style="width:fit-content;">
-                            <button type="button" class="btn btn-outline-info" style="padding:2px 6px;font-size:.7rem;" onclick="openBookingModal(<?= $ret['id'] ?>)" title="Dönüş Detayı">
+                            <button type="button" class="btn btn-outline-info" style="padding:2px 6px;" onclick="openBookingModal(<?= $ret['id'] ?>)" title="Dönüş Detayı">
                                 <i class="bi bi-box-arrow-up-right"></i>
                             </button>
-                            <button type="button" class="btn btn-outline-secondary" style="padding:2px 6px;font-size:.7rem;" onclick="openOpsStatus(<?= $ret['id'] ?>)" title="İş Durumu">
-                                <i class="bi bi-clipboard-check"></i>
-                            </button>
-                            <button type="button" class="btn btn-outline-danger" style="padding:2px 6px;font-size:.7rem;" onclick="deleteBooking(<?= $ret['id'] ?>)" title="Dönüş Sil">
+                            
+                            <button type="button" class="btn btn-outline-danger" style="padding:2px 6px;" onclick="deleteBooking(<?= $ret['id'] ?>)" title="Dönüş Sil">
                                 <i class="bi bi-trash"></i>
                             </button>
+                        </div>
+                        <!-- Voucher -->
+                        <div class="btn-group" style="width:fit-content;">
+                            <a href="voucher.php?<?= $vParams ?>&lang=tr" target="_blank" class="btn btn-outline-success" style="padding:2px 6px;" title="Voucher (TR)">
+                                <i class="bi bi-file-earmark-pdf"></i>
+                            </a>
+                            <button type="button" class="btn btn-outline-success dropdown-toggle dropdown-toggle-split" style="padding:2px 4px;" data-bs-toggle="dropdown">
+                                <span class="visually-hidden">Dil Seç</span>
+                            </button>
+                            <ul class="dropdown-menu dropdown-menu-end">
+                                <li><a class="dropdown-item small" href="voucher.php?<?= $vParams ?>&lang=tr" target="_blank">🇹🇷 Türkçe</a></li>
+                                <li><a class="dropdown-item small" href="voucher.php?<?= $vParams ?>&lang=en" target="_blank">🇬🇧 English</a></li>
+                                <li><a class="dropdown-item small" href="voucher.php?<?= $vParams ?>&lang=de" target="_blank">🇩🇪 Deutsch</a></li>
+                                <li><a class="dropdown-item small" href="voucher.php?<?= $vParams ?>&lang=ru" target="_blank">🇷🇺 Русский</a></li>
+                            </ul>
                         </div>
                     <?php endif; ?>
                     </div>
