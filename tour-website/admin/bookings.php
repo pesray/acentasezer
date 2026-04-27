@@ -419,7 +419,28 @@ require_once __DIR__ . '/includes/header.php';
                     </div>
                 </td>
                 <td>
+                    <?php
+                        $vParts = [];
+                        if ($out) $vParts[] = 'out_id=' . $out['id'];
+                        if ($ret) $vParts[] = 'ret_id=' . $ret['id'];
+                        $vParams = implode('&', $vParts);
+                    ?>
                     <div class="d-flex flex-column gap-1">
+                    <!-- Voucher -->
+                    <div class="btn-group" style="width:fit-content;">
+                        <a href="voucher.php?<?= $vParams ?>&lang=tr" target="_blank" class="btn btn-outline-success" style="padding:2px 6px;font-size:.7rem;" title="Voucher (TR)">
+                            <i class="bi bi-file-earmark-pdf"></i>
+                        </a>
+                        <button type="button" class="btn btn-outline-success dropdown-toggle dropdown-toggle-split" style="padding:2px 4px;font-size:.7rem;" data-bs-toggle="dropdown">
+                            <span class="visually-hidden">Dil Seç</span>
+                        </button>
+                        <ul class="dropdown-menu dropdown-menu-end">
+                            <li><a class="dropdown-item small" href="voucher.php?<?= $vParams ?>&lang=tr" target="_blank">🇹🇷 Türkçe</a></li>
+                            <li><a class="dropdown-item small" href="voucher.php?<?= $vParams ?>&lang=en" target="_blank">🇬🇧 English</a></li>
+                            <li><a class="dropdown-item small" href="voucher.php?<?= $vParams ?>&lang=de" target="_blank">🇩🇪 Deutsch</a></li>
+                            <li><a class="dropdown-item small" href="voucher.php?<?= $vParams ?>&lang=ru" target="_blank">🇷🇺 Русский</a></li>
+                        </ul>
+                    </div>
                     <?php if ($out): ?>
                         <div class="btn-group" style="width:fit-content;">
                             <button type="button" class="btn btn-outline-primary" style="padding:2px 6px;font-size:.7rem;" onclick="openBookingModal(<?= $out['id'] ?>)" title="Geliş Detayı">
@@ -502,13 +523,33 @@ require_once __DIR__ . '/includes/header.php';
                     </span>
                 </td>
                 <td>
-                    <div class="btn-group btn-group-sm">
-                        <button type="button" class="btn btn-outline-primary" onclick="openBookingModal(<?= $b['id'] ?>)" title="Detay / Düzenle">
-                            <i class="bi bi-eye"></i>
-                        </button>
-                        <button type="button" class="btn btn-outline-danger" onclick="deleteBooking(<?= $b['id'] ?>)" title="Sil">
-                            <i class="bi bi-trash"></i>
-                        </button>
+                    <?php
+                        $bDir = $b['booking_direction'] ?? 'outbound';
+                        $bVParam = ($bDir === 'return') ? 'ret_id=' . $b['id'] : 'out_id=' . $b['id'];
+                    ?>
+                    <div class="d-flex flex-column gap-1 align-items-start">
+                        <div class="btn-group btn-group-sm">
+                            <button type="button" class="btn btn-outline-primary" onclick="openBookingModal(<?= $b['id'] ?>)" title="Detay / Düzenle">
+                                <i class="bi bi-eye"></i>
+                            </button>
+                            <button type="button" class="btn btn-outline-danger" onclick="deleteBooking(<?= $b['id'] ?>)" title="Sil">
+                                <i class="bi bi-trash"></i>
+                            </button>
+                        </div>
+                        <div class="btn-group btn-group-sm">
+                            <a href="voucher.php?<?= $bVParam ?>&lang=tr" target="_blank" class="btn btn-outline-success" title="Voucher (TR)">
+                                <i class="bi bi-file-earmark-pdf"></i>
+                            </a>
+                            <button type="button" class="btn btn-outline-success dropdown-toggle dropdown-toggle-split" data-bs-toggle="dropdown">
+                                <span class="visually-hidden">Dil Seç</span>
+                            </button>
+                            <ul class="dropdown-menu dropdown-menu-end">
+                                <li><a class="dropdown-item small" href="voucher.php?<?= $bVParam ?>&lang=tr" target="_blank">🇹🇷 Türkçe</a></li>
+                                <li><a class="dropdown-item small" href="voucher.php?<?= $bVParam ?>&lang=en" target="_blank">🇬🇧 English</a></li>
+                                <li><a class="dropdown-item small" href="voucher.php?<?= $bVParam ?>&lang=de" target="_blank">🇩🇪 Deutsch</a></li>
+                                <li><a class="dropdown-item small" href="voucher.php?<?= $bVParam ?>&lang=ru" target="_blank">🇷🇺 Русский</a></li>
+                            </ul>
+                        </div>
                     </div>
                 </td>
             </tr>
