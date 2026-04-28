@@ -718,7 +718,7 @@ require_once __DIR__ . '/includes/header.php';
                             </div>
                             <div class="col-md-4">
                                 <label class="form-label">Uçuş Numarası</label>
-                                <input type="text" name="flight_number" id="modal-flight-number" class="form-control">
+                                <input type="text" name="flight_number" id="modal-flight-number" class="form-control flight-number-upper" style="text-transform:uppercase;">
                             </div>
                         </div>
                         <div class="row mb-3">
@@ -821,7 +821,7 @@ require_once __DIR__ . '/includes/header.php';
                     <!-- Transfer & Araç -->
                     <h6 class="mb-3"><i class="bi bi-geo-alt me-2"></i>Transfer & Araç Seçimi</h6>
                     <div class="row mb-4">
-                        <div class="col-md-4">
+                        <div class="col-md-6">
                             <label class="form-label">Transfer</label>
                             <select name="destination_id" id="add-destination" class="form-select">
                                 <option value="">-- Transfer Seçin --</option>
@@ -830,7 +830,7 @@ require_once __DIR__ . '/includes/header.php';
                                 <?php endforeach; ?>
                             </select>
                         </div>
-                        <div class="col-md-4">
+                        <div class="col-md-6">
                             <label class="form-label">Araç</label>
                             <select name="vehicle_id" id="add-vehicle" class="form-select">
                                 <option value="">-- Araç Seçin --</option>
@@ -838,18 +838,6 @@ require_once __DIR__ . '/includes/header.php';
                                 <option value="<?= $v['id'] ?>"><?= e($v['vehicle_name']) ?> (<?= (int)$v['capacity'] ?> kişi)</option>
                                 <?php endforeach; ?>
                             </select>
-                        </div>
-                        <div class="col-md-4">
-                            <label class="form-label">Geliş Fiyatı</label>
-                            <div class="input-group">
-                                <select name="currency" id="add-currency" class="form-select" style="max-width:90px;">
-                                    <option value="TRY">₺ TRY</option>
-                                    <option value="EUR" selected>€ EUR</option>
-                                    <option value="USD">$ USD</option>
-                                    <option value="GBP">£ GBP</option>
-                                </select>
-                                <input type="number" name="total_price" id="add-total-price" class="form-control" min="0" step="0.01" placeholder="0.00">
-                            </div>
                         </div>
                     </div>
 
@@ -874,51 +862,74 @@ require_once __DIR__ . '/includes/header.php';
 
                     <hr>
 
-                    <!-- GELİŞ -->
-                    <h6 class="mb-3 text-primary"><i class="bi bi-box-arrow-in-down-right me-2"></i>Geliş Uçuş Bilgileri</h6>
-                    <div class="row mb-3">
-                        <div class="col-md-4">
-                            <label class="form-label">Uçuş Tarihi</label>
-                            <input type="date" name="flight_date" class="form-control">
-                        </div>
-                        <div class="col-md-4">
-                            <label class="form-label">Uçuş Saati</label>
-                            <input type="time" name="flight_time" class="form-control">
-                        </div>
-                        <div class="col-md-4">
-                            <label class="form-label">Uçuş Numarası</label>
-                            <input type="text" name="flight_number" class="form-control">
-                        </div>
+                    <!-- Geliş toggle -->
+                    <div class="form-check form-switch mb-3">
+                        <input class="form-check-input" type="checkbox" id="add-has-outbound" name="has_outbound" value="1"
+                            <?= $view !== 'return' ? 'checked' : '' ?>>
+                        <label class="form-check-label fw-bold" for="add-has-outbound">
+                            <i class="bi bi-box-arrow-in-down-right me-1 text-primary"></i>Geliş Transferi Ekle
+                        </label>
                     </div>
-                    <div class="row mb-3">
-                        <div class="col-md-12">
-                            <label class="form-label">Otel / Adres</label>
-                            <div class="d-flex gap-2">
-                                <div class="flex-grow-1">
-                                    <select name="hotel_address" id="add-hotel-address" class="form-select hotel-select">
-                                        <option value=""></option>
-                                        <?php foreach ($hotelOptions as $ho): ?>
-                                        <option value="<?= e($ho['name'] . ($ho['address'] ? ' — ' . $ho['address'] : '')) ?>">
-                                            <?= e($ho['name']) ?><?= $ho['distance_km'] !== null ? ' (' . number_format((float)$ho['distance_km'], 0) . ' km)' : '' ?>
-                                        </option>
-                                        <?php endforeach; ?>
-                                    </select>
-                                </div>
-                                <button type="button" class="btn btn-outline-success btn-quick-hotel flex-shrink-0"
-                                        data-target="add-hotel-address" title="Hızlı Otel Ekle" style="height:38px;">
-                                    <i class="bi bi-plus-lg"></i>
-                                </button>
+
+                    <!-- GELİŞ alanları -->
+                    <div id="outbound-section" style="<?= $view !== 'return' ? '' : 'display:none;' ?>">
+                        <h6 class="mb-3 text-primary"><i class="bi bi-box-arrow-in-down-right me-2"></i>Geliş Uçuş Bilgileri</h6>
+                        <div class="row mb-3">
+                            <div class="col-md-4">
+                                <label class="form-label">Uçuş Tarihi</label>
+                                <input type="date" name="flight_date" class="form-control">
+                            </div>
+                            <div class="col-md-4">
+                                <label class="form-label">Uçuş Saati</label>
+                                <input type="time" name="flight_time" class="form-control">
+                            </div>
+                            <div class="col-md-4">
+                                <label class="form-label">Uçuş Numarası</label>
+                                <input type="text" name="flight_number" class="form-control flight-number-upper" style="text-transform:uppercase;">
                             </div>
                         </div>
+                        <div class="row mb-3">
+                            <div class="col-md-7">
+                                <label class="form-label">Otel / Adres</label>
+                                <div class="d-flex gap-2">
+                                    <div class="flex-grow-1">
+                                        <select name="hotel_address" id="add-hotel-address" class="form-select hotel-select">
+                                            <option value=""></option>
+                                            <?php foreach ($hotelOptions as $ho): ?>
+                                            <option value="<?= e($ho['name'] . ($ho['address'] ? ' — ' . $ho['address'] : '')) ?>">
+                                                <?= e($ho['name']) ?><?= $ho['distance_km'] !== null ? ' (' . number_format((float)$ho['distance_km'], 0) . ' km)' : '' ?>
+                                            </option>
+                                            <?php endforeach; ?>
+                                        </select>
+                                    </div>
+                                    <button type="button" class="btn btn-outline-success btn-quick-hotel flex-shrink-0"
+                                            data-target="add-hotel-address" title="Hızlı Otel Ekle" style="height:38px;">
+                                        <i class="bi bi-plus-lg"></i>
+                                    </button>
+                                </div>
+                            </div>
+                            <div class="col-md-5">
+                                <label class="form-label">Geliş Fiyatı</label>
+                                <div class="input-group">
+                                    <select name="currency" id="add-currency" class="form-select" style="max-width:90px;">
+                                        <option value="TRY">₺ TRY</option>
+                                        <option value="EUR" selected>€ EUR</option>
+                                        <option value="USD">$ USD</option>
+                                        <option value="GBP">£ GBP</option>
+                                    </select>
+                                    <input type="number" name="total_price" id="add-total-price" class="form-control" min="0" step="0.01" placeholder="0.00">
+                                </div>
+                            </div>
+                        </div>
+                        <hr>
                     </div>
-                    <hr>
 
                     <!-- Dönüş toggle -->
                     <div class="form-check form-switch mb-3">
                         <input class="form-check-input" type="checkbox" id="add-has-return" name="has_return" value="1"
                             <?= $view === 'return' ? 'checked' : '' ?>>
                         <label class="form-check-label fw-bold" for="add-has-return">
-                            <i class="bi bi-box-arrow-up-right me-1 text-info"></i>Dönüş Transferi de Ekle
+                            <i class="bi bi-box-arrow-up-right me-1 text-info"></i>Dönüş Transferi Ekle
                         </label>
                     </div>
 
@@ -936,7 +947,7 @@ require_once __DIR__ . '/includes/header.php';
                             </div>
                             <div class="col-md-4">
                                 <label class="form-label">Dönüş Uçuş Numarası</label>
-                                <input type="text" name="return_flight_number" class="form-control">
+                                <input type="text" name="return_flight_number" class="form-control flight-number-upper" style="text-transform:uppercase;">
                             </div>
                         </div>
                         <div class="row mb-3">
@@ -1266,16 +1277,21 @@ $(document).ready(function() {
     // all:     Yön(0) GelişTarihi(1) GelişSaati(2) GidişTarihi(3) GidişSaati(4) AlışSaati(5) Müşteri(6) Kişi(7) Otel(8) Tutar(9) Durum(10)
     // arrival: No(0) Müşteri(1) Otel(2) Uçuş(3) Araç(4) Kişi(5) Tutar(6) Durum(7)
     // return:  No(0) Müşteri(1) Otel(2) Uçuş(3) AlışSaati(4) Araç(5) Kişi(6) Tutar(7) Durum(8)
-    const dateColIdx   = currentView === 'all' ? 1 : 3;
+    // all: GelişTarihi(1) + GidişTarihi(3) — herhangi biri eşleşirse geçer
+    // arrival/return: tek tarih sütunu (3)
+    const dateColIdxs  = currentView === 'all' ? [1, 3] : [3];
     const statusColIdx = currentView === 'all' ? 11 : (currentView === 'return' ? 8 : 7);
 
     $.fn.dataTable.ext.search.push(function(settings, data) {
         if (settings.nTable.id !== 'bookingsTable') return true;
         const fd = $('#filter-date').val();
         if (fd) {
-            const m = (data[dateColIdx] || '').match(/(\d{2})\.(\d{2})\.(\d{4})/);
-            if (!m) return false;
-            if (m[3]+'-'+m[2]+'-'+m[1] !== fd) return false;
+            var matched = false;
+            for (var i = 0; i < dateColIdxs.length; i++) {
+                var m = (data[dateColIdxs[i]] || '').match(/(\d{2})\.(\d{2})\.(\d{4})/);
+                if (m && (m[3]+'-'+m[2]+'-'+m[1]) === fd) { matched = true; break; }
+            }
+            if (!matched) return false;
         }
         const fs = $('#filter-status').val();
         if (fs && (data[statusColIdx] || '').indexOf(fs) === -1) return false;
@@ -1325,6 +1341,25 @@ $(document).ready(function() {
     });
 });
 
+// ─── Uçuş numarası inputlarını otomatik büyük harf yap ──────────────────────
+document.addEventListener('input', function(e) {
+    if (e.target && e.target.classList && e.target.classList.contains('flight-number-upper')) {
+        var pos = e.target.selectionStart;
+        e.target.value = e.target.value.toUpperCase();
+        try { e.target.setSelectionRange(pos, pos); } catch (err) {}
+    }
+});
+
+// ─── Geliş toggle ────────────────────────────────────────────────────────────
+document.getElementById('add-has-outbound').addEventListener('change', function() {
+    document.getElementById('outbound-section').style.display = this.checked ? 'block' : 'none';
+    // En az biri seçili olmalı
+    if (!this.checked && !document.getElementById('add-has-return').checked) {
+        document.getElementById('add-has-return').checked = true;
+        document.getElementById('add-has-return').dispatchEvent(new Event('change'));
+    }
+});
+
 // ─── Dönüş toggle ────────────────────────────────────────────────────────────
 document.getElementById('add-has-return').addEventListener('change', function() {
     document.getElementById('return-section').style.display = this.checked ? 'block' : 'none';
@@ -1334,6 +1369,11 @@ document.getElementById('add-has-return').addEventListener('change', function() 
         if (gelisVal && !$('#add-return-hotel-address').val()) {
             $('#add-return-hotel-address').val(gelisVal).trigger('change');
         }
+    }
+    // En az biri seçili olmalı
+    if (!this.checked && !document.getElementById('add-has-outbound').checked) {
+        document.getElementById('add-has-outbound').checked = true;
+        document.getElementById('add-has-outbound').dispatchEvent(new Event('change'));
     }
 });
 

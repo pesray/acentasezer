@@ -196,7 +196,7 @@ function voucherLangUrl($l, $outId, $retId) {
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title><?= e($siteName) ?> — Voucher #<?= e($base['booking_number']) ?></title>
+    <title><?= e($base['customer_name']) ?> — <?= e($siteName) ?> — Voucher #<?= e($base['booking_number']) ?></title>
     <style>
         * { box-sizing: border-box; margin: 0; padding: 0; }
 

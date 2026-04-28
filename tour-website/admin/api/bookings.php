@@ -28,7 +28,10 @@ switch ($action) {
         try {
             $destinationId = (int)($_POST['destination_id'] ?? 0);
             $vehicleId     = (int)($_POST['vehicle_id'] ?? 0);
+            $hasOutbound   = !empty($_POST['has_outbound']);
             $hasReturn     = !empty($_POST['has_return']);
+            // En az biri olmak zorunda; hiçbiri yoksa varsayılan geliş
+            if (!$hasOutbound && !$hasReturn) $hasOutbound = true;
 
             $insertBooking = $db->prepare("
                 INSERT INTO bookings (
@@ -66,29 +69,31 @@ switch ($action) {
                 trim($_POST['admin_notes'] ?? '') ?: null,
             ];
 
-            // Geliş kaydı
-            $numOutbound = 'TRF-' . date('Ymd') . '-' . str_pad(mt_rand(1, 9999), 4, '0', STR_PAD_LEFT);
-            $insertBooking->execute(array_merge(
-                [$numOutbound, 'outbound'],
-                $commonFields,
-                [
-                    ($_POST['flight_date'] ?? '') ?: null,
-                    ($_POST['flight_time'] ?? '') ?: null,
-                    trim($_POST['flight_number'] ?? '') ?: null,
-                    trim($_POST['hotel_address'] ?? '') ?: null,
-                    null, // pickup_time geliş için yok
-                ],
-                $passengerFields,
-                [(float)($_POST['total_price'] ?? 0), trim($_POST['currency'] ?? 'TRY')],
-                $noteFields
-            ));
-
-            $outboundId = (int)$db->lastInsertId();
             $adultNames = $_POST['passenger_adult_name'] ?? [];
             $childNames = $_POST['passenger_child_name'] ?? [];
-            savePassengers($db, $outboundId, $numOutbound, $adultNames, $childNames);
+            $messages   = [];
 
-            $message = 'Geliş rezervasyonu oluşturuldu: #' . $numOutbound;
+            // Geliş kaydı (isteğe bağlı)
+            if ($hasOutbound) {
+                $numOutbound = 'TRF-' . date('Ymd') . '-' . str_pad(mt_rand(1, 9999), 4, '0', STR_PAD_LEFT);
+                $insertBooking->execute(array_merge(
+                    [$numOutbound, 'outbound'],
+                    $commonFields,
+                    [
+                        ($_POST['flight_date'] ?? '') ?: null,
+                        ($_POST['flight_time'] ?? '') ?: null,
+                        trim($_POST['flight_number'] ?? '') ?: null,
+                        trim($_POST['hotel_address'] ?? '') ?: null,
+                        null, // pickup_time geliş için yok
+                    ],
+                    $passengerFields,
+                    [(float)($_POST['total_price'] ?? 0), trim($_POST['currency'] ?? 'TRY')],
+                    $noteFields
+                ));
+                $outboundId = (int)$db->lastInsertId();
+                savePassengers($db, $outboundId, $numOutbound, $adultNames, $childNames);
+                $messages[] = 'Geliş: #' . $numOutbound;
+            }
 
             // Dönüş kaydı (isteğe bağlı)
             if ($hasReturn) {
@@ -109,10 +114,10 @@ switch ($action) {
                 ));
                 $returnId = (int)$db->lastInsertId();
                 savePassengers($db, $returnId, $numReturn, $adultNames, $childNames);
-                $message .= ' | Dönüş: #' . $numReturn;
+                $messages[] = 'Dönüş: #' . $numReturn;
             }
 
-            jsonResponse(true, $message);
+            jsonResponse(true, 'Rezervasyon oluşturuldu — ' . implode(' | ', $messages));
         } catch (Exception $e) {
             jsonResponse(false, 'Hata: ' . $e->getMessage());
         }
