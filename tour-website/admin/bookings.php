@@ -8,8 +8,9 @@ requireLogin();
 
 $db = getDB();
 
-$view = $_GET['view'] ?? 'arrival';
-if (!in_array($view, ['arrival', 'return', 'all'])) $view = 'arrival';
+$defaultView = defined('BOOKINGS_AS_DASHBOARD') ? 'all' : 'arrival';
+$view = $_GET['view'] ?? $defaultView;
+if (!in_array($view, ['arrival', 'return', 'all'])) $view = $defaultView;
 
 $viewTitleMap = ['return' => 'Dönüş Rezervasyonları', 'all' => 'Tüm Rezervasyonlar'];
 $viewTitle = $viewTitleMap[$view] ?? 'Geliş Rezervasyonları';
@@ -114,7 +115,7 @@ if ($view === 'all') {
     }
 }
 
-$pageTitle = $viewTitle;
+if (!isset($pageTitle)) $pageTitle = $viewTitle;
 require_once __DIR__ . '/includes/header.php';
 ?>
 
@@ -440,13 +441,16 @@ require_once __DIR__ . '/includes/header.php';
                 <?php else: ?>-<?php endif; ?></td>
                 <td>
                     <div class="d-flex flex-column gap-1" style="width:fit-content;">
-                    
-                    <button type="button" class="btn btn-outline-primary" style="padding:2px 6px;" onclick="openOpsStatus(<?= $out['id'] ?>)" title="Geliş iş Durumu">
-                                <i class="bi bi-box-arrow-in-down-right"></i>
+                    <?php if ($out): ?>
+                    <button type="button" class="btn btn-outline-primary" style="padding:2px 6px;" onclick="openOpsStatus(<?= $out['id'] ?>)" title="Geliş İş Durumu">
+                        <i class="bi bi-box-arrow-in-down-right"></i>
                     </button>
+                    <?php endif; ?>
+                    <?php if ($ret): ?>
                     <button type="button" class="btn btn-outline-info" style="padding:2px 6px;" onclick="openOpsStatus(<?= $ret['id'] ?>)" title="Dönüş İş Durumu">
-                                <i class="bi bi-box-arrow-up-right"></i>
+                        <i class="bi bi-box-arrow-up-right"></i>
                     </button>
+                    <?php endif; ?>
                     </div>
                 </td>
                 <td>
@@ -462,7 +466,7 @@ require_once __DIR__ . '/includes/header.php';
                             <button type="button" class="btn btn-outline-primary" style="padding:2px 6px;" onclick="openBookingModal(<?= $out['id'] ?>)" title="Geliş Detayı">
                                 <i class="bi bi-box-arrow-in-down-right"></i>
                             </button>
-                            
+
                             <button type="button" class="btn btn-outline-danger" style="padding:2px 6px;" onclick="deleteBooking(<?= $out['id'] ?>)" title="Geliş Sil">
                                 <i class="bi bi-trash"></i>
                             </button>
@@ -473,27 +477,27 @@ require_once __DIR__ . '/includes/header.php';
                             <button type="button" class="btn btn-outline-info" style="padding:2px 6px;" onclick="openBookingModal(<?= $ret['id'] ?>)" title="Dönüş Detayı">
                                 <i class="bi bi-box-arrow-up-right"></i>
                             </button>
-                            
+
                             <button type="button" class="btn btn-outline-danger" style="padding:2px 6px;" onclick="deleteBooking(<?= $ret['id'] ?>)" title="Dönüş Sil">
                                 <i class="bi bi-trash"></i>
                             </button>
                         </div>
-                        <!-- Voucher -->
-                        <div class="btn-group" style="width:fit-content;">
-                            <a href="voucher.php?<?= $vParams ?>&lang=tr" target="_blank" class="btn btn-outline-success" style="padding:2px 6px;" title="Voucher (TR)">
-                                <i class="bi bi-file-earmark-pdf"></i>
-                            </a>
-                            <button type="button" class="btn btn-outline-success dropdown-toggle dropdown-toggle-split" style="padding:2px 4px;" data-bs-toggle="dropdown">
-                                <span class="visually-hidden">Dil Seç</span>
-                            </button>
-                            <ul class="dropdown-menu dropdown-menu-end">
-                                <li><a class="dropdown-item small" href="voucher.php?<?= $vParams ?>&lang=tr" target="_blank">🇹🇷 Türkçe</a></li>
-                                <li><a class="dropdown-item small" href="voucher.php?<?= $vParams ?>&lang=en" target="_blank">🇬🇧 English</a></li>
-                                <li><a class="dropdown-item small" href="voucher.php?<?= $vParams ?>&lang=de" target="_blank">🇩🇪 Deutsch</a></li>
-                                <li><a class="dropdown-item small" href="voucher.php?<?= $vParams ?>&lang=ru" target="_blank">🇷🇺 Русский</a></li>
-                            </ul>
-                        </div>
                     <?php endif; ?>
+                    <!-- Voucher (her zaman) -->
+                    <div class="btn-group" style="width:fit-content;">
+                        <a href="voucher.php?<?= $vParams ?>&lang=tr" target="_blank" class="btn btn-outline-success" style="padding:2px 6px;" title="Voucher (TR)">
+                            <i class="bi bi-file-earmark-pdf"></i>
+                        </a>
+                        <button type="button" class="btn btn-outline-success dropdown-toggle dropdown-toggle-split" style="padding:2px 4px;" data-bs-toggle="dropdown">
+                            <span class="visually-hidden">Dil Seç</span>
+                        </button>
+                        <ul class="dropdown-menu dropdown-menu-end">
+                            <li><a class="dropdown-item small" href="voucher.php?<?= $vParams ?>&lang=tr" target="_blank">🇹🇷 Türkçe</a></li>
+                            <li><a class="dropdown-item small" href="voucher.php?<?= $vParams ?>&lang=en" target="_blank">🇬🇧 English</a></li>
+                            <li><a class="dropdown-item small" href="voucher.php?<?= $vParams ?>&lang=de" target="_blank">🇩🇪 Deutsch</a></li>
+                            <li><a class="dropdown-item small" href="voucher.php?<?= $vParams ?>&lang=ru" target="_blank">🇷🇺 Русский</a></li>
+                        </ul>
+                    </div>
                     </div>
                 </td>
             </tr>
@@ -1310,12 +1314,15 @@ $(document).ready(function() {
         return true;
     });
 
-    // Bugünü default olarak set et
-    var today = new Date();
-    var todayStr = today.getFullYear() + '-'
-        + String(today.getMonth() + 1).padStart(2, '0') + '-'
-        + String(today.getDate()).padStart(2, '0');
-    $('#filter-date').val(todayStr);
+    // Bugünü default olarak set et (dashboard'dan açılırsa atla)
+    <?php if (defined('BOOKINGS_AS_DASHBOARD')): ?>window.AUTO_FILTER_TODAY = false;<?php endif; ?>
+    if (window.AUTO_FILTER_TODAY !== false) {
+        var today = new Date();
+        var todayStr = today.getFullYear() + '-'
+            + String(today.getMonth() + 1).padStart(2, '0') + '-'
+            + String(today.getDate()).padStart(2, '0');
+        $('#filter-date').val(todayStr);
+    }
 
     $('#filter-date, #filter-status').on('change', function() { table.draw(); });
 
