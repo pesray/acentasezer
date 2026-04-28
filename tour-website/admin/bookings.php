@@ -1105,8 +1105,8 @@ require_once __DIR__ . '/includes/header.php';
                 </div>
 
                 <!-- Inputlar yan yana -->
-                <div class="row g-3">
-                    <div class="col-md-5">
+                <div class="row g-3 align-items-end">
+                    <div class="col-md-4">
                         <label class="form-label fw-semibold">Ad Soyad / Firma</label>
                         <div class="d-flex gap-2">
                             <div class="flex-grow-1">
@@ -1123,9 +1123,21 @@ require_once __DIR__ . '/includes/header.php';
                         <label class="form-label fw-semibold">Otelden Alış Saati</label>
                         <input type="time" id="outsource-pickup-input" class="form-control">
                     </div>
-                    <div class="col-md-4">
+                    <div class="col-md-2">
                         <label class="form-label fw-semibold">Tutar</label>
                         <input type="number" id="outsource-price-input" class="form-control" min="0" step="0.01" placeholder="0.00">
+                    </div>
+                    <div class="col-md-3" id="outsource-wa-wrap">
+                        <label class="form-label fw-semibold d-block">&nbsp;</label>
+                        <div class="d-flex align-items-center gap-2 border rounded px-2" style="height:38px;background:#f6fff8;border-color:#25d366 !important;white-space:nowrap;">
+                            <div class="form-check form-switch mb-0" style="padding-left:2.2em;min-height:auto;">
+                                <input class="form-check-input mt-0" type="checkbox" id="outsource-wa-toggle" style="cursor:pointer;width:2em;height:1em;">
+                            </div>
+                            <label for="outsource-wa-toggle" class="fw-bold mb-0" style="cursor:pointer;color:#25d366;font-size:.85rem;line-height:1;">
+                                <i class="bi bi-whatsapp"></i> WP Mesaj At
+                            </label>
+                            <span class="small text-muted ms-1" id="outsource-wa-hint" style="font-size:.65rem;display:none;">(numara yok)</span>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -1807,6 +1819,14 @@ document.getElementById('outsource-save-btn').addEventListener('click', function
                     chk.dataset.outsourceName      = name;
                     chk.dataset.outsourcePartnerId = partnerId;
                 }
+
+                // WhatsApp mesajı (toggle açık + telefon varsa)
+                const waToggle = document.getElementById('outsource-wa-toggle');
+                const waPhone  = ($('#outsource-name-input').find('option:selected').data('phone') || '').toString().trim();
+                if (waToggle.checked && waPhone) {
+                    sendOutsourceWhatsApp(id, waPhone, name, price, pickupTime);
+                }
+
                 bootstrap.Modal.getInstance(document.getElementById('outsourceModal')).hide();
             }
         })
@@ -1822,6 +1842,87 @@ document.addEventListener('blur', function(e) {
     if (!e.target.classList.contains('ops-price-input')) return;
     updateOps(e.target.dataset.id, 'outsource_price', e.target.value);
 }, true);
+
+// ─── Dışarıya Verilen Partnere WhatsApp Mesajı ────────────────────────────────
+function sendOutsourceWhatsApp(bookingId, partnerPhone, partnerName, partnerPrice, pickupTimeOverride) {
+    var bData = bookingsData.find(function(x) { return x.id == bookingId; });
+    if (!bData) return;
+
+    // Yolcuları çek
+    var fdp = new FormData();
+    fdp.append('action', 'get_passengers');
+    fdp.append('id', bookingId);
+    fdp.append('csrf_token', csrfToken);
+
+    fetch(apiUrl, {method:'POST', body:fdp})
+        .then(function(r) { return r.json(); })
+        .then(function(d) {
+            var passengers = (d.success && d.data && d.data.passengers) ? d.data.passengers : [];
+            var msg = buildOutsourceMessage(bData, partnerPrice, pickupTimeOverride, passengers);
+            var waNumber = (partnerPhone || '').replace(/[^0-9]/g, '');
+            if (!waNumber) return;
+            var url = 'https://wa.me/' + waNumber + '?text=' + encodeURIComponent(msg);
+            window.open(url, '_blank');
+        })
+        .catch(function() {});
+}
+
+function buildOutsourceMessage(b, partnerPrice, pickupTimeOverride, passengers) {
+    var AIRPORT  = 'ANTALYA AİRPORT AYT';
+    var hotel    = b.hotel_address || '-';
+    var isReturn = b.booking_direction === 'return';
+    var adults   = b.adults || 0;
+    var children = b.children || 0;
+
+    var paxStr = adults + ' Yetişkin' + (children > 0 ? ' + ' + children + ' Çocuk' : '');
+    var price  = b.total_price > 0
+        ? (parseFloat(b.total_price).toLocaleString('tr-TR', {minimumFractionDigits:0}) + ' ' + (b.currency || 'EUR'))
+        : '-';
+    var hak    = (partnerPrice && parseFloat(partnerPrice) > 0)
+        ? (parseFloat(partnerPrice).toLocaleString('tr-TR', {minimumFractionDigits:0}) + ' ' + (b.currency || 'EUR'))
+        : '-';
+
+    function fmtDate(d) {
+        if (!d) return '';
+        var dt = new Date(d);
+        return dt.toLocaleDateString('tr-TR', {day:'2-digit', month:'2-digit', year:'numeric'});
+    }
+    function fmtTime(t) { return t ? t.substring(0, 5) : ''; }
+
+    var lines = [];
+    if (isReturn) {
+        lines.push(hotel + ' --> ' + AIRPORT);
+        var pickupTime = pickupTimeOverride || (b.pickup_time ? b.pickup_time.substring(0,5) : '');
+        var pickupDate = fmtDate(b.flight_date);
+        lines.push('*OTELDEN ALINIŞ: ' + pickupDate + ' - ' + pickupTime + '*');
+        lines.push('Uçuş: ' + fmtDate(b.flight_date) + ' - ' + fmtTime(b.flight_time));
+        lines.push('Kişi: ' + paxStr);
+    } else {
+        lines.push(AIRPORT + ' --> ' + hotel);
+        lines.push(fmtDate(b.flight_date) + ' - ' + fmtTime(b.flight_time));
+        lines.push('Kişi: ' + paxStr);
+    }
+    if (b.flight_number) {
+        lines.push('Uçuş No: ' + b.flight_number);
+    }
+
+    lines.push('');
+    lines.push('*TAHSİLAT: ' + price + '*');
+    lines.push('HAKEDİŞ: ' + hak);
+
+    if (passengers && passengers.length > 0) {
+        lines.push('');
+        lines.push('*YOLCULAR*');
+        passengers.forEach(function(p) {
+            if (p.full_name) {
+                var tag = p.passenger_type === 'child' ? ' (Çocuk)' : '';
+                lines.push('• ' + p.full_name + tag);
+            }
+        });
+    }
+
+    return lines.join('\n');
+}
 
 // ─── İş Durumu Modalı ─────────────────────────────────────────────────────────
 function openOpsStatus(id) {
@@ -1938,6 +2039,23 @@ function openOpsStatus(id) {
 // ─── Outsource Partner Select2 ───────────────────────────────────────────────
 var partnerApiUrl = window.ADMIN_URL + '/api/handler.php?entity=outsource_partners';
 
+// Partner select'i değişince WP toggle durumu (telefon yoksa devre dışı)
+function updateWaToggleState() {
+    var $sel    = $('#outsource-name-input');
+    var phone   = ($sel.find('option:selected').data('phone') || '').toString().trim();
+    var toggle  = document.getElementById('outsource-wa-toggle');
+    var hint    = document.getElementById('outsource-wa-hint');
+    if (phone) {
+        toggle.disabled = false;
+        toggle.checked  = true;
+        hint.style.display = 'none';
+    } else {
+        toggle.disabled = true;
+        toggle.checked  = false;
+        hint.style.display = '';
+    }
+}
+
 function initPartnerSelect(currentPid, currentName) {
     var $sel = $('#outsource-name-input');
     if ($sel.hasClass('select2-hidden-accessible')) {
@@ -1975,6 +2093,8 @@ function initPartnerSelect(currentPid, currentName) {
                     return {id: params.term, text: params.term, newTag: true};
                 }
             });
+            $sel.off('change.waToggle').on('change.waToggle', updateWaToggleState);
+            updateWaToggleState();
         })
         .catch(function() {});
 }
