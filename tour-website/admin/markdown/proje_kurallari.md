@@ -135,6 +135,19 @@ PHP 8+ syntax'ı **KESİNLİKLE KULLANILMAZ**:
 ## Mevcut Durum (2026-04-28)
 
 - ✅ Rezervasyon modülü tamamlandı (detaylar `rezervasyon_yapilanlar.md`)
-- ✅ **Admin panel sidebar redesign tamamlandı** — beyaz minimal, Inter font, dinamik logo/site adı, modern flyout, gelişmiş mobile davranış
-- 🔜 Sırada: Top navbar bildirimler/dil switcher, settings.php yenileme, dashboard widget'ları
+- ✅ **Admin panel sidebar redesign** — beyaz minimal, Inter font, dinamik logo/site adı, modern flyout, gelişmiş mobile davranış
+- ✅ **Dark mode** eklendi — top navbar'da ay/güneş toggle, localStorage kalıcı, flash'sız yükleme, Bootstrap 5.3 `data-bs-theme` ile entegre
+- ✅ **Mobile responsive iyileştirmeleri** (header.php global CSS) — tablo yatay scroll, modal full-screen <576px, page header stack, button compact, DataTables filter stack, touch-friendly tap targets, nav-tabs scroll
+- 🔜 Sırada: Diğer admin sayfalarını mobil için tek tek polish (vehicles, hotels, settings, partner pages…), settings.php yenileme, dashboard widget'ları
 - Sonrasında: Frontend site polish, raporlama
+
+## Mobile Responsive Pattern (Tüm admin sayfaları)
+
+`includes/header.php` içinde global CSS var. Ek bir şey gerekmiyorsa sayfa otomatik responsive. Sayfa-spesifik gereksinimler için pattern:
+
+- **Tablolar:** `<div class="table-responsive">` ile sar, sonra `.view-X` wrapper içinde `nth-child` ile mobile'da gizleme stratejisi uygula
+- **Stat cards:** col-xl-3 col-md-6 (otomatik mobile'da 1 sütun)
+- **Page header:** `<div class="d-flex justify-content-between align-items-center mb-4">` → mobile'da otomatik stack
+- **Modal:** Default boyutlarda mobil için otomatik full-screen davranış var (<576px)
+- **Form satırları:** `<div class="row">` + `col-md-X` kullan — mobile'da otomatik stack
+- **Mobile-only gizle:** `.d-mobile-hide` utility class kullan (≤575px)

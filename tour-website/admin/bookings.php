@@ -306,7 +306,53 @@ require_once __DIR__ . '/includes/header.php';
 #bookingsTable {
     zoom: 0.95;
 }
+/* Mobile: bazı sütunları gizle, ferahlat */
+@media (max-width: 991.98px) {
+    #bookingsTable { zoom: 1; font-size: .8rem; }
+    #bookingsTable th, #bookingsTable td { padding: .5rem .4rem; }
+}
+@media (max-width: 767.98px) {
+    /* all view: Geliş Saati(3), Gidiş Saati(5), Kişi(8), Otel(9), Araç(10), Durum(14) gizle
+       — Geliş Durumu(12) ve Dönüş Durumu(13) görünür kalır */
+    .view-all #bookingsTable th:nth-child(3),
+    .view-all #bookingsTable td:nth-child(3),
+    .view-all #bookingsTable th:nth-child(5),
+    .view-all #bookingsTable td:nth-child(5),
+    .view-all #bookingsTable th:nth-child(8),
+    .view-all #bookingsTable td:nth-child(8),
+    .view-all #bookingsTable th:nth-child(9),
+    .view-all #bookingsTable td:nth-child(9),
+    .view-all #bookingsTable th:nth-child(10),
+    .view-all #bookingsTable td:nth-child(10),
+    .view-all #bookingsTable th:nth-child(14),
+    .view-all #bookingsTable td:nth-child(14) { display: none; }
+
+    /* arrival/return: Otel(3), Araç(5), Kişi(6) gizle */
+    .view-arrival #bookingsTable th:nth-child(3),
+    .view-arrival #bookingsTable td:nth-child(3),
+    .view-arrival #bookingsTable th:nth-child(5),
+    .view-arrival #bookingsTable td:nth-child(5),
+    .view-arrival #bookingsTable th:nth-child(6),
+    .view-arrival #bookingsTable td:nth-child(6),
+    .view-return #bookingsTable th:nth-child(3),
+    .view-return #bookingsTable td:nth-child(3),
+    .view-return #bookingsTable th:nth-child(6),
+    .view-return #bookingsTable td:nth-child(6),
+    .view-return #bookingsTable th:nth-child(7),
+    .view-return #bookingsTable td:nth-child(7) { display: none; }
+}
+
+/* Sayfa filter satırı mobilde stack */
+@media (max-width: 767.98px) {
+    .table-card .card-header > .d-flex { flex-direction: column; align-items: stretch !important; gap: .5rem; }
+    .table-card .card-header .d-flex.gap-2 { flex-wrap: wrap; }
+    .table-card .card-header #filter-status { flex: 1; min-width: 130px; }
+}
     </style>
+
+    <?php $viewClass = 'view-' . $view; ?>
+    <div class="<?= $viewClass ?>">
+    <div class="table-responsive">
 
     <?php if ($view === 'all'): ?>
     <!-- Tüm Rezervasyonlar: geliş+dönüş çifti tek satırda -->
@@ -597,6 +643,9 @@ require_once __DIR__ . '/includes/header.php';
         </tbody>
     </table>
     <?php endif; ?>
+
+    </div><!-- /.table-responsive -->
+    </div><!-- /.view-X -->
 
     </div>
 </div>

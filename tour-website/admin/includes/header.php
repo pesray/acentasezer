@@ -563,6 +563,23 @@ if ($siteLogo && defined('UPLOADS_URL')) {
         }
         .table-card { border: none; border-radius: var(--radius); box-shadow: var(--shadow-sm); }
 
+        /* ─── Zebra stripe (tüm datatable'lar) ──────────────── */
+        .table-hover tbody tr:nth-of-type(even) > * {
+            background-color: rgba(99, 102, 241, .15);
+        }
+        .table-hover tbody tr:nth-of-type(odd) > * {
+            background-color: transparent;
+        }
+        .table-hover tbody tr:hover > * {
+            background-color: rgba(99, 102, 241, .20) !important;
+        }
+        [data-bs-theme="dark"] .table-hover tbody tr:nth-of-type(even) > * {
+            background-color: rgba(255, 255, 255, .07);
+        }
+        [data-bs-theme="dark"] .table-hover tbody tr:hover > * {
+            background-color: rgba(129, 140, 248, .18) !important;
+        }
+
         /* ─── Language tabs ─────────────────────────────────── */
         .lang-tabs .nav-link { border-radius: 0; border: 1px solid #dee2e6; margin-right: -1px; }
         .lang-tabs .nav-link.active { background-color: var(--primary); border-color: var(--primary); color: #fff; }
@@ -579,7 +596,7 @@ if ($siteLogo && defined('UPLOADS_URL')) {
         }
         .sidebar-overlay.show { display: block; opacity: 1; }
 
-        /* ─── Responsive ─────────────────────────────────── */
+        /* ─── Responsive — Tablet (991.98px) ─────────────────── */
         @media (max-width: 991.98px) {
             .sidebar {
                 transform: translateX(-100%);
@@ -589,11 +606,131 @@ if ($siteLogo && defined('UPLOADS_URL')) {
             .sidebar.show { transform: translateX(0); }
             .main-content { margin-left: 0 !important; }
             .top-user-name { display: none; }
+            .content-wrapper { padding: 1.25rem 1rem; }
+
+            /* Sayfa başlıkları stack */
+            .page-header,
+            .d-flex.justify-content-between.align-items-center.mb-4,
+            .d-flex.justify-content-between.align-items-center.mb-3 {
+                flex-direction: column;
+                align-items: stretch !important;
+                gap: .75rem;
+            }
+            .page-header > .btn,
+            .page-header > .d-flex,
+            .d-flex.justify-content-between.align-items-center.mb-4 > .btn,
+            .d-flex.justify-content-between.align-items-center.mb-3 > .btn {
+                align-self: flex-start;
+            }
+
+            h1.h3 { font-size: 1.4rem; }
+
+            /* Stat cards 2 column */
+            .stat-card .card-body { padding: 1rem; }
+            .stat-card .stat-icon { width: 40px; height: 40px; font-size: 1.2rem; }
+
+            /* Card padding küçültme */
+            .card-body { padding: 1rem; }
+            .card-header { padding: .75rem 1rem; }
+
+            /* Modal mobile fullscreen-like */
+            .modal-dialog:not(.modal-sm):not(.modal-fullscreen) {
+                margin: .5rem;
+                max-width: calc(100% - 1rem);
+            }
+            .modal-xl, .modal-lg, .modal-md {
+                margin: .5rem;
+                max-width: calc(100% - 1rem);
+            }
+            .modal-body { padding: 1rem; }
+
+            /* Form: kolonlar mobilde stack */
+            .modal-body .row > [class*="col-md-"] { margin-bottom: .75rem; }
+
+            /* Tablolar — horizontal scroll wrap */
+            .table-responsive { -webkit-overflow-scrolling: touch; }
+            .table { font-size: .85rem; }
+            .table th, .table td { padding: .55rem .5rem; white-space: nowrap; }
+            .table .btn-group .btn { padding: .25rem .45rem; }
+
+            /* DataTables mobile */
+            .dataTables_wrapper .row { flex-direction: column; gap: .5rem; }
+            .dataTables_wrapper .dataTables_length,
+            .dataTables_wrapper .dataTables_filter,
+            .dataTables_wrapper .dataTables_info,
+            .dataTables_wrapper .dataTables_paginate { text-align: left !important; }
+            .dataTables_filter input { width: 100% !important; max-width: none !important; margin-left: .5rem; }
+            .dataTables_paginate .paginate_button { padding: .3rem .6rem; }
+
+            /* Toggle butonlar / filter chip'ler stack */
+            .input-group-sm { width: 100% !important; }
+
+            /* Tab nav scroll */
+            .nav-tabs {
+                flex-wrap: nowrap;
+                overflow-x: auto;
+                overflow-y: hidden;
+                -webkit-overflow-scrolling: touch;
+            }
+            .nav-tabs .nav-link { white-space: nowrap; }
         }
 
+        /* ─── Mobile (≤575px) ─────────────────────────────── */
         @media (max-width: 575px) {
             .topbar-btn span { display: none; }
-            .content-wrapper { padding: 1rem; }
+            .topbar-btn { padding: 0; width: 38px; height: 38px; justify-content: center; }
+            .content-wrapper { padding: .85rem .65rem; }
+            :root { --header-height: 56px; }
+
+            /* Sayfa başlığı */
+            h1.h3 { font-size: 1.2rem; }
+
+            /* Stat cards: 1 column for ultra-narrow */
+            .row.g-4 > .col-xl-3.col-md-6 { padding: .5rem; }
+
+            /* Modal full-screen on phone */
+            .modal-dialog {
+                margin: 0 !important;
+                max-width: 100% !important;
+                min-height: 100vh !important;
+            }
+            .modal-content {
+                min-height: 100vh;
+                border-radius: 0 !important;
+                border: 0 !important;
+            }
+            .modal-header, .modal-footer { border-radius: 0 !important; }
+
+            /* Buton textleri kısalt */
+            .btn-sm { padding: .35rem .55rem; font-size: .78rem; }
+            .btn { font-size: .85rem; }
+
+            /* Stack form columns mobile */
+            .row > [class*="col-"] { margin-bottom: .65rem; }
+
+            /* Top navbar minimize */
+            .top-navbar { padding: 0 .75rem; }
+            #sidebarToggle, .topbar-icon-btn { width: 36px; height: 36px; }
+
+            /* DataTable controls compact */
+            .dataTables_length select { padding: .2rem .35rem; }
+            .dataTables_filter input { font-size: .85rem; }
+
+            /* Cards in stat row gap fix */
+            .row.g-4 { --bs-gutter-x: .75rem; --bs-gutter-y: .75rem; }
+
+            /* Forms tighter */
+            .form-label { font-size: .8rem; margin-bottom: .25rem; }
+            .form-control, .form-select { font-size: .9rem; }
+
+            /* Hide nice-to-have columns on phone (utility class for pages to use) */
+            .d-mobile-hide { display: none !important; }
+        }
+
+        /* Touch-friendly tap targets */
+        @media (hover: none) and (pointer: coarse) {
+            .btn, .nav-link, .dropdown-item { min-height: 36px; }
+            .form-check-input { width: 1.2em; height: 1.2em; }
         }
     </style>
 </head>

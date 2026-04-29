@@ -62,8 +62,12 @@ $(document).ready(function() {
         if (overlay) overlay.classList.remove('show');
     }
 
-    $('#sidebarToggle').on('click', function(e) {
+    // Event delegation — bookings.php gibi geç yüklenen sayfalarda da çalışır
+    document.addEventListener('click', function(e) {
+        var btn = e.target.closest('#sidebarToggle');
+        if (!btn) return;
         e.preventDefault();
+        e.stopPropagation();
         if (isMobile()) {
             var open = sidebar.classList.toggle('show');
             if (overlay) overlay.classList.toggle('show', open);
@@ -71,7 +75,7 @@ $(document).ready(function() {
         }
         var collapsed = sidebar.classList.toggle('collapsed');
         mainContent.classList.toggle('sidebar-collapsed', collapsed);
-        localStorage.setItem('sidebarCollapsed', collapsed ? '1' : '0');
+        try { localStorage.setItem('sidebarCollapsed', collapsed ? '1' : '0'); } catch(err) {}
     });
 
     // Mobile: overlay tıklayınca kapat
