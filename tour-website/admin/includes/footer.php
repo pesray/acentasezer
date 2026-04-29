@@ -18,20 +18,55 @@
 
 <script>
 $(document).ready(function() {
+    // ── Tema (Dark / Light) ──────────────────────────────────
+    var themeBtn   = document.getElementById('themeToggle');
+    var iconDark   = document.getElementById('themeIconDark');
+    var iconLight  = document.getElementById('themeIconLight');
+
+    function applyThemeIcon(theme) {
+        if (!iconDark || !iconLight) return;
+        if (theme === 'dark') {
+            iconDark.style.display = 'none';
+            iconLight.style.display = '';
+        } else {
+            iconDark.style.display = '';
+            iconLight.style.display = 'none';
+        }
+    }
+    var currentTheme = document.documentElement.getAttribute('data-bs-theme') || 'light';
+    applyThemeIcon(currentTheme);
+
+    if (themeBtn) {
+        themeBtn.addEventListener('click', function() {
+            var t = document.documentElement.getAttribute('data-bs-theme') === 'dark' ? 'light' : 'dark';
+            document.documentElement.setAttribute('data-bs-theme', t);
+            try { localStorage.setItem('adminTheme', t); } catch (e) {}
+            applyThemeIcon(t);
+        });
+    }
+
     // ── Sidebar collapse toggle ──────────────────────────────
     var sidebar     = document.getElementById('mainSidebar');
     var mainContent = document.getElementById('mainContent');
-    var isMobile    = function() { return window.innerWidth <= 768; };
+    var overlay     = document.getElementById('sidebarOverlay');
+    var isMobile    = function() { return window.innerWidth <= 991; };
 
-    // Restore saved state
+    // Restore saved state (sadece desktop'ta)
     if (!isMobile() && localStorage.getItem('sidebarCollapsed') === '1') {
         sidebar.classList.add('collapsed');
         mainContent.classList.add('sidebar-collapsed');
     }
 
-    $('#sidebarToggle').on('click', function() {
+    function closeMobileSidebar() {
+        sidebar.classList.remove('show');
+        if (overlay) overlay.classList.remove('show');
+    }
+
+    $('#sidebarToggle').on('click', function(e) {
+        e.preventDefault();
         if (isMobile()) {
-            sidebar.classList.toggle('show');
+            var open = sidebar.classList.toggle('show');
+            if (overlay) overlay.classList.toggle('show', open);
             return;
         }
         var collapsed = sidebar.classList.toggle('collapsed');
@@ -39,15 +74,77 @@ $(document).ready(function() {
         localStorage.setItem('sidebarCollapsed', collapsed ? '1' : '0');
     });
 
-    // Flyout vertical positioning
+    // Mobile: overlay tıklayınca kapat
+    if (overlay) overlay.addEventListener('click', closeMobileSidebar);
+
+    // Mobile: link tıklayınca otomatik kapat (collapse içindekiler hariç)
+    document.querySelectorAll('.sidebar-nav .nav-link[href]').forEach(function(link) {
+        link.addEventListener('click', function() {
+            if (isMobile() && !this.hasAttribute('data-bs-toggle')) {
+                closeMobileSidebar();
+            }
+        });
+    });
+
+    // Window resize: mobile→desktop geçince mobile state'i temizle
+    var resizeTimer;
+    window.addEventListener('resize', function() {
+        clearTimeout(resizeTimer);
+        resizeTimer = setTimeout(function() {
+            if (!isMobile()) {
+                sidebar.classList.remove('show');
+                if (overlay) overlay.classList.remove('show');
+            }
+        }, 150);
+    });
+
+    // Flyout vertical positioning + hover bridge (collapsed mode)
     document.querySelectorAll('.nav-item-group').forEach(function(group) {
         var flyout = group.querySelector('.submenu-flyout');
         if (!flyout) return;
-        group.addEventListener('mouseenter', function() {
-            if (!sidebar.classList.contains('collapsed')) return;
+        var closeTimer = null;
+
+        function open() {
+            if (!sidebar.classList.contains('collapsed') || isMobile()) return;
+            clearTimeout(closeTimer);
+            // Diğer tüm açık flyout'ları kapat
+            document.querySelectorAll('.nav-item-group.flyout-open').forEach(function(g) {
+                if (g !== group) g.classList.remove('flyout-open');
+            });
             var rect = group.getBoundingClientRect();
             flyout.style.top = rect.top + 'px';
-        });
+            group.classList.add('flyout-open');
+        }
+        function scheduleClose() {
+            clearTimeout(closeTimer);
+            closeTimer = setTimeout(function() {
+                group.classList.remove('flyout-open');
+            }, 180);
+        }
+        function cancelClose() {
+            clearTimeout(closeTimer);
+        }
+
+        group.addEventListener('mouseenter', open);
+        group.addEventListener('mouseleave', scheduleClose);
+        flyout.addEventListener('mouseenter', cancelClose);
+        flyout.addEventListener('mouseleave', scheduleClose);
+    });
+
+    // Sidebar genişleyince tüm flyout'ları kapat
+    document.addEventListener('click', function(e) {
+        if (e.target.closest('#sidebarToggle')) {
+            document.querySelectorAll('.nav-item-group.flyout-open').forEach(function(g) {
+                g.classList.remove('flyout-open');
+            });
+        }
+    });
+
+    // ESC ile mobile sidebar kapansın
+    document.addEventListener('keydown', function(e) {
+        if (e.key === 'Escape' && sidebar.classList.contains('show')) {
+            closeMobileSidebar();
+        }
     });
     
     // DataTables default config

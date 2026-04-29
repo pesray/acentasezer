@@ -131,6 +131,7 @@ switch ($action) {
         try {
             $stmt = $db->prepare("
                 UPDATE bookings SET
+                    destination_id = ?, vehicle_id = ?,
                     customer_name = ?, customer_email = ?, customer_phone = ?,
                     pickup_location = ?, pickup_date = ?, pickup_time = ?, return_time = ?,
                     flight_date = ?, flight_time = ?, flight_number = ?, hotel_address = ?,
@@ -142,6 +143,8 @@ switch ($action) {
                 WHERE id = ?
             ");
             $stmt->execute([
+                ((int)($_POST['destination_id'] ?? 0)) ?: null,
+                ((int)($_POST['vehicle_id'] ?? 0)) ?: null,
                 trim($_POST['customer_name'] ?? ''),
                 trim($_POST['customer_email'] ?? ''),
                 trim($_POST['customer_phone'] ?? ''),
