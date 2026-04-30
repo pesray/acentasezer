@@ -332,19 +332,15 @@ require_once __DIR__ . '/includes/header.php';
     .view-all #bookingsTable th:nth-child(14),
     .view-all #bookingsTable td:nth-child(14) { display: none; }
 
-    /* arrival/return: Otel(3), Araç(5), Kişi(6) gizle */
-    .view-arrival #bookingsTable th:nth-child(3),
-    .view-arrival #bookingsTable td:nth-child(3),
-    .view-arrival #bookingsTable th:nth-child(5),
-    .view-arrival #bookingsTable td:nth-child(5),
-    .view-arrival #bookingsTable th:nth-child(6),
-    .view-arrival #bookingsTable td:nth-child(6),
-    .view-return #bookingsTable th:nth-child(3),
-    .view-return #bookingsTable td:nth-child(3),
-    .view-return #bookingsTable th:nth-child(6),
-    .view-return #bookingsTable td:nth-child(6),
-    .view-return #bookingsTable th:nth-child(7),
-    .view-return #bookingsTable td:nth-child(7) { display: none; }
+    /* arrival: Yön(1), Alış Saati(4) gizle */
+    .view-arrival #bookingsTable th:nth-child(1),
+    .view-arrival #bookingsTable td:nth-child(1),
+    .view-arrival #bookingsTable th:nth-child(4),
+    .view-arrival #bookingsTable td:nth-child(4) { display: none; }
+
+    /* return: Yön(1) gizle */
+    .view-return #bookingsTable th:nth-child(1),
+    .view-return #bookingsTable td:nth-child(1) { display: none; }
 
     /* daily: Saat(3), Alış Saati(4), Kişi(6), Araç(8) gizle */
     .view-daily #bookingsTable th:nth-child(3),
@@ -696,48 +692,61 @@ require_once __DIR__ . '/includes/header.php';
     </table>
 
     <?php else: ?>
-    <!-- Geliş / Dönüş view: eski yapı -->
+    <!-- Geliş / Dönüş view: günlük görünüm ile aynı sütunlar -->
     <table id="bookingsTable" class="table table-hover datatable">
         <thead>
             <tr>
-                <th>No</th>
+                <th>Yön</th>
+                <th>Tarih</th>
+                <th>Saat</th>
+                <?php if ($view !== 'arrival'): ?>
+                <th>Alış Saati</th>
+                <?php endif; ?>
                 <th>Müşteri</th>
-                <th><?= $view === 'return' ? 'Alış Otel Adı' : 'Varış Otel Adı' ?></th>
-                <th>Uçuş</th>
-                <?php if ($view === 'return'): ?><th>Alış Saati</th><?php endif; ?>
-                <th>Araç</th>
                 <th>Kişi</th>
+                <th>Otel Adı</th>
+                <th>Araç</th>
                 <th>Tutar</th>
-                <th width="110">Durum</th>
-                <th width="100">İşlem</th>
+                <th>İş Durumu</th>
+                <th>Durum</th>
+                <th>İşlem</th>
             </tr>
         </thead>
         <tbody>
             <?php foreach ($allBookings as $b):
-                $dateField = $b['pickup_date'] ?: $b['flight_date'];
+                $dir      = $b['booking_direction'] ?? 'outbound';
+                $dirLabel = $directionLabels[$dir] ?? ['Geliş','primary'];
+                $dirIcon  = $dir === 'return' ? 'box-arrow-up-right' : 'box-arrow-in-down-right';
+                $dateField = $b['flight_date'] ?: ($b['pickup_date'] ?: null);
+                $bVParam   = ($dir === 'return') ? 'ret_id=' . $b['id'] : 'out_id=' . $b['id'];
             ?>
             <tr>
-                <td><strong class="text-primary"><?= e($b['booking_number']) ?></strong></td>
                 <td>
-                    <?= e($b['customer_name']) ?><br>
-                    <strong><?= e($b['customer_phone'] ?? '') ?></strong>
+                    <span class="badge bg-<?= $dirLabel[1] ?>">
+                        <i class="bi bi-<?= $dirIcon ?> me-1"></i><?= $dirLabel[0] ?>
+                    </span>
                 </td>
-                <td><?= e(trim($b['hotel_address'] ?? '') ?: '-') ?></td>
+                <td data-order="<?= $dateField ? date('Y-m-d', strtotime($dateField)) : '' ?>"><?= $dateField ? date('d.m.Y', strtotime($dateField)) : '-' ?></td>
                 <td>
-                    <?= $dateField ? date('d.m.Y', strtotime($dateField)) : '-' ?>
                     <?php if ($b['flight_time']): ?>
-                        <strong> <?= date('H:i', strtotime($b['flight_time'])) ?></strong>
-                    <?php endif; ?>
+                        <strong><?= date('H:i', strtotime($b['flight_time'])) ?></strong>
+                        <?php if ($b['flight_number']): ?><br><strong class="text-dark">(<?= e($b['flight_number']) ?>)</strong><?php endif; ?>
+                    <?php else: ?>-<?php endif; ?>
                 </td>
-                <?php if ($view === 'return'): ?>
+                <?php if ($view !== 'arrival'): ?>
                 <td>
-                    <?php if ($b['pickup_time']): ?>
+                    <?php if ($dir === 'return' && $b['pickup_time']): ?>
                         <strong><?= date('H:i', strtotime($b['pickup_time'])) ?></strong>
                     <?php else: ?>-<?php endif; ?>
                 </td>
                 <?php endif; ?>
-                <td><?= e(trim($b['vehicle_name'] ?? '') ?: '-') ?></td>
+                <td>
+                    <?= e($b['customer_name']) ?><br>
+                    <strong><?= e($b['customer_phone'] ?? '') ?></strong>
+                </td>
                 <td><?= (int)$b['adults'] ?>Y<?= (int)$b['children'] > 0 ? ' +'.(int)$b['children'].'Ç' : '' ?></td>
+                <td><?= e(trim($b['hotel_address'] ?? '') ?: '-') ?></td>
+                <td><?= e(trim($b['vehicle_name'] ?? '') ?: '-') ?></td>
                 <td>
                     <?php if ((float)$b['total_price'] > 0): ?>
                         <strong><?= number_format((float)$b['total_price'], 0, ',', '.') ?></strong>
@@ -745,32 +754,49 @@ require_once __DIR__ . '/includes/header.php';
                     <?php else: ?>-<?php endif; ?>
                 </td>
                 <td>
-                    <span class="badge bg-<?= $statusLabels[$b['booking_status']][1] ?>">
-                        <i class="bi <?= $statusLabels[$b['booking_status']][2] ?> me-1"></i><?= $statusLabels[$b['booking_status']][0] ?>
-                    </span>
+                    <div class="ops-cell">
+                        <div class="form-check mb-1">
+                            <input type="checkbox" class="form-check-input ops-check" id="comp-<?= $b['id'] ?>"
+                                   data-id="<?= $b['id'] ?>" data-field="is_completed"
+                                   <?= !empty($b['is_completed']) ? 'checked' : '' ?>>
+                            <label class="form-check-label small" for="comp-<?= $b['id'] ?>">Iş yapıldı</label>
+                        </div>
+                        <div class="form-check">
+                            <input type="checkbox" class="form-check-input ops-check ops-out-check" id="out-<?= $b['id'] ?>"
+                                   data-id="<?= $b['id'] ?>" data-field="is_outsourced"
+                                   data-outsource-name="<?= e($b['outsource_name'] ?? '') ?>"
+                                   data-outsource-partner-id="<?= (int)($b['outsource_partner_id'] ?? 0) ?>"
+                                   <?= !empty($b['is_outsourced']) ? 'checked' : '' ?>>
+                            <label class="form-check-label small" for="out-<?= $b['id'] ?>">Dışarıya verildi</label>
+                        </div>
+                        <div class="ops-price-wrap mt-1" style="display:none;">
+                            <input type="number" class="form-control form-control-sm ops-price-input"
+                                   data-id="<?= $b['id'] ?>"
+                                   value="<?= e($b['outsource_price'] ?? '') ?>"
+                                   placeholder="Tutar..." min="0" step="0.01" style="width:90px;">
+                            <?php if (!empty($b['outsource_name'])): ?>
+                            <small class="ops-name-display text-muted d-block mt-1"><?= e($b['outsource_name']) ?></small>
+                            <?php else: ?>
+                            <small class="ops-name-display text-muted d-block mt-1" style="display:none!important;"></small>
+                            <?php endif; ?>
+                        </div>
+                    </div>
                 </td>
                 <td>
-                    <?php
-                        $bDir = $b['booking_direction'] ?? 'outbound';
-                        $bVParam = ($bDir === 'return') ? 'ret_id=' . $b['id'] : 'out_id=' . $b['id'];
-                    ?>
-                    <div class="d-flex flex-column gap-1 align-items-start">
+                    <span class="visually-hidden"><?= $statusLabels[$b['booking_status']][0] ?></span>
+                    <div class="d-flex gap-1 align-items-center flex-wrap">
+                        <button type="button"
+                                class="btn btn-outline-<?= $dir === 'return' ? 'info' : 'primary' ?>"
+                                style="padding:2px 6px;"
+                                onclick="openOpsStatus(<?= $b['id'] ?>)"
+                                title="<?= $statusLabels[$b['booking_status']][0] ?>">
+                            <i class="bi bi-<?= $dirIcon ?>"></i>
+                        </button>
                         <div class="btn-group btn-group-sm">
-                            <button type="button" class="btn btn-outline-primary" onclick="openBookingModal(<?= $b['id'] ?>)" title="Detay / Düzenle">
-                                <i class="bi bi-eye"></i>
-                            </button>
-                            <button type="button" class="btn btn-outline-secondary" onclick="openOpsStatus(<?= $b['id'] ?>)" title="İş Durumu">
-                                <i class="bi bi-clipboard-check"></i>
-                            </button>
-                            <button type="button" class="btn btn-outline-danger" onclick="deleteBooking(<?= $b['id'] ?>)" title="Sil">
-                                <i class="bi bi-trash"></i>
-                            </button>
-                        </div>
-                        <div class="btn-group btn-group-sm">
-                            <a href="voucher.php?<?= $bVParam ?>&lang=tr" target="_blank" class="btn btn-outline-success" title="Voucher (TR)">
+                            <a href="voucher.php?<?= $bVParam ?>&lang=tr" target="_blank" class="btn btn-outline-success" style="padding:2px 6px;" title="Voucher (TR)">
                                 <i class="bi bi-file-earmark-pdf"></i>
                             </a>
-                            <button type="button" class="btn btn-outline-success dropdown-toggle dropdown-toggle-split" data-bs-toggle="dropdown">
+                            <button type="button" class="btn btn-outline-success dropdown-toggle dropdown-toggle-split" style="padding:2px 4px;" data-bs-toggle="dropdown">
                                 <span class="visually-hidden">Dil Seç</span>
                             </button>
                             <ul class="dropdown-menu dropdown-menu-end">
@@ -780,6 +806,16 @@ require_once __DIR__ . '/includes/header.php';
                                 <li><a class="dropdown-item small" href="voucher.php?<?= $bVParam ?>&lang=ru" target="_blank">🇷🇺 Русский</a></li>
                             </ul>
                         </div>
+                    </div>
+                </td>
+                <td>
+                    <div class="btn-group btn-group-sm">
+                        <button type="button" class="btn btn-outline-primary" onclick="openBookingModal(<?= $b['id'] ?>)" title="Detay / Düzenle">
+                            <i class="bi bi-eye"></i>
+                        </button>
+                        <button type="button" class="btn btn-outline-danger" onclick="deleteBooking(<?= $b['id'] ?>)" title="Sil">
+                            <i class="bi bi-trash"></i>
+                        </button>
                     </div>
                 </td>
             </tr>
@@ -1521,16 +1557,15 @@ $(document).ready(function() {
     // Footer zaten '.datatable' class'ı ile init etti, mevcut instance'ı al
     var table = $('#bookingsTable').DataTable();
 
-    // daily view: tarihe göre artan sıra
-    if (currentView === 'daily') {
+    // daily view ve geliş/dönüş: tarihe göre artan sıra
+    if (currentView === 'daily' || currentView === 'arrival' || currentView === 'return') {
         table.order([[1, 'asc']]).draw();
     }
     // all:     Yön(0) GelişTarihi(1) GelişSaati(2) GidişTarihi(3) GidişSaati(4) AlışSaati(5) Müşteri(6) Kişi(7) Otel(8) Araç(9) Tutar(10) GelişDurum(11) DönüşDurum(12) Durum(13) İşlem(14)
-    // daily:   Yön(0) Tarih(1) Saat(2) AlışSaati(3) Müşteri(4) Kişi(5) Otel(6) Araç(7) Tutar(8) İşDurumu(9) Durum(10) İşlem(11)
-    // arrival: No(0) Müşteri(1) Otel(2) Uçuş(3) Araç(4) Kişi(5) Tutar(6) Durum(7)
-    // return:  No(0) Müşteri(1) Otel(2) Uçuş(3) AlışSaati(4) Araç(5) Kişi(6) Tutar(7) Durum(8)
-    const dateColIdxs  = currentView === 'all' ? [1, 3] : (currentView === 'daily' ? [1] : [3]);
-    const statusColIdx = currentView === 'all' ? 11 : (currentView === 'daily' ? 10 : (currentView === 'return' ? 8 : 7));
+    // daily/return: Yön(0) Tarih(1) Saat(2) AlışSaati(3) Müşteri(4) Kişi(5) Otel(6) Araç(7) Tutar(8) İşDurumu(9) Durum(10) İşlem(11)
+    // arrival:      Yön(0) Tarih(1) Saat(2) Müşteri(3) Kişi(4) Otel(5) Araç(6) Tutar(7) İşDurumu(8) Durum(9) İşlem(10)
+    const dateColIdxs  = currentView === 'all' ? [1, 3] : [1];
+    const statusColIdx = currentView === 'all' ? 11 : (currentView === 'arrival' ? 9 : 10);
 
     $.fn.dataTable.ext.search.push(function(settings, data) {
         if (settings.nTable.id !== 'bookingsTable') return true;
@@ -1541,7 +1576,7 @@ $(document).ready(function() {
                 var m = (data[dateColIdxs[i]] || '').match(/(\d{2})\.(\d{2})\.(\d{4})/);
                 if (m) {
                     var rowDate = m[3]+'-'+m[2]+'-'+m[1];
-                    if (currentView === 'daily' ? (rowDate >= fd) : (rowDate === fd)) { matched = true; break; }
+                    if ((currentView === 'daily' || currentView === 'arrival' || currentView === 'return') ? (rowDate >= fd) : (rowDate === fd)) { matched = true; break; }
                 }
             }
             if (!matched) return false;
