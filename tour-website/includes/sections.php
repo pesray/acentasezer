@@ -20,11 +20,13 @@ function getPageSections($pageId) {
     try {
         $db = getDB();
         // Tek sorguda section ve çevirileri al (N+1 query problemi çözümü)
+        // Settings için: dile özgü varsa onu, yoksa base'i kullan
         $stmt = $db->prepare("
-            SELECT s.*, 
+            SELECT s.*,
                    COALESCE(st.title, s.title) as title,
                    COALESCE(st.subtitle, s.subtitle) as subtitle,
-                   COALESCE(st.content, s.content) as content
+                   COALESCE(st.content, s.content) as content,
+                   COALESCE(st.settings, s.settings) as settings
             FROM sections s
             LEFT JOIN section_translations st ON s.id = st.section_id AND st.language_code = ?
             WHERE s.page_id = ? AND s.is_active = 1
@@ -32,7 +34,7 @@ function getPageSections($pageId) {
         ");
         $stmt->execute([$lang, $pageId]);
         $sections = $stmt->fetchAll();
-        
+
         $cache[$cacheKey] = $sections;
         return $sections;
     } catch (Exception $e) {

@@ -774,6 +774,10 @@ if ($siteLogo && defined('UPLOADS_URL')) {
             </a>
             <div class="collapse <?= $currentPage === 'bookings' ? 'show' : '' ?>" id="bookingsSubmenu">
                 <div class="nav-submenu">
+                    <a href="<?= ADMIN_URL ?>/bookings.php?view=daily" class="nav-link <?= ($currentPage === 'bookings' && ($_GET['view'] ?? '') === 'daily') ? 'active' : '' ?>">
+                        <i class="bi bi-calendar-day nav-link-icon"></i>
+                        <span class="nav-link-text">Günlük Görünüm</span>
+                    </a>
                     <a href="<?= ADMIN_URL ?>/bookings.php?view=all" class="nav-link <?= ($currentPage === 'bookings' && ($_GET['view'] ?? '') === 'all') ? 'active' : '' ?>">
                         <i class="bi bi-list-ul nav-link-icon"></i>
                         <span class="nav-link-text">Tüm Rezervasyonlar</span>
@@ -791,6 +795,9 @@ if ($siteLogo && defined('UPLOADS_URL')) {
             <!-- Collapsed flyout -->
             <div class="submenu-flyout">
                 <div class="flyout-header">Rezervasyonlar</div>
+                <a href="<?= ADMIN_URL ?>/bookings.php?view=daily" class="flyout-item <?= ($currentPage === 'bookings' && ($_GET['view'] ?? '') === 'daily') ? 'active' : '' ?>">
+                    <i class="bi bi-calendar-day"></i> Günlük Görünüm
+                </a>
                 <a href="<?= ADMIN_URL ?>/bookings.php?view=all" class="flyout-item <?= ($currentPage === 'bookings' && ($_GET['view'] ?? '') === 'all') ? 'active' : '' ?>">
                     <i class="bi bi-list-ul"></i> Tüm Rezervasyonlar
                 </a>

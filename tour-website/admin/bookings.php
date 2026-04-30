@@ -10,9 +10,9 @@ $db = getDB();
 
 $defaultView = defined('BOOKINGS_AS_DASHBOARD') ? 'all' : 'arrival';
 $view = $_GET['view'] ?? $defaultView;
-if (!in_array($view, ['arrival', 'return', 'all'])) $view = $defaultView;
+if (!in_array($view, ['arrival', 'return', 'all', 'daily'])) $view = $defaultView;
 
-$viewTitleMap = ['return' => 'Dönüş Rezervasyonları', 'all' => 'Tüm Rezervasyonlar'];
+$viewTitleMap = ['return' => 'Dönüş Rezervasyonları', 'all' => 'Tüm Rezervasyonlar', 'daily' => 'Günlük Görünüm'];
 $viewTitle = $viewTitleMap[$view] ?? 'Geliş Rezervasyonları';
 
 $statusLabels = [
@@ -29,7 +29,7 @@ $directionLabels = [
 // WHERE koşulu view'a göre
 if ($view === 'return') {
     $dirWhere = "AND COALESCE(b.booking_direction,'outbound') = 'return'";
-} elseif ($view === 'all') {
+} elseif ($view === 'all' || $view === 'daily') {
     $dirWhere = '';
 } else {
     $dirWhere = "AND COALESCE(b.booking_direction,'outbound') = 'outbound'";
@@ -181,6 +181,11 @@ require_once __DIR__ . '/includes/header.php';
 
 <!-- View Tabları -->
 <ul class="nav nav-tabs mb-4">
+    <li class="nav-item">
+        <a class="nav-link view-tab <?= $view === 'daily' ? 'active' : '' ?>" href="?view=daily">
+            <i class="bi bi-calendar-day me-1"></i>Günlük Görünüm
+        </a>
+    </li>
     <li class="nav-item">
         <a class="nav-link view-tab <?= $view === 'all' ? 'active' : '' ?>" href="?view=all">
             <i class="bi bi-list-ul me-1"></i>Tüm Rezervasyonlar
@@ -340,6 +345,16 @@ require_once __DIR__ . '/includes/header.php';
     .view-return #bookingsTable td:nth-child(6),
     .view-return #bookingsTable th:nth-child(7),
     .view-return #bookingsTable td:nth-child(7) { display: none; }
+
+    /* daily: Saat(3), Alış Saati(4), Kişi(6), Araç(8) gizle */
+    .view-daily #bookingsTable th:nth-child(3),
+    .view-daily #bookingsTable td:nth-child(3),
+    .view-daily #bookingsTable th:nth-child(4),
+    .view-daily #bookingsTable td:nth-child(4),
+    .view-daily #bookingsTable th:nth-child(6),
+    .view-daily #bookingsTable td:nth-child(6),
+    .view-daily #bookingsTable th:nth-child(8),
+    .view-daily #bookingsTable td:nth-child(8) { display: none; }
 }
 
 /* Sayfa filter satırı mobilde stack */
@@ -544,6 +559,135 @@ require_once __DIR__ . '/includes/header.php';
                             <li><a class="dropdown-item small" href="voucher.php?<?= $vParams ?>&lang=ru" target="_blank">🇷🇺 Русский</a></li>
                         </ul>
                     </div>
+                    </div>
+                </td>
+            </tr>
+            <?php endforeach; ?>
+        </tbody>
+    </table>
+
+    <?php elseif ($view === 'daily'): ?>
+    <!-- Günlük Görünüm: her rezervasyon ayrı satırda -->
+    <table id="bookingsTable" class="table table-hover datatable">
+        <thead>
+            <tr>
+                <th>Yön</th>
+                <th>Tarih</th>
+                <th>Saat</th>
+                <th>Alış Saati</th>
+                <th>Müşteri</th>
+                <th>Kişi</th>
+                <th>Otel Adı</th>
+                <th>Araç</th>
+                <th>Tutar</th>
+                <th>İş Durumu</th>
+                <th>Durum</th>
+                <th>İşlem</th>
+            </tr>
+        </thead>
+        <tbody>
+            <?php foreach ($allBookings as $b):
+                $dir      = $b['booking_direction'] ?? 'outbound';
+                $dirLabel = $directionLabels[$dir] ?? ['Geliş','primary'];
+                $dirIcon  = $dir === 'return' ? 'box-arrow-up-right' : 'box-arrow-in-down-right';
+                $dateField = $b['flight_date'] ?: ($b['pickup_date'] ?: null);
+                $bVParam   = ($dir === 'return') ? 'ret_id=' . $b['id'] : 'out_id=' . $b['id'];
+            ?>
+            <tr>
+                <td>
+                    <span class="badge bg-<?= $dirLabel[1] ?>">
+                        <i class="bi bi-<?= $dirIcon ?> me-1"></i><?= $dirLabel[0] ?>
+                    </span>
+                </td>
+                <td data-order="<?= $dateField ? date('Y-m-d', strtotime($dateField)) : '' ?>"><?= $dateField ? date('d.m.Y', strtotime($dateField)) : '-' ?></td>
+                <td>
+                    <?php if ($b['flight_time']): ?>
+                        <strong><?= date('H:i', strtotime($b['flight_time'])) ?></strong>
+                        <?php if ($b['flight_number']): ?><br><strong class="text-dark">(<?= e($b['flight_number']) ?>)</strong><?php endif; ?>
+                    <?php else: ?>-<?php endif; ?>
+                </td>
+                <td>
+                    <?php if ($dir === 'return' && $b['pickup_time']): ?>
+                        <strong><?= date('H:i', strtotime($b['pickup_time'])) ?></strong>
+                    <?php else: ?>-<?php endif; ?>
+                </td>
+                <td>
+                    <?= e($b['customer_name']) ?><br>
+                    <strong><?= e($b['customer_phone'] ?? '') ?></strong>
+                </td>
+                <td><?= (int)$b['adults'] ?>Y<?= (int)$b['children'] > 0 ? ' +'.(int)$b['children'].'Ç' : '' ?></td>
+                <td><?= e(trim($b['hotel_address'] ?? '') ?: '-') ?></td>
+                <td><?= e(trim($b['vehicle_name'] ?? '') ?: '-') ?></td>
+                <td>
+                    <?php if ((float)$b['total_price'] > 0): ?>
+                        <strong><?= number_format((float)$b['total_price'], 0, ',', '.') ?></strong>
+                        <small class="text-muted"><?= e($b['currency'] ?? 'TRY') ?></small>
+                    <?php else: ?>-<?php endif; ?>
+                </td>
+                <td>
+                    <div class="ops-cell">
+                        <div class="form-check mb-1">
+                            <input type="checkbox" class="form-check-input ops-check" id="comp-<?= $b['id'] ?>"
+                                   data-id="<?= $b['id'] ?>" data-field="is_completed"
+                                   <?= !empty($b['is_completed']) ? 'checked' : '' ?>>
+                            <label class="form-check-label small" for="comp-<?= $b['id'] ?>">İş yapıldı</label>
+                        </div>
+                        <div class="form-check">
+                            <input type="checkbox" class="form-check-input ops-check ops-out-check" id="out-<?= $b['id'] ?>"
+                                   data-id="<?= $b['id'] ?>" data-field="is_outsourced"
+                                   data-outsource-name="<?= e($b['outsource_name'] ?? '') ?>"
+                                   data-outsource-partner-id="<?= (int)($b['outsource_partner_id'] ?? 0) ?>"
+                                   <?= !empty($b['is_outsourced']) ? 'checked' : '' ?>>
+                            <label class="form-check-label small" for="out-<?= $b['id'] ?>">Dışarıya verildi</label>
+                        </div>
+                        <!-- daily: fiyat/partner gizli (ileride açılabilir) -->
+                        <div class="ops-price-wrap mt-1" style="display:none;">
+                            <input type="number" class="form-control form-control-sm ops-price-input"
+                                   data-id="<?= $b['id'] ?>"
+                                   value="<?= e($b['outsource_price'] ?? '') ?>"
+                                   placeholder="Tutar..." min="0" step="0.01" style="width:90px;">
+                            <?php if (!empty($b['outsource_name'])): ?>
+                            <small class="ops-name-display text-muted d-block mt-1"><?= e($b['outsource_name']) ?></small>
+                            <?php else: ?>
+                            <small class="ops-name-display text-muted d-block mt-1" style="display:none!important;"></small>
+                            <?php endif; ?>
+                        </div>
+                    </div>
+                </td>
+                <td>
+                    <span class="visually-hidden"><?= $statusLabels[$b['booking_status']][0] ?></span>
+                    <div class="d-flex gap-1 align-items-center flex-wrap">
+                        <button type="button"
+                                class="btn btn-outline-<?= $dir === 'return' ? 'info' : 'primary' ?>"
+                                style="padding:2px 6px;"
+                                onclick="openOpsStatus(<?= $b['id'] ?>)"
+                                title="<?= $statusLabels[$b['booking_status']][0] ?>">
+                            <i class="bi bi-<?= $dirIcon ?>"></i>
+                        </button>
+                        <div class="btn-group btn-group-sm">
+                            <a href="voucher.php?<?= $bVParam ?>&lang=tr" target="_blank" class="btn btn-outline-success" style="padding:2px 6px;" title="Voucher (TR)">
+                                <i class="bi bi-file-earmark-pdf"></i>
+                            </a>
+                            <button type="button" class="btn btn-outline-success dropdown-toggle dropdown-toggle-split" style="padding:2px 4px;" data-bs-toggle="dropdown">
+                                <span class="visually-hidden">Dil Seç</span>
+                            </button>
+                            <ul class="dropdown-menu dropdown-menu-end">
+                                <li><a class="dropdown-item small" href="voucher.php?<?= $bVParam ?>&lang=tr" target="_blank">🇹🇷 Türkçe</a></li>
+                                <li><a class="dropdown-item small" href="voucher.php?<?= $bVParam ?>&lang=en" target="_blank">🇬🇧 English</a></li>
+                                <li><a class="dropdown-item small" href="voucher.php?<?= $bVParam ?>&lang=de" target="_blank">🇩🇪 Deutsch</a></li>
+                                <li><a class="dropdown-item small" href="voucher.php?<?= $bVParam ?>&lang=ru" target="_blank">🇷🇺 Русский</a></li>
+                            </ul>
+                        </div>
+                    </div>
+                </td>
+                <td>
+                    <div class="btn-group btn-group-sm">
+                        <button type="button" class="btn btn-outline-primary" onclick="openBookingModal(<?= $b['id'] ?>)" title="Detay / Düzenle">
+                            <i class="bi bi-eye"></i>
+                        </button>
+                        <button type="button" class="btn btn-outline-danger" onclick="deleteBooking(<?= $b['id'] ?>)" title="Sil">
+                            <i class="bi bi-trash"></i>
+                        </button>
                     </div>
                 </td>
             </tr>
@@ -1180,36 +1324,47 @@ require_once __DIR__ . '/includes/header.php';
                     </div>
                 </div>
 
-                <!-- Inputlar yan yana -->
-                <div class="row g-3 align-items-end">
-                    <div class="col-md-4">
-                        <label class="form-label fw-semibold">Ad Soyad / Firma</label>
-                        <div class="d-flex gap-2">
+                <!-- Inputlar: mobilde alt alta, desktop tek satır -->
+                <div class="row g-2 align-items-end">
+                    <!-- Ad Soyad / Firma -->
+                    <div class="col-12 col-md">
+                        <label class="form-label fw-semibold mb-1" style="font-size:.82rem;">Ad Soyad / Firma</label>
+                        <div class="d-flex gap-1">
                             <div class="flex-grow-1">
-                                <select id="outsource-name-input" class="form-select">
+                                <select id="outsource-name-input" class="form-select form-select-sm">
                                     <option value=""></option>
                                 </select>
                             </div>
-                            <button type="button" class="btn btn-outline-success flex-shrink-0" id="btn-add-partner" title="Yeni kişi/firma ekle" style="height:38px;">
+                            <button type="button" class="btn btn-outline-success btn-sm flex-shrink-0" id="btn-add-partner" title="Yeni kişi/firma ekle">
                                 <i class="bi bi-plus-lg"></i>
                             </button>
                         </div>
                     </div>
-                    <div class="col-md-3" id="outsource-pickup-wrap" style="display:none;">
-                        <label class="form-label fw-semibold">Otelden Alış Saati</label>
-                        <input type="time" id="outsource-pickup-input" class="form-control">
+                    <!-- Otelden Alış Saati (sadece dönüş) -->
+                    <div class="col-6 col-md-auto" id="outsource-pickup-wrap" style="display:none;">
+                        <label class="form-label fw-semibold mb-1" style="font-size:.82rem;">Alış Saati</label>
+                        <input type="time" id="outsource-pickup-input" class="form-control form-control-sm" style="width:130px;">
                     </div>
-                    <div class="col-md-2">
-                        <label class="form-label fw-semibold">Tutar</label>
-                        <input type="number" id="outsource-price-input" class="form-control" min="0" step="0.01" placeholder="0.00">
+                    <!-- Tutar + Para Birimi -->
+                    <div class="col-6 col-md-auto">
+                        <label class="form-label fw-semibold mb-1" style="font-size:.82rem;">Tutar</label>
+                        <div class="d-flex gap-1">
+                            <input type="number" id="outsource-price-input" class="form-control form-control-sm" min="0" step="0.01" placeholder="0.00" style="width:100px;">
+                            <select id="outsource-currency-input" class="form-select form-select-sm" style="width:70px;">
+                                <option value="TRY">TRY</option>
+                                <option value="EUR" selected>EUR</option>
+                                <option value="USD">USD</option>
+                                <option value="GBP">GBP</option>
+                            </select>
+                        </div>
                     </div>
-                    <div class="col-md-3" id="outsource-wa-wrap">
-                        <label class="form-label fw-semibold d-block">&nbsp;</label>
-                        <div class="d-flex align-items-center gap-2 border rounded px-2" style="height:38px;background:#f6fff8;border-color:#25d366 !important;white-space:nowrap;">
+                    <!-- WP Mesaj At -->
+                    <div class="col-12 col-md-auto" id="outsource-wa-wrap">
+                        <div class="d-flex align-items-center gap-2 border rounded px-2" style="height:32px;background:#f6fff8;border-color:#25d366 !important;white-space:nowrap;width:fit-content;">
                             <div class="form-check form-switch mb-0" style="padding-left:2.2em;min-height:auto;">
-                                <input class="form-check-input mt-0" type="checkbox" id="outsource-wa-toggle" style="cursor:pointer;width:2em;height:1em;">
+                                <input class="form-check-input mt-0" type="checkbox" id="outsource-wa-toggle" style="cursor:pointer;width:1.8em;height:.9em;">
                             </div>
-                            <label for="outsource-wa-toggle" class="fw-bold mb-0" style="cursor:pointer;color:#25d366;font-size:.85rem;line-height:1;">
+                            <label for="outsource-wa-toggle" class="fw-bold mb-0" style="cursor:pointer;color:#25d366;font-size:.8rem;line-height:1;">
                                 <i class="bi bi-whatsapp"></i> WP Mesaj At
                             </label>
                             <span class="small text-muted ms-1" id="outsource-wa-hint" style="font-size:.65rem;display:none;">(numara yok)</span>
@@ -1363,14 +1518,19 @@ const currentView = '<?= $view ?>';
 
 <script>
 $(document).ready(function() {
-    const table = $('#bookingsTable').DataTable();
-    // all:     Yön(0) GelişTarihi(1) GelişSaati(2) GidişTarihi(3) GidişSaati(4) AlışSaati(5) Müşteri(6) Kişi(7) Otel(8) Tutar(9) Durum(10)
+    // Footer zaten '.datatable' class'ı ile init etti, mevcut instance'ı al
+    var table = $('#bookingsTable').DataTable();
+
+    // daily view: tarihe göre artan sıra
+    if (currentView === 'daily') {
+        table.order([[1, 'asc']]).draw();
+    }
+    // all:     Yön(0) GelişTarihi(1) GelişSaati(2) GidişTarihi(3) GidişSaati(4) AlışSaati(5) Müşteri(6) Kişi(7) Otel(8) Araç(9) Tutar(10) GelişDurum(11) DönüşDurum(12) Durum(13) İşlem(14)
+    // daily:   Yön(0) Tarih(1) Saat(2) AlışSaati(3) Müşteri(4) Kişi(5) Otel(6) Araç(7) Tutar(8) İşDurumu(9) Durum(10) İşlem(11)
     // arrival: No(0) Müşteri(1) Otel(2) Uçuş(3) Araç(4) Kişi(5) Tutar(6) Durum(7)
     // return:  No(0) Müşteri(1) Otel(2) Uçuş(3) AlışSaati(4) Araç(5) Kişi(6) Tutar(7) Durum(8)
-    // all: GelişTarihi(1) + GidişTarihi(3) — herhangi biri eşleşirse geçer
-    // arrival/return: tek tarih sütunu (3)
-    const dateColIdxs  = currentView === 'all' ? [1, 3] : [3];
-    const statusColIdx = currentView === 'all' ? 11 : (currentView === 'return' ? 8 : 7);
+    const dateColIdxs  = currentView === 'all' ? [1, 3] : (currentView === 'daily' ? [1] : [3]);
+    const statusColIdx = currentView === 'all' ? 11 : (currentView === 'daily' ? 10 : (currentView === 'return' ? 8 : 7));
 
     $.fn.dataTable.ext.search.push(function(settings, data) {
         if (settings.nTable.id !== 'bookingsTable') return true;
@@ -1379,7 +1539,10 @@ $(document).ready(function() {
             var matched = false;
             for (var i = 0; i < dateColIdxs.length; i++) {
                 var m = (data[dateColIdxs[i]] || '').match(/(\d{2})\.(\d{2})\.(\d{4})/);
-                if (m && (m[3]+'-'+m[2]+'-'+m[1]) === fd) { matched = true; break; }
+                if (m) {
+                    var rowDate = m[3]+'-'+m[2]+'-'+m[1];
+                    if (currentView === 'daily' ? (rowDate >= fd) : (rowDate === fd)) { matched = true; break; }
+                }
             }
             if (!matched) return false;
         }
@@ -1396,6 +1559,7 @@ $(document).ready(function() {
             + String(today.getMonth() + 1).padStart(2, '0') + '-'
             + String(today.getDate()).padStart(2, '0');
         $('#filter-date').val(todayStr);
+        table.draw();
     }
 
     $('#filter-date, #filter-status').on('change', function() { table.draw(); });
@@ -1812,6 +1976,10 @@ document.addEventListener('change', function(e) {
             outsourceModalCurrentPid  = parseInt(e.target.dataset.outsourcePartnerId) || 0;
             const priceInp = e.target.closest('.ops-cell').querySelector('.ops-price-input');
             document.getElementById('outsource-price-input').value = priceInp ? priceInp.value : '';
+            // Para birimini booking'den al
+            var bDataCur = bookingsData.find(function(x) { return x.id == id; });
+            var curSel = document.getElementById('outsource-currency-input');
+            if (curSel && bDataCur) curSel.value = bDataCur.currency || 'EUR';
 
             // Rezervasyon özeti doldur
             var bData = bookingsData.find(function(x) { return x.id == id; });
@@ -1900,6 +2068,7 @@ document.getElementById('outsource-save-btn').addEventListener('click', function
         ? ($('#outsource-name-input option:selected').data('name') || selVal).trim()
         : selVal.trim();
     const price      = document.getElementById('outsource-price-input').value;
+    const currency   = document.getElementById('outsource-currency-input').value;
     const pickupWrap = document.getElementById('outsource-pickup-wrap');
     const pickupTime = (pickupWrap && pickupWrap.style.display !== 'none')
                        ? document.getElementById('outsource-pickup-input').value
@@ -1912,6 +2081,7 @@ document.getElementById('outsource-save-btn').addEventListener('click', function
     fd.append('outsource_name', name);
     fd.append('outsource_partner_id', partnerId);
     fd.append('outsource_price', price);
+    fd.append('outsource_currency', currency);
     if (pickupTime) fd.append('outsource_pickup_time', pickupTime);
     fd.append('csrf_token', csrfToken);
 
@@ -1929,7 +2099,7 @@ document.getElementById('outsource-save-btn').addEventListener('click', function
                 if (priceInp) {
                     priceInp.value = price;
                     const wrap = priceInp.closest('.ops-price-wrap');
-                    if (wrap) wrap.style.display = '';
+                    if (wrap && currentView !== 'daily') wrap.style.display = '';
                     const nameDisp = wrap ? wrap.querySelector('.ops-name-display') : null;
                     if (nameDisp) {
                         nameDisp.textContent = name;
@@ -1947,7 +2117,8 @@ document.getElementById('outsource-save-btn').addEventListener('click', function
                 const waToggle = document.getElementById('outsource-wa-toggle');
                 const waPhone  = ($('#outsource-name-input').find('option:selected').data('phone') || '').toString().trim();
                 if (waToggle.checked && waPhone) {
-                    sendOutsourceWhatsApp(id, waPhone, name, price, pickupTime);
+                    var outCurrency = document.getElementById('outsource-currency-input').value || 'EUR';
+                    sendOutsourceWhatsApp(id, waPhone, name, price, pickupTime, outCurrency);
                 }
 
                 bootstrap.Modal.getInstance(document.getElementById('outsourceModal')).hide();
@@ -1967,7 +2138,7 @@ document.addEventListener('blur', function(e) {
 }, true);
 
 // ─── Dışarıya Verilen Partnere WhatsApp Mesajı ────────────────────────────────
-function sendOutsourceWhatsApp(bookingId, partnerPhone, partnerName, partnerPrice, pickupTimeOverride) {
+function sendOutsourceWhatsApp(bookingId, partnerPhone, partnerName, partnerPrice, pickupTimeOverride, outsourceCurrency) {
     var bData = bookingsData.find(function(x) { return x.id == bookingId; });
     if (!bData) return;
 
@@ -1981,7 +2152,7 @@ function sendOutsourceWhatsApp(bookingId, partnerPhone, partnerName, partnerPric
         .then(function(r) { return r.json(); })
         .then(function(d) {
             var passengers = (d.success && d.data && d.data.passengers) ? d.data.passengers : [];
-            var msg = buildOutsourceMessage(bData, partnerPrice, pickupTimeOverride, passengers);
+            var msg = buildOutsourceMessage(bData, partnerPrice, pickupTimeOverride, passengers, outsourceCurrency);
             var waNumber = (partnerPhone || '').replace(/[^0-9]/g, '');
             if (!waNumber) return;
             var url = 'https://wa.me/' + waNumber + '?text=' + encodeURIComponent(msg);
@@ -1990,7 +2161,7 @@ function sendOutsourceWhatsApp(bookingId, partnerPhone, partnerName, partnerPric
         .catch(function() {});
 }
 
-function buildOutsourceMessage(b, partnerPrice, pickupTimeOverride, passengers) {
+function buildOutsourceMessage(b, partnerPrice, pickupTimeOverride, passengers, outsourceCurrency) {
     var AIRPORT  = 'ANTALYA AİRPORT AYT';
     var hotel    = b.hotel_address || '-';
     var isReturn = b.booking_direction === 'return';
@@ -2001,8 +2172,9 @@ function buildOutsourceMessage(b, partnerPrice, pickupTimeOverride, passengers) 
     var price  = b.total_price > 0
         ? (parseFloat(b.total_price).toLocaleString('tr-TR', {minimumFractionDigits:0}) + ' ' + (b.currency || 'EUR'))
         : '-';
+    var hakCur = outsourceCurrency || b.currency || 'EUR';
     var hak    = (partnerPrice && parseFloat(partnerPrice) > 0)
-        ? (parseFloat(partnerPrice).toLocaleString('tr-TR', {minimumFractionDigits:0}) + ' ' + (b.currency || 'EUR'))
+        ? (parseFloat(partnerPrice).toLocaleString('tr-TR', {minimumFractionDigits:0}) + ' ' + hakCur)
         : '-';
 
     function fmtDate(d) {
@@ -2129,32 +2301,119 @@ function openOpsStatus(id) {
 
             if (ops.is_outsourced == 1) {
                 html += '<div class="rounded p-3 mt-1" style="background:#fffbf0;border:1px solid #f6c23e;">'
-                    + '<div class="row g-2">';
+                    + '<div class="row g-2 align-items-end">';
 
+                // 1) Kime
                 var partnerHtml = ops.outsource_name || '<em class="text-muted">—</em>';
                 if (ops.outsource_phone) {
                     partnerHtml += '<br><small class="text-muted"><i class="bi bi-telephone me-1"></i>' + ops.outsource_phone + '</small>';
                 }
-                html += '<div class="col-6"><div class="text-muted" style="font-size:.72rem;text-transform:uppercase;">Kime</div>'
+                html += '<div class="col-sm-4"><div class="text-muted" style="font-size:.72rem;text-transform:uppercase;">Kime</div>'
                     + '<div class="fw-semibold">' + partnerHtml + '</div></div>';
 
-                if (ops.outsource_pickup_time) {
-                    html += '<div class="col-6"><div class="text-muted" style="font-size:.72rem;text-transform:uppercase;">Alış Saati</div>'
-                        + '<div class="fw-bold">' + ops.outsource_pickup_time.substring(0, 5) + '</div></div>';
-                }
+                // 2) Verilen Tutar (editable + currency + kaydet butonu)
+                var curCurrency = ops.outsource_currency || 'TRY';
+                var curOpts = ['TRY','EUR','USD','GBP'];
+                var curSelectHtml = '<select id="ops-modal-currency" class="form-select form-select-sm" style="width:70px;font-size:.8rem;">';
+                curOpts.forEach(function(c) {
+                    curSelectHtml += '<option value="' + c + '"' + (c === curCurrency ? ' selected' : '') + '>' + c + '</option>';
+                });
+                curSelectHtml += '</select>';
+                html += '<div class="col-sm-5"><div class="text-muted" style="font-size:.72rem;text-transform:uppercase;">Verilen Tutar</div>'
+                    + '<div class="d-flex align-items-center gap-1 mt-1">'
+                    + '<input type="number" id="ops-modal-price" class="form-control form-control-sm fw-bold text-danger" '
+                    + 'value="' + (ops.outsource_price ? parseFloat(ops.outsource_price).toFixed(2) : '') + '" '
+                    + 'placeholder="0.00" min="0" step="0.01" style="width:90px;font-size:1rem;" '
+                    + 'data-booking-id="' + ops.id + '">'
+                    + curSelectHtml
+                    + '<button type="button" id="ops-modal-price-save" class="btn btn-outline-primary btn-sm" style="font-size:.75rem;padding:2px 8px;" title="Kaydet">'
+                    + '<i class="bi bi-check-lg"></i>'
+                    + '</button>'
+                    + '<span class="ops-modal-price-status" style="font-size:.7rem;"></span>'
+                    + '</div></div>';
 
-                if (ops.outsource_price) {
-                    html += '<div class="col-12 mt-1 pt-1" style="border-top:1px dashed #f6c23e;">'
-                        + '<span class="text-muted" style="font-size:.75rem;">Verilen Tutar</span>'
-                        + '<span class="fw-bold ms-2 text-danger fs-5">' + parseFloat(ops.outsource_price).toFixed(2) + '</span>'
-                        + '</div>';
-                }
+                // 3) WhatsApp Mesaj At
+                var hasPhone = !!(ops.outsource_phone && ops.outsource_phone.trim());
+                html += '<div class="col-sm-3 text-sm-end"><div class="text-muted d-none d-sm-block" style="font-size:.72rem;text-transform:uppercase;">&nbsp;</div>'
+                    + '<button type="button" id="ops-modal-wa-btn" class="btn btn-success btn-sm mt-1" '
+                    + (hasPhone ? '' : 'disabled ')
+                    + 'data-booking-id="' + ops.id + '" '
+                    + 'data-partner-phone="' + (ops.outsource_phone || '') + '" '
+                    + 'data-partner-name="' + (ops.outsource_name || '') + '" '
+                    + 'data-partner-price="' + (ops.outsource_price || '') + '" '
+                    + 'data-pickup-time="' + (ops.outsource_pickup_time || '') + '">'
+                    + '<i class="bi bi-whatsapp me-1"></i>WP Mesaj At'
+                    + '</button>'
+                    + (hasPhone ? '' : '<br><small class="text-muted" style="font-size:.68rem;">Telefon kaydı yok</small>')
+                    + '</div>';
 
                 html += '</div></div>';
             }
 
             html += '</div>';
             body.innerHTML = html;
+
+            // Verilen Tutar kaydet butonu handler
+            var priceInput = document.getElementById('ops-modal-price');
+            var currencySelect = document.getElementById('ops-modal-currency');
+            var saveBtn = document.getElementById('ops-modal-price-save');
+            if (saveBtn && priceInput) {
+                saveBtn.addEventListener('click', function() {
+                    var statusEl = saveBtn.parentElement.querySelector('.ops-modal-price-status');
+                    var newPrice = priceInput.value;
+                    var newCurrency = currencySelect ? currencySelect.value : 'TRY';
+                    var bId = priceInput.dataset.bookingId;
+
+                    saveBtn.disabled = true;
+                    saveBtn.innerHTML = '<span class="spinner-border spinner-border-sm" style="width:.7rem;height:.7rem;"></span>';
+                    statusEl.textContent = '';
+
+                    var fd = new FormData();
+                    fd.append('action', 'update_outsource_pricing');
+                    fd.append('id', bId);
+                    fd.append('outsource_price', newPrice);
+                    fd.append('outsource_currency', newCurrency);
+                    fd.append('csrf_token', csrfToken);
+
+                    fetch(apiUrl, {method:'POST', body:fd})
+                        .then(function(r) { return r.json(); })
+                        .then(function(d) {
+                            saveBtn.disabled = false;
+                            saveBtn.innerHTML = '<i class="bi bi-check-lg"></i>';
+                            if (d.success) {
+                                statusEl.textContent = '\u2713 Kaydedildi';
+                                statusEl.className = 'ops-modal-price-status text-success';
+                            } else {
+                                statusEl.textContent = '\u2717 ' + (d.message || 'Hata');
+                                statusEl.className = 'ops-modal-price-status text-danger';
+                            }
+                            var tableInp = document.querySelector('.ops-price-input[data-id="' + bId + '"]');
+                            if (tableInp) tableInp.value = newPrice;
+                            var waBtn = document.getElementById('ops-modal-wa-btn');
+                            if (waBtn) waBtn.dataset.partnerPrice = newPrice;
+                        })
+                        .catch(function() {
+                            saveBtn.disabled = false;
+                            saveBtn.innerHTML = '<i class="bi bi-check-lg"></i>';
+                            statusEl.textContent = '\u2717 Bağlantı hatası';
+                            statusEl.className = 'ops-modal-price-status text-danger';
+                        });
+                });
+            }
+
+            // WhatsApp buton handler
+            var waBtn = document.getElementById('ops-modal-wa-btn');
+            if (waBtn) {
+                waBtn.addEventListener('click', function() {
+                    var bId = this.dataset.bookingId;
+                    var phone = this.dataset.partnerPhone;
+                    var name = this.dataset.partnerName;
+                    var price = this.dataset.partnerPrice;
+                    var pickup = this.dataset.pickupTime;
+                    var outCur = currencySelect ? currencySelect.value : 'EUR';
+                    sendOutsourceWhatsApp(bId, phone, name, price, pickup ? pickup.substring(0,5) : '', outCur);
+                });
+            }
         })
         .catch(function() { body.innerHTML = '<p class="text-danger mb-0">Bağlantı hatası.</p>'; });
 }

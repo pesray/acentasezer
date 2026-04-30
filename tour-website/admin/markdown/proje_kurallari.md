@@ -138,8 +138,56 @@ PHP 8+ syntax'ı **KESİNLİKLE KULLANILMAZ**:
 - ✅ **Admin panel sidebar redesign** — beyaz minimal, Inter font, dinamik logo/site adı, modern flyout, gelişmiş mobile davranış
 - ✅ **Dark mode** eklendi — top navbar'da ay/güneş toggle, localStorage kalıcı, flash'sız yükleme, Bootstrap 5.3 `data-bs-theme` ile entegre
 - ✅ **Mobile responsive iyileştirmeleri** (header.php global CSS) — tablo yatay scroll, modal full-screen <576px, page header stack, button compact, DataTables filter stack, touch-friendly tap targets, nav-tabs scroll
-- 🔜 Sırada: Diğer admin sayfalarını mobil için tek tek polish (vehicles, hotels, settings, partner pages…), settings.php yenileme, dashboard widget'ları
-- Sonrasında: Frontend site polish, raporlama
+- ✅ **Bookings tablosu mobil-spesifik:** view-X wrapper'ları + nth-child gizleme stratejisi
+- ✅ **Zebra stripe tablo satırları** — tüm `.table-hover` tablolarda otomatik (light + dark uyumlu)
+- 🔜 Sırada: **Site yönetimi (frontend yönetimi)** — Anasayfa içerik yönetiminden başla, çoklu dil sistemi düzeltmeleri, SEO odaklı tüm sayfaların admin'den yönetilebilirliği
+- Sonrasında: Diğer admin sayfaları polish, raporlama, dashboard widget'ları
+
+## SEO & Çoklu Dil Kuralları (Frontend Yönetimi için)
+
+- **Her sayfa SEO odaklı:** title, meta_description, meta_keywords, og_image, canonical URL admin'den düzenlenebilmeli
+- **Tüm içerik tabloları çoklu dil destekli:** `*_translations` pattern — her aktif dil için kayıt
+- **Yeni dil eklendiğinde** dinamik olarak çeviri inputları görünmeli — hardcoded `tr/en/de` yok
+- **Schema.org structured data** uygun yerlerde (TourPackage, Hotel, Organization, BreadcrumbList)
+- **Sitemap.xml** otomatik üretilmeli (tüm dillerin URL'leri ile)
+- **hreflang** tag'leri her sayfada otomatik (mevcut `getAlternateLanguageUrl()` fonksiyonu kullan)
+- **Image alt** ve **title** attributeleri tüm medyalar için zorunlu
+
+## URL Slug Sistemi (SEO odaklı)
+
+- **Her içerik tipinde slug zorunlu:** pages, tours, destinations, blog_posts, vb.
+- **Slug her dil için ayrı:** `page_translations.slug`, `tour_translations.slug` — aynı içerik farklı dillerde farklı slug'lara sahip olabilir
+- **Otomatik slug üretimi:** title girilince otomatik slug öner (`title` blur event), kullanıcı isterse manuel düzenler
+- **Türkçe karakter normalizasyonu:** ı→i, ğ→g, ü→u, ş→s, ö→o, ç→c, boşluk→-, lowercase
+- **URL pattern:** `/[lang]/[content-type]/[slug]` — Örn: `/tr/turlar/kappadokya-balon-turu`, `/en/tours/cappadocia-balloon-tour`
+- **Unique constraint:** her dil içinde benzersiz olmalı (`UNIQUE KEY (slug, language_code)`)
+- **301 redirect:** slug değiştirilirse eski URL → yeni URL yönlendirme (gelecekte eklenecek)
+- **Reserved slug'lar:** `admin`, `api`, `assets`, `uploads`, `tr`, `en`, `de`, `ru`, `ar` (dil kodları) — kontrol et, kullandırma
+- **Slug input'u:** her zaman görünür, manuel düzenlenebilir, otomatik üretim sadece boşken çalışır
+
+## Admin'den Yönetilebilen Tüm Site Yapısı
+
+Frontend'in her parçası admin panelden yönetilebilmeli:
+
+| Alan | Admin Sayfası | Tablo |
+|------|--------------|-------|
+| Anasayfa section'lar | homepage.php | sections + section_translations |
+| Statik sayfalar (Hakkımızda, KVKK, vb.) | pages.php | pages + page_translations |
+| Menüler (header/footer) | menus.php | menus + menu_items + menu_item_translations |
+| Slider'lar | sliders.php | sliders + slider_translations |
+| Tur paketleri | tours.php | tours + tour_translations + tour_categories |
+| Destinasyonlar/Transferler | destinations.php | destinations + destination_translations + destination_vehicles |
+| Araçlar | vehicles.php | vehicles + vehicle_services |
+| Oteller | hotels.php | hotels |
+| Müşteri yorumları | testimonials.php | testimonials + testimonial_translations |
+| Blog yazıları | blog.php | blog_posts + blog_post_translations + blog_categories |
+| Galeri | gallery.php | gallery + gallery_categories |
+| SSS | faq.php | faqs + faq_translations + faq_categories |
+| Features (özellikler) | features.php | features + feature_translations |
+| İletişim formları | contacts.php | contacts |
+| UI metinleri (header/footer/buttons) | translations.php | translations |
+| Site genel ayarları | settings.php | settings |
+| Diller | languages.php | languages |
 
 ## Mobile Responsive Pattern (Tüm admin sayfaları)
 
