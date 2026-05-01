@@ -8,7 +8,7 @@ requireLogin();
 
 $db = getDB();
 
-$defaultView = defined('BOOKINGS_AS_DASHBOARD') ? 'all' : 'arrival';
+$defaultView = defined('BOOKINGS_AS_DASHBOARD') ? 'daily' : 'arrival';
 $view = $_GET['view'] ?? $defaultView;
 if (!in_array($view, ['arrival', 'return', 'all', 'daily'])) $view = $defaultView;
 
@@ -1803,9 +1803,9 @@ $(document).ready(function() {
         return true;
     });
 
-    // Bugünü default olarak set et (dashboard'dan açılırsa atla)
-    <?php if (defined('BOOKINGS_AS_DASHBOARD')): ?>window.AUTO_FILTER_TODAY = false;<?php endif; ?>
-    if (window.AUTO_FILTER_TODAY !== false) {
+    // Günlük görünüm, Geliş ve Dönüş sekmelerinde her halükarda bugünü default olarak seç
+    // Sadece "Tüm Rezervasyonlar" (all) görünümünde tarih boş gelsin.
+    if (currentView !== 'all') {
         var today = new Date();
         var todayStr = today.getFullYear() + '-'
             + String(today.getMonth() + 1).padStart(2, '0') + '-'
