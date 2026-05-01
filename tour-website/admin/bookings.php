@@ -431,19 +431,61 @@ require_once __DIR__ . '/includes/header.php';
         padding-right: 10px !important;
     }
     
-    /* İş Durumu, Durum, İşlem gibi aksiyon sütunlarını yan yana diz */
+    /* İş Durumu (Checkboxes) - Tam genişlik, içerik yan yana */
+    table.dataTable > tbody > tr.child ul.custom-dtr-details > li.dtr-status-cell {
+        flex: 1 1 100% !important;
+        width: 100% !important;
+        border-bottom: none !important;
+        background-color: var(--bs-body-bg);
+        border: 1px solid var(--bs-border-color) !important;
+        padding: 12px !important;
+        margin-top: 10px !important;
+        border-radius: 8px;
+    }
+    table.dataTable > tbody > tr.child ul.custom-dtr-details > li.dtr-status-cell > .dtr-title {
+        color: var(--bs-secondary);
+        border-bottom: 1px solid var(--bs-border-color);
+        padding-bottom: 4px;
+        margin-bottom: 10px;
+        width: 100%;
+    }
+    table.dataTable > tbody > tr.child ul.custom-dtr-details > li.dtr-status-cell .ops-cell {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 15px;
+        align-items: center;
+    }
+    table.dataTable > tbody > tr.child ul.custom-dtr-details > li.dtr-status-cell .form-check {
+        margin-bottom: 0 !important;
+        display: flex;
+        align-items: center;
+        gap: 6px;
+    }
+    table.dataTable > tbody > tr.child ul.custom-dtr-details > li.dtr-status-cell .form-check-input {
+        margin-top: 0;
+        width: 1.2rem;
+        height: 1.2rem;
+        cursor: pointer;
+    }
+    table.dataTable > tbody > tr.child ul.custom-dtr-details > li.dtr-status-cell .form-check-label {
+        font-size: 0.90rem;
+        cursor: pointer;
+    }
+
+    /* Durum ve İşlem - %48 yan yana ve merkezlenmiş */
     table.dataTable > tbody > tr.child ul.custom-dtr-details > li.dtr-action-cell {
-        flex: 1 1 0% !important; /* Eşit genişlikte esne */
+        flex: 1 1 45% !important; 
         width: auto !important;
         min-width: 0 !important; /* İçeriğin flex'i patlatmasını önle */
         border-bottom: none !important;
         background-color: var(--bs-body-bg);
         border: 1px solid var(--bs-border-color) !important;
-        padding: 10px !important;
+        padding: 12px !important;
         margin-top: 10px !important;
         border-radius: 8px;
-        margin-right: 8px !important;
-        align-items: flex-start !important;
+        margin-right: 10px !important;
+        align-items: center !important;
+        text-align: center;
     }
     table.dataTable > tbody > tr.child ul.custom-dtr-details > li.dtr-action-cell:last-child {
         margin-right: 0 !important;
@@ -452,16 +494,20 @@ require_once __DIR__ . '/includes/header.php';
         color: var(--bs-secondary);
         border-bottom: 1px solid var(--bs-border-color);
         padding-bottom: 4px;
-        margin-bottom: 8px;
+        margin-bottom: 10px;
+        width: 100%;
+        text-align: center;
+    }
+    table.dataTable > tbody > tr.child ul.custom-dtr-details > li.dtr-action-cell > .dtr-data {
+        display: flex;
+        justify-content: center;
         width: 100%;
     }
     
-    /* Aksiyon hücreleri içindeki buton gruplarını dar alana sığdır */
-    table.dataTable > tbody > tr.child ul.custom-dtr-details > li.dtr-action-cell .btn-group {
-        flex-wrap: wrap;
-    }
-    table.dataTable > tbody > tr.child ul.custom-dtr-details > li.dtr-action-cell .form-check-label {
-        font-size: 0.80rem;
+    /* Aksiyon butonlarını genişlet (Mobilde rahat basılması için) */
+    table.dataTable > tbody > tr.child ul.custom-dtr-details > li.dtr-action-cell .btn {
+        padding: 8px 14px !important;
+        font-size: 1.1rem !important; /* İkonları netleştir ve büyüt */
     }
 
     /* Tablet/Desktop için Custom Scroll (Mobilde DataTables Responsive çalışsın diye genişlik zorlamaz) */
@@ -1679,7 +1725,9 @@ $(document).ready(function() {
                     var data = $.map(columns, function (col, i) {
                         var title = col.title ? col.title.replace(/(<([^>]+)>)/gi, "").trim() : '';
                         var extraClass = '';
-                        if (title.includes('Durum') || title.includes('İşlem')) {
+                        if (title === 'İş Durumu') {
+                            extraClass = ' dtr-status-cell';
+                        } else if (title.includes('Durum') || title.includes('İşlem')) {
                             extraClass = ' dtr-action-cell';
                         } else if (title.includes('Yön') || title.includes('Tarih') || title.includes('Saat')) {
                             extraClass = ' dtr-info-cell';
