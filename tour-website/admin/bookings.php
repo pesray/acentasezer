@@ -327,31 +327,96 @@ require_once __DIR__ . '/includes/header.php';
     .view-all #bookingsTable td:nth-child(8),
     .view-all #bookingsTable th:nth-child(9),
     .view-all #bookingsTable td:nth-child(9),
-    .view-all #bookingsTable th:nth-child(10),
-    .view-all #bookingsTable td:nth-child(10),
-    .view-all #bookingsTable th:nth-child(14),
-    .view-all #bookingsTable td:nth-child(14) { display: none; }
+    /* Masaüstü ve tabletler için gizleme kuralları (Mobilde DataTables yönetecek) */
+    @media (min-width: 768px) {
+        .view-all #bookingsTable th:nth-child(10),
+        .view-all #bookingsTable td:nth-child(10),
+        .view-all #bookingsTable th:nth-child(14),
+        .view-all #bookingsTable td:nth-child(14) { display: none; }
 
-    /* arrival: Yön(1), Alış Saati(4) gizle */
-    .view-arrival #bookingsTable th:nth-child(1),
-    .view-arrival #bookingsTable td:nth-child(1),
-    .view-arrival #bookingsTable th:nth-child(4),
-    .view-arrival #bookingsTable td:nth-child(4) { display: none; }
+        /* arrival: Yön(1), Alış Saati(4) gizle */
+        .view-arrival #bookingsTable th:nth-child(1),
+        .view-arrival #bookingsTable td:nth-child(1),
+        .view-arrival #bookingsTable th:nth-child(4),
+        .view-arrival #bookingsTable td:nth-child(4) { display: none; }
 
-    /* return: Yön(1) gizle */
-    .view-return #bookingsTable th:nth-child(1),
-    .view-return #bookingsTable td:nth-child(1) { display: none; }
+        /* return: Yön(1) gizle */
+        .view-return #bookingsTable th:nth-child(1),
+        .view-return #bookingsTable td:nth-child(1) { display: none; }
 
-    /* daily: Saat(3), Alış Saati(4), Kişi(6), Araç(8) gizle */
-    .view-daily #bookingsTable th:nth-child(3),
-    .view-daily #bookingsTable td:nth-child(3),
-    .view-daily #bookingsTable th:nth-child(4),
-    .view-daily #bookingsTable td:nth-child(4),
-    .view-daily #bookingsTable th:nth-child(6),
-    .view-daily #bookingsTable td:nth-child(6),
-    .view-daily #bookingsTable th:nth-child(8),
-    .view-daily #bookingsTable td:nth-child(8) { display: none; }
-}
+        /* daily: Saat(3), Alış Saati(4), Kişi(6), Araç(8) gizle */
+        .view-daily #bookingsTable th:nth-child(3),
+        .view-daily #bookingsTable td:nth-child(3),
+        .view-daily #bookingsTable th:nth-child(4),
+        .view-daily #bookingsTable td:nth-child(4),
+        .view-daily #bookingsTable th:nth-child(6),
+        .view-daily #bookingsTable td:nth-child(6),
+        .view-daily #bookingsTable th:nth-child(8),
+        .view-daily #bookingsTable td:nth-child(8) { display: none; }
+    }
+
+    /* Custom DTR Toggle Button (Mobile Child Row Açma Butonu) */
+    table.dataTable.dtr-inline.collapsed > tbody > tr > td.dtr-control::before, 
+    table.dataTable.dtr-inline.collapsed > tbody > tr > th.dtr-control::before {
+        content: "\F282" !important; /* chevron-down */
+        font-family: "bootstrap-icons" !important;
+        background-color: var(--primary) !important;
+        color: white !important;
+        border: none !important;
+        border-radius: 50% !important;
+        box-shadow: 0 2px 5px rgba(0,0,0,0.2) !important;
+        width: 24px !important;
+        height: 24px !important;
+        display: inline-flex !important;
+        align-items: center !important;
+        justify-content: center !important;
+        font-size: 14px !important;
+        line-height: 1 !important;
+        margin-top: -12px !important;
+    }
+    table.dataTable.dtr-inline.collapsed > tbody > tr.parent > td.dtr-control::before, 
+    table.dataTable.dtr-inline.collapsed > tbody > tr.parent > th.dtr-control::before {
+        content: "\F286" !important; /* chevron-up */
+        background-color: #dc3545 !important;
+    }
+
+    /* Child Row (Aşağı açılan satır) Tasarımı */
+    .custom-dtr-details {
+        display: flex;
+        flex-wrap: wrap;
+        padding: 0;
+        margin: 0;
+        list-style: none;
+        width: 100%;
+    }
+    .custom-dtr-details li {
+        width: 100%;
+        border-bottom: 1px solid #e9ecef;
+        padding: 10px 0;
+        display: flex;
+        flex-direction: column;
+    }
+    [data-bs-theme="dark"] .custom-dtr-details li {
+        border-bottom-color: var(--sidebar-border);
+    }
+    .custom-dtr-details li:last-child {
+        border-bottom: none;
+    }
+    .custom-dtr-details li .dtr-title {
+        font-weight: 700;
+        color: var(--text-muted);
+        font-size: 0.75rem;
+        text-transform: uppercase;
+        margin-bottom: 6px;
+        letter-spacing: 0.5px;
+    }
+    .custom-dtr-details li.dtr-side-by-side {
+        width: 50%;
+        border-bottom: none;
+    }
+
+    /* Tablet/Desktop için Custom Scroll (Mobilde DataTables Responsive çalışsın diye genişlik zorlamaz) */
+    /* BU KISIM KALDIRILDI - BOOTSTRAP TABLE-RESPONSIVE KULLANILACAK */
 
 /* Sayfa filter satırı mobilde stack */
 @media (max-width: 767.98px) {
@@ -367,24 +432,24 @@ require_once __DIR__ . '/includes/header.php';
 
     <?php if ($view === 'all'): ?>
     <!-- Tüm Rezervasyonlar: geliş+dönüş çifti tek satırda -->
-    <table id="bookingsTable" class="table table-hover datatable">
+    <table id="bookingsTable" class="table table-hover nowrap" width="100%">
         <thead>
             <tr>
-                <th>Yön</th>
-                <th>Geliş Tarihi</th>
-                <th>Geliş Saati</th>
-                <th>Gidiş Tarihi</th>
-                <th>Gidiş Saati</th>
-                <th>Alış Saati</th>
-                <th>Müşteri</th>
-                <th>Kişi</th>
-                <th>Otel Adı</th>
-                <th>Araç</th>
-                <th>Tutar</th>
-                <th>Geliş Durumu</th>
-                <th>Dönüş Durumu</th>
-                <th>Durum</th>
-                <th >İşlem</th>
+                <th class="all">Yön</th>
+                <th class="all">Geliş Tarihi</th>
+                <th class="min-tablet">Geliş Saati</th>
+                <th class="min-tablet">Gidiş Tarihi</th>
+                <th class="min-tablet">Gidiş Saati</th>
+                <th class="min-tablet">Alış Saati</th>
+                <th class="min-tablet">Müşteri</th>
+                <th class="all">Kişi</th>
+                <th class="min-tablet">Otel Adı</th>
+                <th class="min-tablet">Araç</th>
+                <th class="min-tablet">Tutar</th>
+                <th class="min-tablet">Geliş Durumu</th>
+                <th class="min-tablet">Dönüş Durumu</th>
+                <th class="min-tablet">Durum</th>
+                <th class="min-tablet">İşlem</th>
             </tr>
         </thead>
         <tbody>
@@ -564,21 +629,21 @@ require_once __DIR__ . '/includes/header.php';
 
     <?php elseif ($view === 'daily'): ?>
     <!-- Günlük Görünüm: her rezervasyon ayrı satırda -->
-    <table id="bookingsTable" class="table table-hover datatable">
+    <table id="bookingsTable" class="table table-hover nowrap" width="100%">
         <thead>
             <tr>
-                <th>Yön</th>
-                <th>Tarih</th>
-                <th>Saat</th>
-                <th>Alış Saati</th>
-                <th>Müşteri</th>
-                <th>Kişi</th>
-                <th>Otel Adı</th>
-                <th>Araç</th>
-                <th>Tutar</th>
-                <th>İş Durumu</th>
-                <th>Durum</th>
-                <th>İşlem</th>
+                <th class="all">Yön</th>
+                <th class="all">Tarih</th>
+                <th class="min-tablet">Saat</th>
+                <th class="min-tablet">Alış Saati</th>
+                <th class="min-tablet">Müşteri</th>
+                <th class="all">Kişi</th>
+                <th class="min-tablet">Otel Adı</th>
+                <th class="min-tablet">Araç</th>
+                <th class="min-tablet">Tutar</th>
+                <th class="min-tablet">İş Durumu</th>
+                <th class="min-tablet">Durum</th>
+                <th class="min-tablet">İşlem</th>
             </tr>
         </thead>
         <tbody>
@@ -693,23 +758,23 @@ require_once __DIR__ . '/includes/header.php';
 
     <?php else: ?>
     <!-- Geliş / Dönüş view: günlük görünüm ile aynı sütunlar -->
-    <table id="bookingsTable" class="table table-hover datatable">
+    <table id="bookingsTable" class="table table-hover nowrap" width="100%">
         <thead>
             <tr>
-                <th>Yön</th>
-                <th>Tarih</th>
-                <th>Saat</th>
+                <th class="all">Yön</th>
+                <th class="all">Tarih</th>
+                <th class="min-tablet">Saat</th>
                 <?php if ($view !== 'arrival'): ?>
-                <th>Alış Saati</th>
+                <th class="min-tablet">Alış Saati</th>
                 <?php endif; ?>
-                <th>Müşteri</th>
-                <th>Kişi</th>
-                <th>Otel Adı</th>
-                <th>Araç</th>
-                <th>Tutar</th>
-                <th>İş Durumu</th>
-                <th>Durum</th>
-                <th>İşlem</th>
+                <th class="min-tablet">Müşteri</th>
+                <th class="all">Kişi</th>
+                <th class="min-tablet">Otel Adı</th>
+                <th class="min-tablet">Araç</th>
+                <th class="min-tablet">Tutar</th>
+                <th class="min-tablet">İş Durumu</th>
+                <th class="min-tablet">Durum</th>
+                <th class="min-tablet">İşlem</th>
             </tr>
         </thead>
         <tbody>
@@ -1554,8 +1619,30 @@ const currentView = '<?= $view ?>';
 
 <script>
 $(document).ready(function() {
-    // Footer zaten '.datatable' class'ı ile init etti, mevcut instance'ı al
-    var table = $('#bookingsTable').DataTable();
+    var table = $('#bookingsTable').DataTable({
+        language: {
+            url: 'https://cdn.datatables.net/plug-ins/1.13.6/i18n/tr.json'
+        },
+        pageLength: 25,
+        responsive: {
+            details: {
+                renderer: function (api, rowIdx, columns) {
+                    var data = $.map(columns, function (col, i) {
+                        var title = col.title ? col.title.replace(/(<([^>]+)>)/gi, "").trim() : '';
+                        var extraClass = '';
+                        if (title === 'Durum' || title === 'İşlem') {
+                            extraClass = ' dtr-side-by-side';
+                        }
+                        return '<li class="' + extraClass + '" data-dtr-index="'+col.columnIndex+'">'+
+                                 '<span class="dtr-title">'+col.title+'</span> '+
+                                 '<span class="dtr-data">'+col.data+'</span>'+
+                               '</li>';
+                    }).join('');
+                    return data ? $('<ul class="dtr-details custom-dtr-details"/>').append(data) : false;
+                }
+            }
+        }
+    });
 
     // daily view ve geliş/dönüş: tarihe göre artan sıra
     if (currentView === 'daily' || currentView === 'arrival' || currentView === 'return') {
