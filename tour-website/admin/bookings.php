@@ -521,6 +521,23 @@ require_once __DIR__ . '/includes/header.php';
         font-size: 1.1rem !important; /* İkonları netleştir ve büyüt */
     }
 
+    /* Masaüstü (Desktop) Görünümde "Tüm Rezervasyonlar"ın ekrana sığması için sıkıştırma */
+    @media (min-width: 992px) {
+        .view-all #bookingsTable {
+            font-size: 0.85rem;
+        }
+        .view-all #bookingsTable th,
+        .view-all #bookingsTable td {
+            padding: 0.5rem 0.4rem !important;
+            white-space: normal !important; /* Uzun otel/müşteri isimleri alt satıra geçerek yatayda yer açsın */
+            word-break: break-word;
+        }
+        .view-all #bookingsTable .btn-group .btn {
+            padding: 0.25rem 0.5rem;
+            font-size: 0.85rem;
+        }
+    }
+
     /* Tablet/Desktop için Custom Scroll (Mobilde DataTables Responsive çalışsın diye genişlik zorlamaz) */
     /* BU KISIM KALDIRILDI - BOOTSTRAP TABLE-RESPONSIVE KULLANILACAK */
 
@@ -538,7 +555,7 @@ require_once __DIR__ . '/includes/header.php';
 
     <?php if ($view === 'all'): ?>
     <!-- Tüm Rezervasyonlar: geliş+dönüş çifti tek satırda -->
-    <table id="bookingsTable" class="table table-hover nowrap" width="100%">
+    <table id="bookingsTable" class="table table-hover" width="100%">
         <thead>
             <tr>
                 <th class="all">Yön</th>
@@ -735,7 +752,7 @@ require_once __DIR__ . '/includes/header.php';
 
     <?php elseif ($view === 'daily'): ?>
     <!-- Günlük Görünüm: her rezervasyon ayrı satırda -->
-    <table id="bookingsTable" class="table table-hover nowrap" width="100%">
+    <table id="bookingsTable" class="table table-hover" width="100%">
         <thead>
             <tr>
                 <th class="all">Yön</th>
@@ -864,7 +881,7 @@ require_once __DIR__ . '/includes/header.php';
 
     <?php else: ?>
     <!-- Geliş / Dönüş view: günlük görünüm ile aynı sütunlar -->
-    <table id="bookingsTable" class="table table-hover nowrap" width="100%">
+    <table id="bookingsTable" class="table table-hover" width="100%">
         <thead>
             <tr>
                 <th class="all">Yön</th>
@@ -1730,6 +1747,7 @@ $(document).ready(function() {
             url: 'https://cdn.datatables.net/plug-ins/1.13.6/i18n/tr.json'
         },
         pageLength: 25,
+        autoWidth: false,
         responsive: {
             details: {
                 renderer: function (api, rowIdx, columns) {
