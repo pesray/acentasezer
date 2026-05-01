@@ -380,39 +380,88 @@ require_once __DIR__ . '/includes/header.php';
         background-color: #dc3545 !important;
     }
 
-    /* Child Row (Aşağı açılan satır) Tasarımı */
-    .custom-dtr-details {
-        display: flex;
-        flex-wrap: wrap;
-        padding: 0;
-        margin: 0;
-        list-style: none;
-        width: 100%;
+    /* Child Row (Aşağı açılan satır / Kart) Tasarımı */
+    table.dataTable.dtr-inline.collapsed > tbody > tr.child > td {
+        padding: 0 !important;
     }
-    .custom-dtr-details li {
-        width: 100%;
-        border-bottom: 1px solid #e9ecef;
-        padding: 10px 0;
-        display: flex;
-        flex-direction: column;
+    table.dataTable > tbody > tr.child ul.custom-dtr-details {
+        display: flex !important;
+        flex-wrap: wrap !important;
+        padding: 12px 15px !important;
+        margin: 0 !important;
+        list-style: none !important;
+        width: 100% !important;
+        background-color: rgba(var(--bs-light-rgb), 0.5); /* Hafif arka plan */
+        border-radius: 0 0 8px 8px;
+        box-shadow: inset 0 3px 6px rgba(0,0,0,0.02);
     }
-    [data-bs-theme="dark"] .custom-dtr-details li {
-        border-bottom-color: var(--sidebar-border);
+    [data-bs-theme="dark"] table.dataTable > tbody > tr.child ul.custom-dtr-details {
+        background-color: rgba(0,0,0,0.15);
     }
-    .custom-dtr-details li:last-child {
-        border-bottom: none;
+    table.dataTable > tbody > tr.child ul.custom-dtr-details > li {
+        width: 100% !important;
+        border-bottom: 1px dashed var(--bs-border-color) !important;
+        padding: 8px 0 !important;
+        display: flex !important;
+        flex-direction: column !important;
     }
-    .custom-dtr-details li .dtr-title {
+    table.dataTable > tbody > tr.child ul.custom-dtr-details > li:last-child {
+        border-bottom: none !important;
+    }
+    table.dataTable > tbody > tr.child ul.custom-dtr-details > li > .dtr-title {
         font-weight: 700;
-        color: var(--text-muted);
-        font-size: 0.75rem;
+        color: var(--bs-primary);
+        font-size: 0.70rem;
         text-transform: uppercase;
-        margin-bottom: 6px;
+        margin-bottom: 4px;
         letter-spacing: 0.5px;
+        display: block;
     }
-    .custom-dtr-details li.dtr-side-by-side {
-        width: 50%;
-        border-bottom: none;
+    table.dataTable > tbody > tr.child ul.custom-dtr-details > li > .dtr-data {
+        font-size: 0.85rem;
+        color: var(--bs-body-color);
+        display: block;
+    }
+    
+    /* Yön, Tarih, Saat gibi bilgi sütunlarını yan yana diz (2x2 grid mantığı) */
+    table.dataTable > tbody > tr.child ul.custom-dtr-details > li.dtr-info-cell {
+        flex: 1 1 45% !important; 
+        width: auto !important;
+        min-width: 0 !important;
+        padding-right: 10px !important;
+    }
+    
+    /* İş Durumu, Durum, İşlem gibi aksiyon sütunlarını yan yana diz */
+    table.dataTable > tbody > tr.child ul.custom-dtr-details > li.dtr-action-cell {
+        flex: 1 1 0% !important; /* Eşit genişlikte esne */
+        width: auto !important;
+        min-width: 0 !important; /* İçeriğin flex'i patlatmasını önle */
+        border-bottom: none !important;
+        background-color: var(--bs-body-bg);
+        border: 1px solid var(--bs-border-color) !important;
+        padding: 10px !important;
+        margin-top: 10px !important;
+        border-radius: 8px;
+        margin-right: 8px !important;
+        align-items: flex-start !important;
+    }
+    table.dataTable > tbody > tr.child ul.custom-dtr-details > li.dtr-action-cell:last-child {
+        margin-right: 0 !important;
+    }
+    table.dataTable > tbody > tr.child ul.custom-dtr-details > li.dtr-action-cell > .dtr-title {
+        color: var(--bs-secondary);
+        border-bottom: 1px solid var(--bs-border-color);
+        padding-bottom: 4px;
+        margin-bottom: 8px;
+        width: 100%;
+    }
+    
+    /* Aksiyon hücreleri içindeki buton gruplarını dar alana sığdır */
+    table.dataTable > tbody > tr.child ul.custom-dtr-details > li.dtr-action-cell .btn-group {
+        flex-wrap: wrap;
+    }
+    table.dataTable > tbody > tr.child ul.custom-dtr-details > li.dtr-action-cell .form-check-label {
+        font-size: 0.80rem;
     }
 
     /* Tablet/Desktop için Custom Scroll (Mobilde DataTables Responsive çalışsın diye genişlik zorlamaz) */
@@ -1630,8 +1679,10 @@ $(document).ready(function() {
                     var data = $.map(columns, function (col, i) {
                         var title = col.title ? col.title.replace(/(<([^>]+)>)/gi, "").trim() : '';
                         var extraClass = '';
-                        if (title === 'Durum' || title === 'İşlem') {
-                            extraClass = ' dtr-side-by-side';
+                        if (title.includes('Durum') || title.includes('İşlem')) {
+                            extraClass = ' dtr-action-cell';
+                        } else if (title.includes('Yön') || title.includes('Tarih') || title.includes('Saat')) {
+                            extraClass = ' dtr-info-cell';
                         }
                         return '<li class="' + extraClass + '" data-dtr-index="'+col.columnIndex+'">'+
                                  '<span class="dtr-title">'+col.title+'</span> '+
