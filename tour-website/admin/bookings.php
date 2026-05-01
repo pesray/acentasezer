@@ -423,6 +423,17 @@ require_once __DIR__ . '/includes/header.php';
         display: block;
     }
     
+    /* Tutar alanını büyüt ve belirginleştir */
+    table.dataTable > tbody > tr.child ul.custom-dtr-details > li.dtr-price-cell > .dtr-data {
+        font-size: 1.3rem;
+        font-weight: 800;
+        color: var(--bs-success);
+    }
+    table.dataTable > tbody > tr.child ul.custom-dtr-details > li.dtr-price-cell > .dtr-title {
+        color: var(--bs-success);
+        font-size: 0.75rem;
+    }
+    
     /* Yön, Tarih, Saat gibi bilgi sütunlarını yan yana diz (2x2 grid mantığı) */
     table.dataTable > tbody > tr.child ul.custom-dtr-details > li.dtr-info-cell {
         flex: 1 1 45% !important; 
@@ -1729,8 +1740,10 @@ $(document).ready(function() {
                             extraClass = ' dtr-status-cell';
                         } else if (title.includes('Durum') || title.includes('İşlem')) {
                             extraClass = ' dtr-action-cell';
-                        } else if (title.includes('Yön') || title.includes('Tarih') || title.includes('Saat')) {
+                        } else if (title.includes('Yön') || title.includes('Tarih') || title.includes('Saat') || title.includes('Müşteri') || title.includes('Kişi')) {
                             extraClass = ' dtr-info-cell';
+                        } else if (title.includes('Tutar')) {
+                            extraClass = ' dtr-price-cell';
                         }
                         return '<li class="' + extraClass + '" data-dtr-index="'+col.columnIndex+'">'+
                                  '<span class="dtr-title">'+col.title+'</span> '+
