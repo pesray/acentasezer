@@ -406,41 +406,43 @@ if ($siteLogo && defined('UPLOADS_URL')) {
             font-size: .7rem; color: var(--text-muted);
         }
 
-        /* ─── Collapsed State ─────────────────────────────────── */
-        .sidebar.collapsed { width: var(--sidebar-mini); }
-        .sidebar.collapsed .sidebar-brand {
-            justify-content: center;
-            padding: 0;
+        /* ─── Collapsed State (Sadece Desktop'ta Geçerli) ─────────────────── */
+        @media (min-width: 992px) {
+            .sidebar.collapsed { width: var(--sidebar-mini); }
+            .sidebar.collapsed .sidebar-brand {
+                justify-content: center;
+                padding: 0;
+            }
+            .sidebar.collapsed .sidebar-brand-text,
+            .sidebar.collapsed .nav-section,
+            .sidebar.collapsed .nav-link-text,
+            .sidebar.collapsed .sidebar-chevron,
+            .sidebar.collapsed .nav-link-badge,
+            .sidebar.collapsed .sidebar-user-info {
+                display: none !important;
+            }
+            .sidebar.collapsed .sidebar-nav { padding-left: .5rem; padding-right: .5rem; }
+            .sidebar.collapsed .sidebar-nav .nav-link {
+                justify-content: center !important;
+                align-items: center;
+                padding: .65rem 0 !important;
+                gap: 0 !important;
+                width: 100%;
+            }
+            .sidebar.collapsed .sidebar-nav .nav-link i.nav-link-icon {
+                margin: 0 auto;
+                width: 22px;
+            }
+            .sidebar.collapsed .sidebar-nav .nav-link.active::before { left: -2px; }
+            .sidebar.collapsed .sidebar-nav .nav-submenu,
+            .sidebar.collapsed .collapse { display: none !important; }
+            .sidebar.collapsed .sidebar-user { justify-content: center; padding: .55rem 0; }
+            .sidebar.collapsed .nav-item-group.flyout-open > .submenu-flyout { display: block; }
+            .sidebar.collapsed .nav-section {
+                padding-top: 0; padding-bottom: 0; height: 0;
+            }
+            .sidebar:not(.collapsed) .submenu-flyout { display: none !important; }
         }
-        .sidebar.collapsed .sidebar-brand-text,
-        .sidebar.collapsed .nav-section,
-        .sidebar.collapsed .nav-link-text,
-        .sidebar.collapsed .sidebar-chevron,
-        .sidebar.collapsed .nav-link-badge,
-        .sidebar.collapsed .sidebar-user-info {
-            display: none !important;
-        }
-        .sidebar.collapsed .sidebar-nav { padding-left: .5rem; padding-right: .5rem; }
-        .sidebar.collapsed .sidebar-nav .nav-link {
-            justify-content: center !important;
-            align-items: center;
-            padding: .65rem 0 !important;
-            gap: 0 !important;
-            width: 100%;
-        }
-        .sidebar.collapsed .sidebar-nav .nav-link i.nav-link-icon {
-            margin: 0 auto;
-            width: 22px;
-        }
-        .sidebar.collapsed .sidebar-nav .nav-link.active::before { left: -2px; }
-        .sidebar.collapsed .sidebar-nav .nav-submenu,
-        .sidebar.collapsed .collapse { display: none !important; }
-        .sidebar.collapsed .sidebar-user { justify-content: center; padding: .55rem 0; }
-        .sidebar.collapsed .nav-item-group.flyout-open > .submenu-flyout { display: block; }
-        .sidebar.collapsed .nav-section {
-            padding-top: 0; padding-bottom: 0; height: 0;
-        }
-        .sidebar:not(.collapsed) .submenu-flyout { display: none !important; }
 
         /* ─── Main Content ─────────────────────────────────── */
         .main-content {

@@ -51,7 +51,7 @@ $(document).ready(function() {
     var sidebar     = document.getElementById('mainSidebar');
     var mainContent = document.getElementById('mainContent');
     var overlay     = document.getElementById('sidebarOverlay');
-    var isMobile    = function() { return window.innerWidth <= 991; };
+    var isMobile    = function() { return window.matchMedia('(max-width: 991.98px)').matches; };
 
     // Restore saved state (sadece desktop'ta)
     if (!isMobile() && localStorage.getItem('sidebarCollapsed') === '1') {
