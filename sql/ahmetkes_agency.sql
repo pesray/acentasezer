@@ -3,9 +3,9 @@
 -- https://www.phpmyadmin.net/
 --
 -- Anamakine: localhost:3306
--- Üretim Zamanı: 29 Nis 2026, 13:22:04
+-- Üretim Zamanı: 03 May 2026, 00:15:58
 -- Sunucu sürümü: 8.0.45-cll-lve
--- PHP Sürümü: 8.4.16
+-- PHP Sürümü: 8.4.20
 
 SET SQL_MODE = "NO_AUTO_VALUE_ON_ZERO";
 START TRANSACTION;
@@ -140,6 +140,7 @@ CREATE TABLE `bookings` (
   `is_completed` tinyint(1) NOT NULL DEFAULT '0',
   `is_outsourced` tinyint(1) NOT NULL DEFAULT '0',
   `outsource_price` decimal(10,2) DEFAULT NULL,
+  `outsource_currency` varchar(10) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci DEFAULT NULL,
   `created_at` datetime DEFAULT CURRENT_TIMESTAMP,
   `updated_at` datetime DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   `outsource_name` varchar(255) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
@@ -151,24 +152,81 @@ CREATE TABLE `bookings` (
 -- Tablo döküm verisi `bookings`
 --
 
-INSERT INTO `bookings` (`id`, `booking_number`, `booking_type`, `booking_status`, `booking_direction`, `tour_id`, `destination_id`, `vehicle_id`, `customer_name`, `customer_email`, `customer_phone`, `pickup_location`, `pickup_date`, `pickup_time`, `return_time`, `flight_date`, `flight_time`, `flight_number`, `hotel_address`, `return_transfer`, `return_flight_date`, `return_flight_time`, `return_flight_number`, `return_pickup_time`, `return_hotel_address`, `adults`, `children`, `child_seat`, `total_price`, `currency`, `notes`, `admin_notes`, `is_completed`, `is_outsourced`, `outsource_price`, `created_at`, `updated_at`, `outsource_name`, `outsource_pickup_time`, `outsource_partner_id`) VALUES
-(37, 'TRF-20260428-0191', 'transfer', 'confirmed', 'outbound', NULL, 13, 1, 'FİKRET GEMRİKLİ', '', '+49017680515901', NULL, NULL, '07:30:00', NULL, '2026-05-02', '18:25:00', 'XQ147', 'Delphin Be Grand', 0, NULL, NULL, NULL, NULL, NULL, 4, 2, 0, 25.00, 'EUR', NULL, NULL, 0, 0, NULL, '2026-04-28 20:50:28', '2026-04-28 20:53:30', NULL, NULL, NULL),
-(38, 'TRF-20260428-1764', 'transfer', 'confirmed', 'return', NULL, 13, 1, 'FİKRET GEMRİKLİ', '', '+49017680515901', NULL, NULL, '07:30:00', NULL, '2026-05-09', '10:05:00', 'XQ146', 'Delphin Be Grand', 0, NULL, NULL, NULL, NULL, NULL, 4, 0, 0, 25.00, 'EUR', NULL, NULL, 0, 0, NULL, '2026-04-28 20:50:28', '2026-04-29 02:21:26', NULL, NULL, NULL),
-(39, 'TRF-20260428-1622', 'transfer', 'confirmed', 'outbound', NULL, 17, 1, 'INES KAUFMANN', '', '+491629148108', NULL, NULL, NULL, NULL, '2026-05-14', '06:15:00', 'XQ247', 'Aska Just In Beach', 0, NULL, NULL, NULL, NULL, NULL, 1, 0, 0, 55.00, 'EUR', NULL, NULL, 0, 0, NULL, '2026-04-28 21:05:48', '2026-04-28 23:56:19', NULL, NULL, NULL),
-(48, 'TRF-20260429-7273', 'transfer', 'confirmed', 'return', NULL, 7, 3, 'KANDSORRA WOLFGANG', '', '+4917672883149', NULL, NULL, '17:30:00', NULL, '2026-04-29', '20:55:00', 'XQ236', 'Lilyum Hotel', 0, NULL, NULL, NULL, NULL, NULL, 8, 0, 0, 65.00, 'EUR', NULL, NULL, 0, 0, NULL, '2026-04-29 09:51:57', '2026-04-29 10:02:26', NULL, NULL, NULL),
-(49, 'TRF-20260429-7985', 'transfer', 'confirmed', 'return', NULL, 10, 1, 'EDVIN TISK', '', '+4748653342', NULL, NULL, '09:00:00', NULL, '2026-04-28', '12:00:00', NULL, 'Lago Hotel', 0, NULL, NULL, NULL, NULL, NULL, 3, 0, 0, 40.00, 'EUR', NULL, NULL, 1, 0, NULL, '2026-04-29 09:59:09', '2026-04-29 12:51:17', NULL, NULL, NULL),
-(50, 'TRF-20260429-4802', 'transfer', 'confirmed', 'outbound', NULL, 18, 1, 'KYANAT SHAH', '', '+447464218024', NULL, NULL, NULL, NULL, '2026-04-29', '16:25:00', 'LS1239', 'Eftalia Splash', 0, NULL, NULL, NULL, NULL, NULL, 4, 0, 0, 65.00, 'EUR', NULL, NULL, 0, 0, NULL, '2026-04-29 10:17:31', '2026-04-29 10:17:31', NULL, NULL, NULL),
-(51, 'TRF-20260429-0437', 'transfer', 'confirmed', 'return', NULL, 18, 1, 'KYANAT SHAH', '', '+447464218024', NULL, NULL, '17:30:00', NULL, '2026-05-03', NULL, 'LS1120', 'Eftalia Splash', 0, NULL, NULL, NULL, NULL, NULL, 4, 0, 0, 65.00, 'EUR', NULL, NULL, 0, 0, NULL, '2026-04-29 10:17:31', '2026-04-29 10:17:31', NULL, NULL, NULL),
-(52, 'TRF-20260429-6978', 'transfer', 'confirmed', 'outbound', NULL, 13, 1, 'ANNA JAKUZSEW', '', '+48513095789', NULL, NULL, NULL, NULL, '2026-04-29', '17:55:00', 'ENT7055', 'Delphin Palace', 0, NULL, NULL, NULL, NULL, NULL, 2, 0, 0, 25.00, 'EUR', NULL, NULL, 0, 0, NULL, '2026-04-29 10:33:02', '2026-04-29 10:33:02', NULL, NULL, NULL),
-(53, 'TRF-20260429-0746', 'transfer', 'confirmed', 'return', NULL, 13, 1, 'ANNA JAKUZSEW', '', '+48513095789', NULL, NULL, '11:00:00', NULL, '2026-05-06', '13:50:00', 'ENT7056', 'Delphin Palace', 0, NULL, NULL, NULL, NULL, NULL, 2, 0, 0, 25.00, 'EUR', NULL, NULL, 0, 0, NULL, '2026-04-29 10:33:02', '2026-04-29 11:01:28', NULL, NULL, NULL),
-(54, 'TRF-20260429-2347', 'transfer', 'confirmed', 'return', NULL, 8, 1, 'PATRICIA HIBBERT', '', '+44756534817', NULL, NULL, '17:30:00', NULL, '2026-04-29', '22:30:00', 'EZY2856', 'Port River Hotel', 0, NULL, NULL, NULL, NULL, NULL, 2, 0, 0, 40.00, 'EUR', NULL, NULL, 0, 0, NULL, '2026-04-29 10:46:13', '2026-04-29 10:57:50', NULL, NULL, NULL),
-(55, 'TRF-20260429-9867', 'transfer', 'confirmed', 'outbound', NULL, 13, 1, 'EMILY HENZLER', '', '', NULL, NULL, NULL, NULL, '2026-01-24', '19:00:00', 'XQ141', 'Grand Park Lara', 0, NULL, NULL, NULL, NULL, NULL, 1, 0, 0, 25.00, 'EUR', NULL, NULL, 0, 1, 15.00, '2026-04-29 11:44:43', '2026-04-29 12:55:31', NULL, NULL, NULL),
-(56, 'TRF-20260429-5173', 'transfer', 'confirmed', 'return', NULL, 13, 1, 'EMILY HENZLER', '', '', NULL, NULL, '07:30:00', NULL, '2026-01-27', '10:45:00', 'XQ140', 'Grand Park Lara', 0, NULL, NULL, NULL, NULL, NULL, 1, 0, 0, 25.00, 'EUR', NULL, NULL, 0, 1, 15.00, '2026-04-29 11:44:43', '2026-04-29 12:49:29', NULL, '07:30:00', NULL),
-(57, 'TRF-20260429-1746', 'transfer', 'confirmed', 'outbound', NULL, 7, 1, 'ANJA LANGENBACH', '', '+49 176 34139393', NULL, NULL, NULL, NULL, '2026-02-04', '19:10:00', 'XQ115', 'Aydınbey Kings Palace', 0, NULL, NULL, NULL, NULL, NULL, 2, 0, 0, 40.00, 'EUR', NULL, NULL, 1, 0, NULL, '2026-04-29 11:50:45', '2026-04-29 11:56:29', NULL, NULL, NULL),
-(58, 'TRF-20260429-4915', 'transfer', 'confirmed', 'return', NULL, 7, 1, 'ANJA LANGENBACH', '', '+49 176 34139393', NULL, NULL, '07:00:00', NULL, '2026-02-11', '11:00:00', 'XQ114', 'Aydınbey Kings Palace', 0, NULL, NULL, NULL, NULL, NULL, 2, 0, 0, 39.98, 'EUR', NULL, NULL, 1, 0, NULL, '2026-04-29 11:50:45', '2026-04-29 11:56:30', NULL, NULL, NULL),
-(59, 'TRF-20260429-7223', 'transfer', 'confirmed', 'outbound', NULL, 1, 1, 'JENS KUHLMANN', '', '+49 173 6520273', NULL, NULL, NULL, NULL, '2026-02-05', '19:05:00', 'XQ233', 'The Sense Deluxe', 0, NULL, NULL, NULL, NULL, NULL, 2, 0, 0, 40.00, 'EUR', NULL, NULL, 1, 0, NULL, '2026-04-29 11:55:02', '2026-04-29 11:55:48', NULL, NULL, NULL),
-(60, 'TRF-20260429-5059', 'transfer', 'confirmed', 'return', NULL, 1, 1, 'JENS KUHLMANN', '', '+49 173 6520273', NULL, NULL, '19:00:00', NULL, '2026-02-12', '23:00:00', 'PC5009', 'The Sense Deluxe', 0, NULL, NULL, NULL, NULL, NULL, 2, 0, 0, 40.00, 'EUR', NULL, NULL, 0, 1, 25.00, '2026-04-29 11:55:02', '2026-04-29 11:56:19', NULL, '19:00:00', NULL),
-(61, 'TRF-20260429-0925', 'transfer', 'confirmed', 'outbound', NULL, 12, 1, 'ROMAN BILY', '', '+44 7394 764702', NULL, NULL, NULL, NULL, '2026-04-22', '20:00:00', 'XQ593', 'Kleopatra Royal Palm', 0, NULL, NULL, NULL, NULL, NULL, 2, 0, 0, 75.00, 'EUR', NULL, NULL, 0, 0, NULL, '2026-04-29 12:03:27', '2026-04-29 12:03:27', NULL, NULL, NULL);
+INSERT INTO `bookings` (`id`, `booking_number`, `booking_type`, `booking_status`, `booking_direction`, `tour_id`, `destination_id`, `vehicle_id`, `customer_name`, `customer_email`, `customer_phone`, `pickup_location`, `pickup_date`, `pickup_time`, `return_time`, `flight_date`, `flight_time`, `flight_number`, `hotel_address`, `return_transfer`, `return_flight_date`, `return_flight_time`, `return_flight_number`, `return_pickup_time`, `return_hotel_address`, `adults`, `children`, `child_seat`, `total_price`, `currency`, `notes`, `admin_notes`, `is_completed`, `is_outsourced`, `outsource_price`, `outsource_currency`, `created_at`, `updated_at`, `outsource_name`, `outsource_pickup_time`, `outsource_partner_id`) VALUES
+(37, 'TRF-20260428-0191', 'transfer', 'confirmed', 'outbound', NULL, 13, 1, 'FİKRET GEMRİKLİ', '', '+49017680515901', NULL, NULL, '07:30:00', NULL, '2026-05-02', '18:25:00', 'XQ147', 'Delphin Be Grand', 0, NULL, NULL, NULL, NULL, NULL, 4, 2, 0, 25.00, 'EUR', NULL, NULL, 0, 0, NULL, '', '2026-04-28 20:50:28', '2026-05-01 01:59:40', NULL, NULL, NULL),
+(38, 'TRF-20260428-1764', 'transfer', 'confirmed', 'return', NULL, 13, 1, 'FİKRET GEMRİKLİ', '', '+49017680515901', NULL, NULL, '07:30:00', NULL, '2026-05-09', '10:05:00', 'XQ146', 'DELPHIN BE GRAND — KUNDU', 0, NULL, NULL, NULL, NULL, NULL, 4, 2, 0, 25.00, 'EUR', NULL, NULL, 0, 0, NULL, '', '2026-04-28 20:50:28', '2026-05-02 15:38:37', NULL, NULL, NULL),
+(39, 'TRF-20260428-1622', 'transfer', 'confirmed', 'outbound', NULL, 17, 1, 'INES KAUFMANN', '', '+491629148108', NULL, NULL, NULL, NULL, '2026-05-14', '06:15:00', 'XQ247', 'Aska Just In Beach', 0, NULL, NULL, NULL, NULL, NULL, 1, 0, 0, 55.00, 'EUR', NULL, NULL, 0, 0, NULL, '', '2026-04-28 21:05:48', '2026-05-01 01:59:40', NULL, NULL, NULL),
+(48, 'TRF-20260429-7273', 'transfer', 'confirmed', 'return', NULL, 7, 3, 'KANDSORRA WOLFGANG', '', '+4917672883149', NULL, NULL, '17:30:00', NULL, '2026-04-29', '20:55:00', 'XQ236', 'Lilyum Hotel', 0, NULL, NULL, NULL, NULL, NULL, 8, 0, 0, 65.00, 'EUR', NULL, NULL, 0, 0, NULL, '', '2026-04-29 09:51:57', '2026-05-01 01:59:40', NULL, NULL, NULL),
+(49, 'TRF-20260429-7985', 'transfer', 'confirmed', 'return', NULL, 10, 1, 'EDVIN TISK', '', '+4748653342', NULL, NULL, '09:00:00', NULL, '2026-04-28', '12:00:00', NULL, 'LAGO HOTEL — SORGUN', 0, NULL, NULL, NULL, NULL, NULL, 3, 0, 0, 40.00, 'EUR', NULL, NULL, 0, 0, NULL, '', '2026-04-29 09:59:09', '2026-05-02 13:29:09', NULL, NULL, NULL),
+(50, 'TRF-20260429-4802', 'transfer', 'confirmed', 'outbound', NULL, 18, 1, 'KYANAT SHAH', '', '+447464218024', NULL, NULL, NULL, NULL, '2026-04-29', '16:25:00', 'LS1239', 'Eftalia Splash', 0, NULL, NULL, NULL, NULL, NULL, 4, 0, 0, 65.00, 'EUR', NULL, NULL, 0, 0, NULL, '', '2026-04-29 10:17:31', '2026-05-01 01:59:40', NULL, NULL, NULL),
+(51, 'TRF-20260429-0437', 'transfer', 'confirmed', 'return', NULL, 18, 1, 'KYANAT SHAH', '', '+447464218024', NULL, NULL, '17:30:00', NULL, '2026-05-03', NULL, 'LS1120', 'Eftalia Splash', 0, NULL, NULL, NULL, NULL, NULL, 4, 0, 0, 65.00, 'EUR', NULL, NULL, 0, 0, NULL, '', '2026-04-29 10:17:31', '2026-05-01 01:59:41', NULL, NULL, NULL),
+(52, 'TRF-20260429-6978', 'transfer', 'confirmed', 'outbound', NULL, 13, 1, 'ANNA JAKUZSEW', '', '+48513095789', NULL, NULL, NULL, NULL, '2026-04-29', '17:55:00', 'ENT7055', 'Delphin Palace', 0, NULL, NULL, NULL, NULL, NULL, 2, 0, 0, 25.00, 'EUR', NULL, NULL, 0, 0, NULL, '', '2026-04-29 10:33:02', '2026-05-01 01:59:41', NULL, NULL, NULL),
+(53, 'TRF-20260429-0746', 'transfer', 'confirmed', 'return', NULL, 13, 1, 'ANNA JAKUZSEW', '', '+48513095789', NULL, NULL, '11:00:00', NULL, '2026-05-06', '13:50:00', 'ENT7056', 'Delphin Palace', 0, NULL, NULL, NULL, NULL, NULL, 2, 0, 0, 25.00, 'EUR', NULL, NULL, 0, 0, NULL, '', '2026-04-29 10:33:02', '2026-05-01 01:59:41', NULL, NULL, NULL),
+(54, 'TRF-20260429-2347', 'transfer', 'confirmed', 'return', NULL, 8, 1, 'PATRICIA HIBBERT', '', '+44756534817', NULL, NULL, '17:30:00', NULL, '2026-04-29', '22:30:00', 'EZY2856', 'PORT RIVER HOTEL — SORGUN', 0, NULL, NULL, NULL, NULL, NULL, 2, 0, 0, 40.00, 'EUR', NULL, NULL, 0, 0, NULL, '', '2026-04-29 10:46:13', '2026-05-01 01:59:41', NULL, NULL, NULL),
+(55, 'TRF-20260429-9867', 'transfer', 'confirmed', 'outbound', NULL, 13, 1, 'EMILY HENZLER', '', '', NULL, NULL, NULL, NULL, '2026-01-24', '19:00:00', 'XQ141', 'Grand Park Lara', 0, NULL, NULL, NULL, NULL, NULL, 1, 0, 0, 25.00, 'EUR', NULL, NULL, 0, 0, NULL, NULL, '2026-04-29 11:44:43', '2026-05-02 13:28:51', NULL, NULL, NULL),
+(56, 'TRF-20260429-5173', 'transfer', 'confirmed', 'return', NULL, 13, 1, 'EMILY HENZLER', '', '', NULL, NULL, '07:30:00', NULL, '2026-01-27', '10:45:00', 'XQ140', 'Grand Park Lara', 0, NULL, NULL, NULL, NULL, NULL, 1, 0, 0, 25.00, 'EUR', NULL, NULL, 0, 0, NULL, NULL, '2026-04-29 11:44:43', '2026-05-02 13:28:52', NULL, NULL, NULL),
+(57, 'TRF-20260429-1746', 'transfer', 'confirmed', 'outbound', NULL, 7, 1, 'ANJA LANGENBACH', '', '+49 176 34139393', NULL, NULL, NULL, NULL, '2026-02-04', '19:10:00', 'XQ115', 'Aydınbey Kings Palace', 0, NULL, NULL, NULL, NULL, NULL, 2, 0, 0, 40.00, 'EUR', NULL, NULL, 0, 0, NULL, '', '2026-04-29 11:50:45', '2026-05-02 13:28:54', NULL, NULL, NULL),
+(58, 'TRF-20260429-4915', 'transfer', 'confirmed', 'return', NULL, 7, 1, 'ANJA LANGENBACH', '', '+49 176 34139393', NULL, NULL, '07:00:00', NULL, '2026-02-11', '11:00:00', 'XQ114', 'Aydınbey Kings Palace', 0, NULL, NULL, NULL, NULL, NULL, 2, 0, 0, 40.00, 'EUR', NULL, NULL, 0, 0, NULL, '', '2026-04-29 11:50:45', '2026-05-02 23:48:15', NULL, NULL, NULL),
+(59, 'TRF-20260429-7223', 'transfer', 'confirmed', 'outbound', NULL, 1, 1, 'JENS KUHLMANN', '', '+49 173 6520273', NULL, NULL, NULL, NULL, '2026-02-05', '19:05:00', 'XQ233', 'The Sense Deluxe', 0, NULL, NULL, NULL, NULL, NULL, 2, 0, 0, 40.00, 'EUR', NULL, NULL, 0, 0, NULL, '', '2026-04-29 11:55:02', '2026-05-02 13:28:55', NULL, NULL, NULL),
+(60, 'TRF-20260429-5059', 'transfer', 'confirmed', 'return', NULL, 1, 1, 'JENS KUHLMANN', '', '+49 173 6520273', NULL, NULL, '19:00:00', NULL, '2026-02-12', '23:00:00', 'PC5009', 'The Sense Deluxe', 0, NULL, NULL, NULL, NULL, NULL, 2, 0, 0, 40.00, 'EUR', NULL, NULL, 0, 0, NULL, NULL, '2026-04-29 11:55:02', '2026-05-02 13:29:07', NULL, NULL, NULL),
+(61, 'TRF-20260429-0925', 'transfer', 'confirmed', 'outbound', NULL, 12, 1, 'ROMAN BILY', '', '+44 7394 764702', NULL, NULL, NULL, NULL, '2026-04-22', '20:00:00', 'XQ593', 'Kleopatra Royal Palm', 0, NULL, NULL, NULL, NULL, NULL, 2, 0, 0, 75.00, 'EUR', NULL, NULL, 0, 0, NULL, '', '2026-04-29 12:03:27', '2026-05-02 13:29:08', NULL, NULL, NULL),
+(62, 'TRF-20260430-0447', 'transfer', 'confirmed', 'outbound', NULL, 19, 1, 'ALPASLAN YALÇIN', '', '+33 6 36 67 06 67', NULL, NULL, NULL, NULL, '2026-05-08', '15:30:00', 'XQ127', 'Ethno Belek', 0, NULL, NULL, NULL, NULL, NULL, 1, 0, 0, 30.00, 'EUR', NULL, NULL, 0, 0, NULL, '', '2026-04-30 00:06:57', '2026-05-01 01:59:41', NULL, NULL, NULL),
+(63, 'TRF-20260430-1466', 'transfer', 'confirmed', 'outbound', NULL, 13, 1, 'Lena Mejling', '', '+49 176 81463648', NULL, NULL, NULL, NULL, '2026-05-03', '15:20:00', 'XQ171', 'Delphin Be Grand', 0, NULL, NULL, NULL, NULL, NULL, 2, 0, 0, 25.00, 'EUR', NULL, NULL, 0, 0, NULL, NULL, '2026-04-30 00:13:31', '2026-05-02 13:55:14', NULL, NULL, NULL),
+(64, 'TRF-20260430-3205', 'transfer', 'confirmed', 'return', NULL, 13, 1, 'Lena Mejling', '', '+49 176 81463648', NULL, NULL, '13:30:00', NULL, '2026-05-09', '16:10:00', 'XQ670', 'Delphin Be Grand', 0, NULL, NULL, NULL, NULL, NULL, 2, 0, 0, 25.00, 'EUR', NULL, NULL, 0, 0, NULL, '', '2026-04-30 00:13:31', '2026-05-01 01:59:41', NULL, NULL, NULL),
+(65, 'TRF-20260430-0556', 'transfer', 'confirmed', 'outbound', NULL, 23, 1, 'UFUK CÖMERT', '', '+49 1520 8688845', NULL, NULL, NULL, NULL, '2026-05-28', '22:15:00', 'PC5012', 'Limak Limra Hotel', 0, NULL, NULL, NULL, NULL, NULL, 2, 2, 0, 50.00, 'EUR', NULL, 'ALINIŞ SAATI TEKRAR SORULACAK', 0, 0, NULL, '', '2026-04-30 00:29:41', '2026-05-02 23:48:15', NULL, NULL, NULL),
+(66, 'TRF-20260430-4327', 'transfer', 'confirmed', 'return', NULL, 23, 1, 'UFUK CÖMERT', '', '+49 1520 8688845', NULL, NULL, '07:00:00', NULL, '2026-06-05', '09:30:00', NULL, 'Limak Limra Hotel', 0, NULL, NULL, NULL, NULL, NULL, 2, 2, 0, 50.00, 'EUR', NULL, 'ALINIŞ SAATI TEKRAR SORULACAK', 0, 0, NULL, '', '2026-04-30 00:29:41', '2026-05-01 01:59:41', NULL, NULL, NULL),
+(67, 'TRF-20260430-7210', 'transfer', 'confirmed', 'outbound', NULL, 13, 1, 'DANNY HENNEKES', '', '+31 6 52675282', NULL, NULL, NULL, NULL, '2026-05-21', NULL, 'XC103', 'Aska Lara', 0, NULL, NULL, NULL, NULL, NULL, 6, 0, 0, 25.00, 'EUR', NULL, NULL, 0, 0, NULL, '', '2026-04-30 00:35:43', '2026-05-01 01:59:41', NULL, NULL, NULL),
+(68, 'TRF-20260430-9161', 'transfer', 'confirmed', 'outbound', NULL, 13, 1, 'QUAIMA AIT EL HADJ', '', '+31 6 36032967', NULL, NULL, NULL, NULL, '2026-05-01', '18:30:00', 'XC103', 'Mirackle Resort Hotel', 0, NULL, NULL, NULL, NULL, NULL, 3, 0, 0, 25.00, 'EUR', 'ÇOCUK KOLTUĞU ŞART', NULL, 0, 0, NULL, '', '2026-04-30 00:44:42', '2026-05-01 01:59:49', NULL, NULL, NULL),
+(69, 'TRF-20260430-9916', 'transfer', 'confirmed', 'return', NULL, 10, 1, 'BESMIRA ZHUTA', '', '+41 76 681 42 15', NULL, NULL, '04:00:00', NULL, '2026-05-03', '07:50:00', 'PC5027', 'SIDE CROWN PALACE — EVRENSEKİ', 0, NULL, NULL, NULL, NULL, NULL, 4, 0, 0, 40.00, 'EUR', NULL, NULL, 0, 0, NULL, '', '2026-04-30 00:59:17', '2026-05-02 16:27:07', NULL, NULL, NULL),
+(70, 'TRF-20260430-5242', 'transfer', 'confirmed', 'outbound', NULL, 2, 1, 'DJORDY HENDRICKS', '', '+31 6 39325013', NULL, NULL, NULL, NULL, '2026-05-27', '14:10:00', 'XQ283', 'Dream Fun World', 0, NULL, NULL, NULL, NULL, NULL, 3, 0, 0, 40.00, 'EUR', NULL, NULL, 0, 0, NULL, '', '2026-04-30 11:38:33', '2026-05-01 01:59:49', NULL, NULL, NULL),
+(71, 'TRF-20260430-8491', 'transfer', 'confirmed', 'outbound', NULL, 2, 1, 'ANGIE STARMANS', '', '+31 6 30034315', NULL, NULL, NULL, NULL, '2026-05-02', '08:05:00', 'PC5014', 'DREAM WORLD AQUA — KUMKÖY', 0, NULL, NULL, NULL, NULL, NULL, 4, 0, 0, 40.00, 'EUR', 'asdadadadasdasd', NULL, 1, 0, NULL, NULL, '2026-04-30 11:55:19', '2026-05-02 17:05:48', NULL, NULL, NULL),
+(72, 'TRF-20260430-6823', 'transfer', 'confirmed', 'outbound', NULL, 13, 1, 'AYMAN EL BEKKAOUI', '', '+31 6 13109793', NULL, NULL, NULL, NULL, '2026-05-01', '16:30:00', 'XC101', 'Aska Lara', 0, NULL, NULL, NULL, NULL, NULL, 4, 2, 1, 30.00, 'EUR', '1 CHILD SEAT\r\nKARIŞALAMA ISMI  JADE - AVAH MEZIANE', NULL, 0, 0, NULL, NULL, '2026-04-30 12:02:32', '2026-05-01 03:46:45', NULL, NULL, NULL),
+(73, 'TRF-20260430-6063', 'transfer', 'confirmed', 'outbound', NULL, 1, 1, 'RAZİYE ERYILMAZ', '', '', NULL, NULL, NULL, NULL, '2026-04-30', '15:55:00', 'XQ525', 'SUNBERK HOTEL', 0, NULL, NULL, NULL, NULL, NULL, 1, 0, 0, 40.00, 'EUR', NULL, NULL, 0, 0, NULL, '', '2026-04-30 12:07:45', '2026-05-01 01:59:49', NULL, NULL, NULL),
+(76, 'TRF-20260502-5801', 'transfer', 'confirmed', 'outbound', NULL, 19, 1, 'Vitali Leis', '', '+49 176 22988685', NULL, NULL, NULL, NULL, '2026-05-18', '12:30:00', 'XQ141', 'RIXOS PREMIUM BELEK', 0, NULL, NULL, NULL, NULL, NULL, 4, 0, 0, 30.00, 'EUR', NULL, NULL, 0, 0, NULL, NULL, '2026-05-02 13:15:33', '2026-05-02 13:16:41', NULL, NULL, NULL),
+(77, 'TRF-20260502-2358', 'transfer', 'confirmed', 'return', NULL, 19, 1, 'Vitali Leis', '', '+49 176 22988685', NULL, NULL, '13:00:00', NULL, '2026-05-25', '15:50:00', 'XQ142', 'RIXOS PREMIUM BELEK', 0, NULL, NULL, NULL, NULL, NULL, 4, 0, 0, 30.00, 'EUR', NULL, NULL, 0, 0, NULL, NULL, '2026-05-02 13:15:33', '2026-05-02 13:15:33', NULL, NULL, NULL),
+(78, 'TRF-20260502-3505', 'transfer', 'confirmed', 'outbound', NULL, 13, 1, 'MUHAMMAD BILAL', '', '+44 7384 266651', NULL, NULL, NULL, NULL, '2026-05-19', '10:00:00', 'J20025', 'PALORMA HOTEL — KUNDU', 0, NULL, NULL, NULL, NULL, NULL, 2, 0, 0, 25.00, 'EUR', NULL, 'ÖDEMEYİ 14.15TE İNECEK YOLCU YAPACAK', 0, 0, NULL, NULL, '2026-05-02 14:23:33', '2026-05-02 14:23:33', NULL, NULL, NULL),
+(79, 'TRF-20260502-0089', 'transfer', 'confirmed', 'outbound', NULL, 13, 1, 'MUDASSIR MANSHA', '', '+44 7384 266651', NULL, NULL, NULL, NULL, '2026-05-29', '14:15:00', 'EZY2141', 'PALORMA HOTEL — KUNDU', 0, NULL, NULL, NULL, NULL, NULL, 4, 1, 0, 25.00, 'EUR', NULL, NULL, 0, 0, NULL, NULL, '2026-05-02 14:30:58', '2026-05-02 14:30:58', NULL, NULL, NULL),
+(80, 'TRF-20260502-2670', 'transfer', 'confirmed', 'return', NULL, 13, 1, 'MUDASSIR MANSHA', '', '+44 7384 266651', NULL, NULL, '07:00:00', NULL, '2026-06-19', '09:35:00', 'XQ592', 'PALORMA HOTEL — KUNDU', 0, NULL, NULL, NULL, NULL, NULL, 4, 1, 0, 25.00, 'EUR', NULL, NULL, 0, 0, NULL, NULL, '2026-05-02 14:30:58', '2026-05-02 14:30:58', NULL, NULL, NULL),
+(81, 'TRF-20260502-6851', 'transfer', 'confirmed', 'outbound', NULL, 1, 1, 'AAA', '', '12', NULL, NULL, NULL, NULL, '1111-01-01', '11:11:00', '111', 'ASKA JUST IN BEACH — TÜRKLER', 0, NULL, NULL, NULL, NULL, NULL, 4, 0, 0, 1.00, 'EUR', NULL, NULL, 0, 0, NULL, NULL, '2026-05-02 14:34:14', '2026-05-02 14:34:14', NULL, NULL, NULL),
+(82, 'TRF-20260502-8646', 'transfer', 'confirmed', 'return', NULL, 1, 1, 'AAA', '', '12', NULL, NULL, '05:00:00', NULL, '1112-10-01', '12:12:00', '222', 'ASKA JUST IN BEACH — TÜRKLER', 0, NULL, NULL, NULL, NULL, NULL, 4, 0, 0, 25.00, 'EUR', NULL, NULL, 0, 0, NULL, NULL, '2026-05-02 14:34:14', '2026-05-02 14:34:14', NULL, NULL, NULL),
+(83, 'TRF-20260502-3270', 'transfer', 'confirmed', 'outbound', NULL, 17, 1, 'MAKSIM OSIPOVS', '', '+371 29 746 739', NULL, NULL, NULL, NULL, '2026-05-10', '04:35:00', '4M394', 'RUBI PLATINUM SPA RESORT & SUITES — AVSALLAR', 0, NULL, NULL, NULL, NULL, NULL, 2, 0, 0, 55.00, 'EUR', NULL, 'YAPILI GÜZEL ARAÇ GEREKİRSE VİTO\r\nKARŞILAMA İSMİ \"MAXIM AND SEXY CHIA', 0, 0, NULL, NULL, '2026-05-02 14:53:20', '2026-05-02 15:50:46', NULL, NULL, NULL),
+(84, 'TRF-20260502-8336', 'transfer', 'confirmed', 'outbound', NULL, 2, 1, 'FATIMA AHMED', '', '+31 6 12924953', NULL, NULL, NULL, NULL, '2026-05-18', '23:40:00', 'XQ183', 'DREAM FUN WORLD — KUMKÖY', 0, NULL, NULL, NULL, NULL, NULL, 2, 0, 0, 40.00, 'EUR', NULL, NULL, 0, 0, NULL, NULL, '2026-05-02 15:22:36', '2026-05-02 15:22:36', NULL, NULL, NULL),
+(85, 'TRF-20260502-0476', 'transfer', 'confirmed', 'return', NULL, 19, 1, 'BJÖRN SCHMELZER', '', '+491733010065', NULL, NULL, '19:00:00', NULL, '2026-05-02', '22:40:00', 'PC5009', 'RIXOS PREMIUM BELEK', 0, NULL, NULL, NULL, NULL, NULL, 3, 0, 0, 30.00, 'EUR', NULL, NULL, 0, 0, NULL, NULL, '2026-05-02 15:26:35', '2026-05-02 23:48:21', NULL, NULL, NULL),
+(86, 'TRF-20260502-2062', 'transfer', 'confirmed', 'return', NULL, NULL, NULL, 'RACHELLE SUTTON', '', '+44 7749 193180', NULL, NULL, '16:30:00', NULL, '2026-05-02', '20:25:00', 'LS1810', 'ARCANUS SORGUN — SORGUN', 0, NULL, NULL, NULL, NULL, NULL, 3, 0, 0, 40.00, 'EUR', NULL, NULL, 1, 0, NULL, NULL, '2026-05-02 15:31:16', '2026-05-02 17:05:41', NULL, NULL, NULL),
+(87, 'TRF-20260502-5072', 'transfer', 'confirmed', 'outbound', NULL, NULL, 2, 'SHANTHOSAN SIVANDAN', '', '+44 7405 279855', NULL, NULL, NULL, NULL, '2026-05-02', '23:10:00', 'XQ531', 'GRAND PARK LARA — KUNDU', 0, NULL, NULL, NULL, NULL, NULL, 4, 0, 0, 40.00, 'EUR', NULL, NULL, 1, 0, NULL, NULL, '2026-05-02 15:35:50', '2026-05-02 23:47:46', NULL, NULL, NULL),
+(89, 'TRF-20260502-6222', 'transfer', 'confirmed', 'outbound', NULL, 7, 1, 'KACPER BEC', '', '+49 1575 2472622', NULL, NULL, NULL, NULL, '2026-05-03', '00:30:00', 'XQ671', 'SULTAN OF SIDE — EVRENSEKİ', 0, NULL, NULL, NULL, NULL, NULL, 2, 0, 0, 40.00, 'EUR', NULL, NULL, 0, 0, NULL, NULL, '2026-05-02 15:45:05', '2026-05-02 15:45:05', NULL, NULL, NULL),
+(90, 'TRF-20260502-3980', 'transfer', 'confirmed', 'return', NULL, 7, 1, 'KACPER BEC', '', '+49 1575 2472622', NULL, NULL, '03:30:00', NULL, '2026-05-09', '07:00:00', 'XQ170', 'SULTAN OF SIDE — EVRENSEKİ', 0, NULL, NULL, NULL, NULL, NULL, 2, 0, 0, 40.00, 'EUR', NULL, NULL, 0, 0, NULL, NULL, '2026-05-02 15:45:05', '2026-05-02 15:47:41', NULL, NULL, NULL),
+(91, 'TRF-20260502-9319', 'transfer', 'confirmed', 'return', NULL, 1, 1, 'HELENA WIEBE', '', '', NULL, NULL, '17:00:00', NULL, '2026-05-04', '20:55:00', 'XQ236', 'SUNBERK HOTEL — SİDE', 0, NULL, NULL, NULL, NULL, NULL, 3, 0, 0, 40.00, 'EUR', NULL, NULL, 0, 0, NULL, NULL, '2026-05-02 15:49:41', '2026-05-02 23:48:15', NULL, NULL, NULL),
+(92, 'TRF-20260502-2019', 'transfer', 'confirmed', 'return', NULL, 7, 1, 'VERA ALBERTI', '', '+49 1523 3618806', NULL, NULL, '18:30:00', NULL, '2026-05-03', '22:45:00', 'XC112', 'SEAMELIA BEACH — EVRENSEKİ', 0, NULL, NULL, NULL, NULL, NULL, 2, 0, 0, 40.00, 'EUR', NULL, NULL, 0, 0, NULL, NULL, '2026-05-02 15:54:11', '2026-05-02 23:48:15', NULL, NULL, NULL),
+(93, 'TRF-20260502-1517', 'transfer', 'confirmed', 'return', NULL, 18, 1, 'KYNAAT SHAH', '', '+44 7464 218024', NULL, NULL, '17:00:00', NULL, '2026-05-03', '22:45:00', 'LS1120', 'EFTALIA SPLASH RESORT — TÜRKLER', 0, NULL, NULL, NULL, NULL, NULL, 4, 0, 0, 65.00, 'EUR', NULL, NULL, 0, 0, NULL, NULL, '2026-05-02 15:58:31', '2026-05-02 15:58:31', NULL, NULL, NULL),
+(94, 'TRF-20260502-7320', 'transfer', 'confirmed', 'return', NULL, 1, 1, 'TAHSEEN SHAH', '', '+44 7790 453487', NULL, NULL, '18:30:00', NULL, '2026-05-03', '22:45:00', 'LS1120', 'BARUT GOIA — SİDE', 0, NULL, NULL, NULL, NULL, NULL, 4, 0, 0, 40.00, 'EUR', NULL, NULL, 0, 0, NULL, NULL, '2026-05-02 16:01:03', '2026-05-02 16:01:03', NULL, NULL, NULL),
+(95, 'TRF-20260502-9739', 'transfer', 'confirmed', 'outbound', NULL, 13, 1, 'İLKAY KOPARAN', '', '+49 178 8082590', NULL, NULL, NULL, NULL, '2026-05-03', '00:45:00', 'XQ155', 'LIMAK LARA DELUXE — KUNDU', 0, NULL, NULL, NULL, NULL, NULL, 4, 0, 0, 25.00, 'EUR', NULL, NULL, 0, 0, NULL, NULL, '2026-05-02 16:09:26', '2026-05-02 16:09:26', NULL, NULL, NULL),
+(96, 'TRF-20260502-8813', 'transfer', 'confirmed', 'outbound', NULL, 2, 1, 'CAN KLEISMAN', '', '+49 163 6969895', NULL, NULL, NULL, NULL, '2026-05-04', '06:25:00', 'XQ257', 'DREAM WATER WORLD — KUMKÖY', 0, NULL, NULL, NULL, NULL, NULL, 2, 0, 0, 40.00, 'EUR', NULL, NULL, 0, 0, NULL, NULL, '2026-05-02 16:36:02', '2026-05-02 16:36:02', NULL, NULL, NULL),
+(97, 'TRF-20260502-4170', 'transfer', 'confirmed', 'outbound', NULL, 24, 1, 'MUSTAFA LALE', '', '05327336949', NULL, NULL, NULL, NULL, '2026-05-04', '08:50:00', 'VF3032', 'JUJU PREMIER HOTEL — BELDİBİ', 0, NULL, NULL, NULL, NULL, NULL, 4, 0, 0, 2000.00, 'TRY', NULL, NULL, 0, 0, NULL, NULL, '2026-05-02 16:43:43', '2026-05-02 17:52:14', NULL, NULL, NULL),
+(98, 'TRF-20260502-8809', 'transfer', 'confirmed', 'return', NULL, 24, 1, 'MUSTAFA LALE', '', '05327336949', NULL, NULL, '17:15:00', NULL, '2026-05-07', '20:45:00', NULL, 'JUJU PREMIER HOTEL — BELDİBİ', 0, NULL, NULL, NULL, NULL, NULL, 4, 0, 0, 2000.00, 'TRY', NULL, NULL, 0, 0, NULL, NULL, '2026-05-02 16:43:43', '2026-05-02 17:52:13', NULL, NULL, NULL),
+(99, 'TRF-20260502-9269', 'transfer', 'confirmed', 'return', NULL, NULL, NULL, 'ISABEL SCULTZ', '', '+49 172 2492390', NULL, NULL, '05:00:00', NULL, '2026-05-04', '09:00:00', 'PC5041', 'SIDE MARE — KUMKÖY', 0, NULL, NULL, NULL, NULL, NULL, 3, 0, 0, 40.00, 'EUR', NULL, NULL, 0, 0, NULL, NULL, '2026-05-02 17:50:28', '2026-05-02 17:50:28', NULL, NULL, NULL),
+(100, 'TRF-20260502-4307', 'transfer', 'confirmed', 'outbound', NULL, 25, 1, 'SERGEN ÖZMEN', '', '+49 1577 7358358', NULL, NULL, NULL, NULL, '2026-05-05', '12:10:00', 'XQ151', 'KIRMAN BELAZUR — BOĞAZKENT', 0, NULL, NULL, NULL, NULL, NULL, 4, 0, 0, 35.00, 'EUR', NULL, NULL, 0, 0, NULL, NULL, '2026-05-02 18:01:27', '2026-05-02 18:01:27', NULL, NULL, NULL),
+(101, 'TRF-20260502-8019', 'transfer', 'confirmed', 'return', NULL, 25, 1, 'SERGEN ÖZMEN', '', '+49 1577 7358358', NULL, NULL, '17:30:00', NULL, '2026-05-12', '20:55:00', 'XQ150', 'KIRMAN BELAZUR — BOĞAZKENT', 0, NULL, NULL, NULL, NULL, NULL, 4, 0, 0, 35.00, 'EUR', NULL, NULL, 0, 0, NULL, NULL, '2026-05-02 18:01:27', '2026-05-02 23:48:15', NULL, NULL, NULL),
+(102, 'TRF-20260502-5031', 'transfer', 'confirmed', 'outbound', NULL, 11, 1, 'SHANAY GORDON', '', '+44 7496 345618', NULL, NULL, NULL, NULL, '2026-05-05', '21:25:00', 'BY506', 'CLUB TURAN PRINCE WORLD — KIZILAĞAÇ', 0, NULL, NULL, NULL, NULL, NULL, 2, 0, 0, 50.00, 'EUR', NULL, NULL, 0, 0, NULL, NULL, '2026-05-02 18:06:04', '2026-05-02 18:06:59', NULL, NULL, NULL),
+(103, 'TRF-20260502-3738', 'transfer', 'confirmed', 'return', NULL, 11, 1, 'SHANAY GORDON', '', '+44 7496 345618', NULL, NULL, '17:30:00', NULL, '2026-05-12', '22:25:00', 'BY507', 'CLUB TURAN PRINCE WORLD — KIZILAĞAÇ', 0, NULL, NULL, NULL, NULL, NULL, 2, 0, 0, 50.00, 'EUR', NULL, NULL, 0, 0, NULL, NULL, '2026-05-02 18:06:04', '2026-05-02 18:06:31', NULL, NULL, NULL),
+(104, 'TRF-20260502-2702', 'transfer', 'confirmed', 'outbound', NULL, 11, 1, 'OWAIS ASIF', '', '+44 7414 286708', NULL, NULL, NULL, NULL, '2026-05-06', '00:55:00', 'XQ595', 'WASHINGTON RESORT — KIZILAĞAÇ', 0, NULL, NULL, NULL, NULL, NULL, 4, 0, 0, 40.00, 'EUR', NULL, NULL, 0, 0, NULL, NULL, '2026-05-02 18:18:04', '2026-05-02 18:18:04', NULL, NULL, NULL),
+(105, 'TRF-20260502-4160', 'transfer', 'confirmed', 'return', NULL, 11, 1, 'OWAIS ASIF', '', '+44 7414 286708', NULL, NULL, '10:00:00', NULL, '2026-05-11', '14:25:00', 'XQ594', 'WASHINGTON RESORT — KIZILAĞAÇ', 0, NULL, NULL, NULL, NULL, NULL, 4, 0, 0, 40.00, 'EUR', NULL, NULL, 0, 0, NULL, NULL, '2026-05-02 18:18:04', '2026-05-02 18:18:04', NULL, NULL, NULL),
+(106, 'TRF-20260502-0050', 'transfer', 'confirmed', 'return', NULL, 16, 1, 'ANNA JAKUSZEW', '', '+48 513 095 789', NULL, NULL, '09:00:00', NULL, '2026-05-06', '13:50:00', 'ENT7056', 'DELPHIN DELUXE — OKURCALAR', 0, NULL, NULL, NULL, NULL, NULL, 2, 0, 0, 50.00, 'EUR', NULL, NULL, 0, 0, NULL, NULL, '2026-05-02 18:20:44', '2026-05-02 18:20:44', NULL, NULL, NULL),
+(107, 'TRF-20260502-4799', 'transfer', 'confirmed', 'return', NULL, 17, 1, 'DOERTA KUBERSKI', '', '+49 176 44224994', NULL, NULL, '18:30:00', NULL, '2026-05-07', '23:30:00', 'XQ166', 'ASKA JUST IN BEACH — TÜRKLER', 0, NULL, NULL, NULL, NULL, NULL, 1, 0, 0, 55.00, 'EUR', NULL, NULL, 0, 0, NULL, NULL, '2026-05-02 18:24:06', '2026-05-02 18:24:06', NULL, NULL, NULL),
+(108, 'TRF-20260502-8861', 'transfer', 'confirmed', 'return', NULL, 26, 1, 'ILONA KÖNİG', '', '+49 170 4646219', NULL, NULL, '12:30:00', NULL, '2026-05-07', '16:35:00', 'XQ140', 'TRENDY ASPENDOS BEACH — GÜNDOĞDU', 0, NULL, NULL, NULL, NULL, NULL, 4, 0, 0, 40.00, 'EUR', NULL, NULL, 0, 0, NULL, NULL, '2026-05-02 18:30:16', '2026-05-02 18:33:37', NULL, NULL, NULL),
+(109, 'TRF-20260502-1655', 'transfer', 'confirmed', 'outbound', NULL, 13, 1, 'HUSSEIN EL ABED', '', '+49 1512 4166324', NULL, NULL, NULL, NULL, '2026-05-07', '14:40:00', 'PC5002', 'ROYAL HOLIDAY PALACE — KUNDU', 0, NULL, NULL, NULL, NULL, NULL, 3, 0, 0, 25.00, 'EUR', NULL, NULL, 0, 0, NULL, NULL, '2026-05-02 18:39:00', '2026-05-02 18:39:00', NULL, NULL, NULL),
+(110, 'TRF-20260502-0163', 'transfer', 'confirmed', 'return', NULL, 13, 1, 'HUSSEIN EL ABED', '', '+49 1512 4166324', NULL, NULL, '13:00:00', NULL, '2026-05-13', '15:30:00', 'XC106', 'ROYAL HOLIDAY PALACE — KUNDU', 0, NULL, NULL, NULL, NULL, NULL, 3, 0, 0, 25.00, 'EUR', NULL, NULL, 0, 0, NULL, NULL, '2026-05-02 18:39:00', '2026-05-02 18:39:00', NULL, NULL, NULL),
+(111, 'TRF-20260502-2169', 'transfer', 'confirmed', 'outbound', NULL, 6, 1, 'YUSSOF ALAM', '', '+49 160 1814464', NULL, NULL, NULL, NULL, '2026-05-08', '18:15:00', 'XQ173', 'ALBA RESORT — ÇOLAKLI', 0, NULL, NULL, NULL, NULL, NULL, 3, 0, 0, 35.00, 'EUR', NULL, NULL, 0, 0, NULL, NULL, '2026-05-02 18:50:43', '2026-05-02 18:50:43', NULL, NULL, NULL),
+(112, 'TRF-20260502-1393', 'transfer', 'confirmed', 'return', NULL, 6, 1, 'YUSSOF ALAM', '', '+49 160 1814464', NULL, NULL, '12:30:00', NULL, '2026-05-15', '16:10:00', 'XQ670', 'ALBA RESORT — ÇOLAKLI', 0, NULL, NULL, NULL, NULL, NULL, 3, 0, 0, 35.00, 'EUR', NULL, NULL, 0, 0, NULL, NULL, '2026-05-02 18:50:43', '2026-05-02 18:50:43', NULL, NULL, NULL),
+(113, 'TRF-20260502-7354', 'transfer', 'confirmed', 'outbound', NULL, 19, 1, 'Jacquelina Bollacke', '', '+49 176 23569654', NULL, NULL, NULL, NULL, '2026-05-08', '18:40:00', 'PC5012', 'RIXOS PREMIUM BELEK', 0, NULL, NULL, NULL, NULL, NULL, 3, 0, 0, 35.00, 'EUR', '1 KINDERSITZ // ÇOCUK KOLTUĞU', NULL, 0, 0, NULL, NULL, '2026-05-02 18:55:56', '2026-05-02 18:55:56', NULL, NULL, NULL),
+(114, 'TRF-20260502-3230', 'transfer', 'confirmed', 'return', NULL, 19, 1, 'Jacquelina Bollacke', '', '+49 176 23569654', NULL, NULL, '03:00:00', NULL, '2026-05-16', '06:00:00', 'XQ188', 'RIXOS PREMIUM BELEK', 0, NULL, NULL, NULL, NULL, NULL, 3, 0, 0, 35.00, 'EUR', '1 KINDERSITZ // ÇOCUK KOLTUĞU', NULL, 0, 0, NULL, NULL, '2026-05-02 18:55:56', '2026-05-02 18:55:56', NULL, NULL, NULL),
+(115, 'TRF-20260502-9921', 'transfer', 'confirmed', 'return', NULL, 12, 1, 'STEFAN BELL', '', '+44 7796 913065', NULL, NULL, '05:00:00', NULL, '2026-05-04', '10:30:00', 'XC4142', 'ARSI BLUE BEACH — ALANYA', 0, NULL, NULL, NULL, NULL, NULL, 4, 0, 0, 75.00, 'EUR', NULL, NULL, 0, 0, NULL, NULL, '2026-05-02 18:58:59', '2026-05-02 19:05:15', NULL, NULL, NULL),
+(116, 'TRF-20260502-5382', 'transfer', 'confirmed', 'outbound', NULL, 19, 1, 'ALPASLAN YALÇIN', '', '+33 6 36 67 06 67', NULL, NULL, NULL, NULL, '2026-05-08', '15:30:00', 'XQ127', 'ETHNO BELEK — BELEK', 0, NULL, NULL, NULL, NULL, NULL, 2, 0, 0, 30.00, 'EUR', NULL, NULL, 0, 0, NULL, NULL, '2026-05-02 19:01:54', '2026-05-02 19:01:54', NULL, NULL, NULL),
+(117, 'TRF-20260502-1128', 'transfer', 'confirmed', 'outbound', NULL, 6, 1, 'DIANA RÜLANDER', '', '+49 172 3740934', NULL, NULL, NULL, NULL, '2026-05-03', '04:45:00', 'XQ251', 'SÜRAL RESORT — ÇOLAKLI', 0, NULL, NULL, NULL, NULL, NULL, 2, 0, 0, 40.00, 'EUR', NULL, NULL, 0, 0, NULL, NULL, '2026-05-02 19:13:25', '2026-05-02 19:13:25', NULL, NULL, NULL),
+(118, 'TRF-20260502-7951', 'transfer', 'confirmed', 'return', NULL, 6, 1, 'DIANA RÜLANDER', '', '+49 172 3740934', NULL, NULL, '16:30:00', NULL, '2026-05-10', '20:20:00', NULL, 'SÜRAL RESORT — ÇOLAKLI', 0, NULL, NULL, NULL, NULL, NULL, 2, 0, 0, 40.00, 'EUR', NULL, NULL, 0, 0, NULL, NULL, '2026-05-02 19:13:25', '2026-05-02 19:13:25', NULL, NULL, NULL),
+(119, 'TRF-20260502-5995', 'transfer', 'confirmed', 'outbound', NULL, 7, 3, 'NADINE RADES', '', '+49 176 24655007', NULL, NULL, NULL, NULL, '2026-05-10', '16:15:00', '4M792', 'SIDE STORY HOTEL — EVRENSEKİ', 0, NULL, NULL, NULL, NULL, NULL, 8, 0, 0, 70.00, 'EUR', NULL, NULL, 0, 0, NULL, NULL, '2026-05-02 19:22:29', '2026-05-02 19:22:29', NULL, NULL, NULL),
+(120, 'TRF-20260502-2039', 'transfer', 'confirmed', 'return', NULL, 7, 3, 'NADINE RADES', '', '+49 176 24655007', NULL, NULL, '04:45:00', NULL, '2026-05-17', '08:25:00', '4M791', 'SIDE STORY HOTEL — EVRENSEKİ', 0, NULL, NULL, NULL, NULL, NULL, 8, 0, 0, 70.00, 'EUR', NULL, NULL, 0, 0, NULL, NULL, '2026-05-02 19:22:29', '2026-05-02 19:22:29', NULL, NULL, NULL),
+(121, 'TRF-20260502-3224', 'transfer', 'confirmed', 'return', NULL, 1, 1, 'GALINA STENNING', '', '', NULL, NULL, '07:00:00', NULL, '2026-05-04', NULL, NULL, 'SUNBERK HOTEL — SİDE', 0, NULL, NULL, NULL, NULL, NULL, 1, 0, 0, 40.00, 'EUR', NULL, NULL, 0, 0, NULL, NULL, '2026-05-02 22:03:14', '2026-05-02 22:03:14', NULL, NULL, NULL);
 
 -- --------------------------------------------------------
 
@@ -224,8 +282,6 @@ INSERT INTO `booking_passengers` (`id`, `booking_id`, `booking_number`, `passeng
 (35, 37, 'TRF-20260428-0191', 'child', 'TUANA GEMRİKLİ', 0, '2026-04-28 17:53:30'),
 (36, 37, 'TRF-20260428-0191', 'child', 'MELİNAY GEMRİKLİ', 1, '2026-04-28 17:53:30'),
 (39, 39, 'TRF-20260428-1622', 'adult', 'INES KAUFMANN', 0, '2026-04-28 18:05:48'),
-(49, 38, 'TRF-20260428-1764', 'adult', 'FİKRET GEMRİKLİ', 0, '2026-04-28 23:21:26'),
-(50, 38, 'TRF-20260428-1764', 'adult', 'HOUDA GEMRİKLİ', 1, '2026-04-28 23:21:26'),
 (51, 48, 'TRF-20260429-7273', 'adult', 'KANDSORRA WOLFGANG', 0, '2026-04-29 06:51:57'),
 (52, 48, 'TRF-20260429-7273', 'adult', 'KRISTUN UJEN', 1, '2026-04-29 06:51:57'),
 (53, 48, 'TRF-20260429-7273', 'adult', 'MICHAEL UJEN', 2, '2026-04-29 06:51:57'),
@@ -246,8 +302,6 @@ INSERT INTO `booking_passengers` (`id`, `booking_id`, `booking_number`, `passeng
 (70, 52, 'TRF-20260429-6978', 'adult', 'ALEX JAKUZSEW', 1, '2026-04-29 07:33:02'),
 (71, 53, 'TRF-20260429-0746', 'adult', 'ANNA JAKUZSEW', 0, '2026-04-29 07:33:02'),
 (72, 53, 'TRF-20260429-0746', 'adult', 'ALEX JAKUZSEW', 1, '2026-04-29 07:33:02'),
-(73, 54, 'TRF-20260429-2347', 'adult', 'PATRICIA HIBBERT', 0, '2026-04-29 07:46:13'),
-(74, 54, 'TRF-20260429-2347', 'adult', 'KARINA KARTILL', 1, '2026-04-29 07:46:13'),
 (75, 55, 'TRF-20260429-9867', 'adult', 'EMILY HENZLER', 0, '2026-04-29 08:44:43'),
 (76, 56, 'TRF-20260429-5173', 'adult', 'EMILY HENZLER', 0, '2026-04-29 08:44:43'),
 (77, 57, 'TRF-20260429-1746', 'adult', 'ANJA LANGENBACH', 0, '2026-04-29 08:50:45'),
@@ -260,8 +314,202 @@ INSERT INTO `booking_passengers` (`id`, `booking_id`, `booking_number`, `passeng
 (86, 60, 'TRF-20260429-5059', 'adult', 'CHAHWIWAN SEEHAKAN KUHLMANN', 1, '2026-04-29 08:56:19'),
 (87, 61, 'TRF-20260429-0925', 'adult', 'ROMAN BILY', 0, '2026-04-29 09:03:27'),
 (88, 61, 'TRF-20260429-0925', 'adult', 'MARTIN LACKO', 1, '2026-04-29 09:03:27'),
-(91, 49, 'TRF-20260429-7985', 'adult', 'EDVIN TISK', 0, '2026-04-29 09:51:17'),
-(92, 49, 'TRF-20260429-7985', 'adult', 'ANA TISK', 1, '2026-04-29 09:51:17');
+(93, 62, 'TRF-20260430-0447', 'adult', 'ALPASLAN YALÇIN', 0, '2026-04-29 21:06:57'),
+(94, 63, 'TRF-20260430-1466', 'adult', 'Lena Mejling', 0, '2026-04-29 21:13:31'),
+(95, 63, 'TRF-20260430-1466', 'adult', 'Viktor Mejling', 1, '2026-04-29 21:13:31'),
+(98, 64, 'TRF-20260430-3205', 'adult', 'Lena Mejling', 0, '2026-04-29 21:14:02'),
+(99, 64, 'TRF-20260430-3205', 'adult', 'Viktor Mejling', 1, '2026-04-29 21:14:02'),
+(100, 65, 'TRF-20260430-0556', 'adult', 'UFUK CÖMERT', 0, '2026-04-29 21:29:41'),
+(101, 65, 'TRF-20260430-0556', 'adult', 'NEHİR CÖMERT', 1, '2026-04-29 21:29:41'),
+(102, 65, 'TRF-20260430-0556', 'child', 'FİLİZ CÖMERT', 0, '2026-04-29 21:29:41'),
+(103, 65, 'TRF-20260430-0556', 'child', 'BAHAR CÖMERT', 1, '2026-04-29 21:29:41'),
+(104, 66, 'TRF-20260430-4327', 'adult', 'UFUK CÖMERT', 0, '2026-04-29 21:29:41'),
+(105, 66, 'TRF-20260430-4327', 'adult', 'NEHİR CÖMERT', 1, '2026-04-29 21:29:41'),
+(106, 66, 'TRF-20260430-4327', 'child', 'FİLİZ CÖMERT', 0, '2026-04-29 21:29:41'),
+(107, 66, 'TRF-20260430-4327', 'child', 'BAHAR CÖMERT', 1, '2026-04-29 21:29:41'),
+(108, 67, 'TRF-20260430-7210', 'adult', 'DANNY HENNEKES', 0, '2026-04-29 21:35:43'),
+(109, 67, 'TRF-20260430-7210', 'adult', 'MANDY HENNEKES', 1, '2026-04-29 21:35:43'),
+(110, 67, 'TRF-20260430-7210', 'adult', 'SEM HENNEKES', 2, '2026-04-29 21:35:43'),
+(111, 67, 'TRF-20260430-7210', 'adult', 'RAMON HOL', 3, '2026-04-29 21:35:43'),
+(112, 67, 'TRF-20260430-7210', 'adult', 'KARIN HOL', 4, '2026-04-29 21:35:43'),
+(113, 67, 'TRF-20260430-7210', 'adult', 'MEVI HOL', 5, '2026-04-29 21:35:43'),
+(120, 68, 'TRF-20260430-9161', 'adult', 'QUAIMA AIT EL HADJ', 0, '2026-04-29 21:50:06'),
+(121, 68, 'TRF-20260430-9161', 'adult', 'BİLAL AAMİ', 1, '2026-04-29 21:50:06'),
+(122, 68, 'TRF-20260430-9161', 'adult', 'NOUSSAİR AAMİ', 2, '2026-04-29 21:50:06'),
+(130, 70, 'TRF-20260430-5242', 'adult', 'DJORDY HENDRICKS', 0, '2026-04-30 08:38:33'),
+(131, 70, 'TRF-20260430-5242', 'adult', 'JOY KERSTEN', 1, '2026-04-30 08:38:33'),
+(132, 70, 'TRF-20260430-5242', 'adult', 'JAZZY HENDRICKS', 2, '2026-04-30 08:38:33'),
+(137, 72, 'TRF-20260430-6823', 'adult', 'AYMAN EL BEKKAOUI', 0, '2026-04-30 09:02:32'),
+(138, 72, 'TRF-20260430-6823', 'adult', 'JENNY NGUYEN', 1, '2026-04-30 09:02:32'),
+(139, 72, 'TRF-20260430-6823', 'adult', 'MARINE NGUYEN', 2, '2026-04-30 09:02:32'),
+(140, 72, 'TRF-20260430-6823', 'adult', 'LAMINE MEZIANE', 3, '2026-04-30 09:02:32'),
+(141, 72, 'TRF-20260430-6823', 'child', 'JADE MEZIANE', 0, '2026-04-30 09:02:32'),
+(142, 72, 'TRF-20260430-6823', 'child', 'AVAH MEZIANE', 1, '2026-04-30 09:02:32'),
+(144, 73, 'TRF-20260430-6063', 'adult', 'RAZİYE ERYILMAZ', 0, '2026-04-30 09:07:56'),
+(151, 54, 'TRF-20260429-2347', 'adult', 'PATRICIA HIBBERT', 0, '2026-04-30 18:54:20'),
+(152, 54, 'TRF-20260429-2347', 'adult', 'KARINA KARTILL', 1, '2026-04-30 18:54:20'),
+(153, 49, 'TRF-20260429-7985', 'adult', 'EDVIN TISK', 0, '2026-04-30 18:54:39'),
+(154, 49, 'TRF-20260429-7985', 'adult', 'ANA TISK', 1, '2026-04-30 18:54:39'),
+(162, 77, 'TRF-20260502-2358', 'adult', 'VITALI LEIS', 0, '2026-05-02 10:15:33'),
+(163, 77, 'TRF-20260502-2358', 'adult', 'VALERJIA LEIS', 1, '2026-05-02 10:15:33'),
+(164, 76, 'TRF-20260502-5801', 'adult', 'VITALI LEIS', 0, '2026-05-02 10:16:41'),
+(165, 76, 'TRF-20260502-5801', 'adult', 'VALERJIA LEIS', 1, '2026-05-02 10:16:41'),
+(166, 76, 'TRF-20260502-5801', 'adult', 'MAX LÜDECKE', 2, '2026-05-02 10:16:41'),
+(167, 76, 'TRF-20260502-5801', 'adult', 'ALINA LÜDECKE', 3, '2026-05-02 10:16:41'),
+(168, 71, 'TRF-20260430-8491', 'adult', 'ANGIE STARMANS', 0, '2026-05-02 10:22:47'),
+(169, 71, 'TRF-20260430-8491', 'adult', 'JAXX LAMERS', 1, '2026-05-02 10:22:47'),
+(170, 71, 'TRF-20260430-8491', 'adult', 'BEN ZENDEN', 2, '2026-05-02 10:22:47'),
+(171, 71, 'TRF-20260430-8491', 'adult', 'SANDRA EYKENBOOM', 3, '2026-05-02 10:22:47'),
+(172, 78, 'TRF-20260502-3505', 'adult', 'MUHAMMAD BILAL', 0, '2026-05-02 11:23:33'),
+(173, 78, 'TRF-20260502-3505', 'adult', 'SAIMA BILAL', 1, '2026-05-02 11:23:33'),
+(174, 79, 'TRF-20260502-0089', 'adult', 'MUDASSIR MANSHA', 0, '2026-05-02 11:30:58'),
+(175, 79, 'TRF-20260502-0089', 'adult', 'ZULAIKHA BIBI', 1, '2026-05-02 11:30:58'),
+(176, 79, 'TRF-20260502-0089', 'adult', 'MUHAMMAD BILAL', 2, '2026-05-02 11:30:58'),
+(177, 79, 'TRF-20260502-0089', 'adult', 'SAIMA BILAL', 3, '2026-05-02 11:30:58'),
+(178, 79, 'TRF-20260502-0089', 'child', 'AYAT NOOR', 0, '2026-05-02 11:30:58'),
+(179, 80, 'TRF-20260502-2670', 'adult', 'MUDASSIR MANSHA', 0, '2026-05-02 11:30:58'),
+(180, 80, 'TRF-20260502-2670', 'adult', 'ZULAIKHA BIBI', 1, '2026-05-02 11:30:58'),
+(181, 80, 'TRF-20260502-2670', 'adult', 'MUHAMMAD BILAL', 2, '2026-05-02 11:30:58'),
+(182, 80, 'TRF-20260502-2670', 'adult', 'SAIMA BILAL', 3, '2026-05-02 11:30:58'),
+(183, 80, 'TRF-20260502-2670', 'child', 'AYAT NOOR', 0, '2026-05-02 11:30:58'),
+(184, 81, 'TRF-20260502-6851', 'adult', 'AAA', 0, '2026-05-02 11:34:14'),
+(185, 81, 'TRF-20260502-6851', 'adult', 'AAD', 1, '2026-05-02 11:34:14'),
+(186, 81, 'TRF-20260502-6851', 'adult', 'DDD', 2, '2026-05-02 11:34:14'),
+(187, 81, 'TRF-20260502-6851', 'adult', 'WQE', 3, '2026-05-02 11:34:14'),
+(188, 82, 'TRF-20260502-8646', 'adult', 'AAA', 0, '2026-05-02 11:34:14'),
+(189, 82, 'TRF-20260502-8646', 'adult', 'AAD', 1, '2026-05-02 11:34:14'),
+(190, 82, 'TRF-20260502-8646', 'adult', 'DDD', 2, '2026-05-02 11:34:14'),
+(191, 82, 'TRF-20260502-8646', 'adult', 'WQE', 3, '2026-05-02 11:34:14'),
+(196, 84, 'TRF-20260502-8336', 'adult', 'FATIMA AHMED', 0, '2026-05-02 12:22:36'),
+(197, 84, 'TRF-20260502-8336', 'adult', 'AISHA AHMED', 1, '2026-05-02 12:22:36'),
+(198, 85, 'TRF-20260502-0476', 'adult', 'BJÖRN SCHMELZER', 0, '2026-05-02 12:26:35'),
+(199, 85, 'TRF-20260502-0476', 'adult', 'ANDREA SCHMELZER', 1, '2026-05-02 12:26:35'),
+(200, 85, 'TRF-20260502-0476', 'adult', 'BENNET SCHMELZER', 2, '2026-05-02 12:26:35'),
+(201, 86, 'TRF-20260502-2062', 'adult', 'RACHELLE SUTTON', 0, '2026-05-02 12:31:16'),
+(202, 86, 'TRF-20260502-2062', 'adult', 'CHRISTOPHER HADLEY', 1, '2026-05-02 12:31:16'),
+(203, 86, 'TRF-20260502-2062', 'adult', 'EVAN SUTTON', 2, '2026-05-02 12:31:16'),
+(208, 38, 'TRF-20260428-1764', 'adult', 'FİKRET GEMRİKLİ', 0, '2026-05-02 12:38:37'),
+(209, 38, 'TRF-20260428-1764', 'adult', 'HOUDA GEMRİKLİ', 1, '2026-05-02 12:38:37'),
+(210, 38, 'TRF-20260428-1764', 'adult', 'NAJAH MORADG', 2, '2026-05-02 12:38:37'),
+(211, 38, 'TRF-20260428-1764', 'adult', 'MARYAM MORADG', 3, '2026-05-02 12:38:37'),
+(212, 38, 'TRF-20260428-1764', 'child', 'TUANA GEMRIKLI', 0, '2026-05-02 12:38:37'),
+(213, 38, 'TRF-20260428-1764', 'child', 'MELINAY GEMRIKLI', 1, '2026-05-02 12:38:37'),
+(216, 89, 'TRF-20260502-6222', 'adult', 'KACPER BEC', 0, '2026-05-02 12:45:05'),
+(217, 89, 'TRF-20260502-6222', 'adult', 'NATHAN MARSZEWSKİ', 1, '2026-05-02 12:45:05'),
+(220, 90, 'TRF-20260502-3980', 'adult', 'KACPER BEC', 0, '2026-05-02 12:47:41'),
+(221, 90, 'TRF-20260502-3980', 'adult', 'NATHAN MARSZEWSKİ', 1, '2026-05-02 12:47:41'),
+(222, 91, 'TRF-20260502-9319', 'adult', 'HELENA WIEBE', 0, '2026-05-02 12:49:41'),
+(223, 91, 'TRF-20260502-9319', 'adult', 'JAKOB WIEBE', 1, '2026-05-02 12:49:41'),
+(224, 91, 'TRF-20260502-9319', 'adult', 'BERRAK KLASSEN', 2, '2026-05-02 12:49:41'),
+(225, 83, 'TRF-20260502-3270', 'adult', 'MAKSIM OSIPOVS', 0, '2026-05-02 12:50:46'),
+(226, 83, 'TRF-20260502-3270', 'adult', 'SEJITGULIJEVA MILANA', 1, '2026-05-02 12:50:46'),
+(227, 92, 'TRF-20260502-2019', 'adult', 'VERA ALBERTI', 0, '2026-05-02 12:54:11'),
+(228, 92, 'TRF-20260502-2019', 'adult', 'ANDREI COSAREV', 1, '2026-05-02 12:54:11'),
+(229, 93, 'TRF-20260502-1517', 'adult', 'KYNAAT SHAH', 0, '2026-05-02 12:58:31'),
+(230, 93, 'TRF-20260502-1517', 'adult', 'MUSHRAF BUKHARI', 1, '2026-05-02 12:58:31'),
+(231, 93, 'TRF-20260502-1517', 'adult', 'ALEEZA BUKHARI', 2, '2026-05-02 12:58:31'),
+(232, 93, 'TRF-20260502-1517', 'adult', 'ADAM BUKHARI', 3, '2026-05-02 12:58:31'),
+(233, 94, 'TRF-20260502-7320', 'adult', 'TAHSEEN SHAH', 0, '2026-05-02 13:01:03'),
+(234, 94, 'TRF-20260502-7320', 'adult', 'HASINA BATOOL', 1, '2026-05-02 13:01:03'),
+(235, 94, 'TRF-20260502-7320', 'adult', 'EMANI SHAH', 2, '2026-05-02 13:01:03'),
+(236, 94, 'TRF-20260502-7320', 'adult', 'INAYA SHAH', 3, '2026-05-02 13:01:03'),
+(237, 95, 'TRF-20260502-9739', 'adult', 'İLKAY KOPARAN', 0, '2026-05-02 13:09:26'),
+(238, 95, 'TRF-20260502-9739', 'adult', 'ALEX KOCH', 1, '2026-05-02 13:09:26'),
+(239, 95, 'TRF-20260502-9739', 'adult', 'ELISA PAGNOZZO', 2, '2026-05-02 13:09:26'),
+(240, 95, 'TRF-20260502-9739', 'adult', 'NADINE WUNSCH', 3, '2026-05-02 13:09:26'),
+(241, 69, 'TRF-20260430-9916', 'adult', 'BESMIRA ZHUTA', 0, '2026-05-02 13:27:07'),
+(242, 69, 'TRF-20260430-9916', 'adult', 'ALBION MUSA', 1, '2026-05-02 13:27:07'),
+(243, 69, 'TRF-20260430-9916', 'adult', 'LIAN MUSA', 2, '2026-05-02 13:27:07'),
+(244, 69, 'TRF-20260430-9916', 'adult', 'MALIK MUSA', 3, '2026-05-02 13:27:07'),
+(245, 96, 'TRF-20260502-8813', 'adult', 'CAN KLEISMAN', 0, '2026-05-02 13:36:02'),
+(246, 96, 'TRF-20260502-8813', 'adult', 'CEM KLEISMAN', 1, '2026-05-02 13:36:02'),
+(247, 97, 'TRF-20260502-4170', 'adult', 'MUSTAFA LALE', 0, '2026-05-02 13:43:43'),
+(248, 97, 'TRF-20260502-4170', 'adult', 'VEDAT DEMİRALP', 1, '2026-05-02 13:43:43'),
+(249, 97, 'TRF-20260502-4170', 'adult', 'NEVZAT SARIKAYA', 2, '2026-05-02 13:43:43'),
+(250, 97, 'TRF-20260502-4170', 'adult', 'HAYRİ GÜROĞLU', 3, '2026-05-02 13:43:43'),
+(251, 98, 'TRF-20260502-8809', 'adult', 'MUSTAFA LALE', 0, '2026-05-02 13:43:43'),
+(252, 98, 'TRF-20260502-8809', 'adult', 'VEDAT DEMİRALP', 1, '2026-05-02 13:43:43'),
+(253, 98, 'TRF-20260502-8809', 'adult', 'NEVZAT SARIKAYA', 2, '2026-05-02 13:43:43'),
+(254, 98, 'TRF-20260502-8809', 'adult', 'HAYRİ GÜROĞLU', 3, '2026-05-02 13:43:43'),
+(255, 99, 'TRF-20260502-9269', 'adult', 'ISABEL SCULTZ', 0, '2026-05-02 14:50:28'),
+(256, 99, 'TRF-20260502-9269', 'adult', 'JULY ROSE SCULTZ', 1, '2026-05-02 14:50:28'),
+(257, 99, 'TRF-20260502-9269', 'adult', 'JAN CAPALBO BÖHME', 2, '2026-05-02 14:50:28'),
+(258, 100, 'TRF-20260502-4307', 'adult', 'SERGEN ÖZMEN', 0, '2026-05-02 15:01:27'),
+(259, 100, 'TRF-20260502-4307', 'adult', 'SELİN NUR GÜLER', 1, '2026-05-02 15:01:27'),
+(260, 100, 'TRF-20260502-4307', 'adult', 'DAVID BOJKOVIC', 2, '2026-05-02 15:01:27'),
+(261, 100, 'TRF-20260502-4307', 'adult', 'JENNIFER VANESSA MOKROS', 3, '2026-05-02 15:01:27'),
+(262, 101, 'TRF-20260502-8019', 'adult', 'SERGEN ÖZMEN', 0, '2026-05-02 15:01:27'),
+(263, 101, 'TRF-20260502-8019', 'adult', 'SELİN NUR GÜLER', 1, '2026-05-02 15:01:27'),
+(264, 101, 'TRF-20260502-8019', 'adult', 'DAVID BOJKOVIC', 2, '2026-05-02 15:01:27'),
+(265, 101, 'TRF-20260502-8019', 'adult', 'JENNIFER VANESSA MOKROS', 3, '2026-05-02 15:01:27'),
+(270, 103, 'TRF-20260502-3738', 'adult', 'SHANAY GORDON', 0, '2026-05-02 15:06:31'),
+(271, 103, 'TRF-20260502-3738', 'adult', 'AYLAH AYANLEYE GORDON', 1, '2026-05-02 15:06:31'),
+(272, 102, 'TRF-20260502-5031', 'adult', 'SHANAY GORDON', 0, '2026-05-02 15:06:59'),
+(273, 102, 'TRF-20260502-5031', 'adult', 'AYLAH AYANLEYE GORDON', 1, '2026-05-02 15:06:59'),
+(274, 104, 'TRF-20260502-2702', 'adult', 'OWAIS ASIF', 0, '2026-05-02 15:18:04'),
+(275, 104, 'TRF-20260502-2702', 'adult', 'MADIHA RASHID', 1, '2026-05-02 15:18:04'),
+(276, 104, 'TRF-20260502-2702', 'adult', 'MALIHA IRFAN', 2, '2026-05-02 15:18:04'),
+(277, 104, 'TRF-20260502-2702', 'adult', 'ZEESHAN SAGHIR', 3, '2026-05-02 15:18:04'),
+(278, 105, 'TRF-20260502-4160', 'adult', 'OWAIS ASIF', 0, '2026-05-02 15:18:04'),
+(279, 105, 'TRF-20260502-4160', 'adult', 'MADIHA RASHID', 1, '2026-05-02 15:18:04'),
+(280, 105, 'TRF-20260502-4160', 'adult', 'MALIHA IRFAN', 2, '2026-05-02 15:18:04'),
+(281, 105, 'TRF-20260502-4160', 'adult', 'ZEESHAN SAGHIR', 3, '2026-05-02 15:18:04'),
+(282, 106, 'TRF-20260502-0050', 'adult', 'ANNA JAKUSZEW', 0, '2026-05-02 15:20:44'),
+(283, 106, 'TRF-20260502-0050', 'adult', 'ALEX JAKUSZEW', 1, '2026-05-02 15:20:44'),
+(284, 107, 'TRF-20260502-4799', 'adult', 'DOERTA KUBERSKI', 0, '2026-05-02 15:24:06'),
+(289, 108, 'TRF-20260502-8861', 'adult', 'ILONA KÖNİG', 0, '2026-05-02 15:33:37'),
+(290, 108, 'TRF-20260502-8861', 'adult', 'MARGARETE KÖNİG', 1, '2026-05-02 15:33:37'),
+(291, 108, 'TRF-20260502-8861', 'adult', 'LISA KÖNİG', 2, '2026-05-02 15:33:37'),
+(292, 108, 'TRF-20260502-8861', 'adult', 'ALINA KÖNİG', 3, '2026-05-02 15:33:37'),
+(293, 109, 'TRF-20260502-1655', 'adult', 'HUSSEIN EL ABED', 0, '2026-05-02 15:39:00'),
+(294, 109, 'TRF-20260502-1655', 'adult', 'ALI EL ABED', 1, '2026-05-02 15:39:00'),
+(295, 109, 'TRF-20260502-1655', 'adult', 'ALI MENCHO', 2, '2026-05-02 15:39:00'),
+(296, 110, 'TRF-20260502-0163', 'adult', 'HUSSEIN EL ABED', 0, '2026-05-02 15:39:00'),
+(297, 110, 'TRF-20260502-0163', 'adult', 'ALI EL ABED', 1, '2026-05-02 15:39:00'),
+(298, 110, 'TRF-20260502-0163', 'adult', 'ALI MENCHO', 2, '2026-05-02 15:39:00'),
+(299, 111, 'TRF-20260502-2169', 'adult', 'YUSSOF ALAM', 0, '2026-05-02 15:50:43'),
+(300, 111, 'TRF-20260502-2169', 'adult', 'JAMSHED ALAM', 1, '2026-05-02 15:50:43'),
+(301, 111, 'TRF-20260502-2169', 'adult', 'HAMSA ALAM', 2, '2026-05-02 15:50:43'),
+(302, 112, 'TRF-20260502-1393', 'adult', 'YUSSOF ALAM', 0, '2026-05-02 15:50:43'),
+(303, 112, 'TRF-20260502-1393', 'adult', 'JAMSHED ALAM', 1, '2026-05-02 15:50:43'),
+(304, 112, 'TRF-20260502-1393', 'adult', 'HAMSA ALAM', 2, '2026-05-02 15:50:43'),
+(305, 113, 'TRF-20260502-7354', 'adult', 'Jacquelina Bollacke', 0, '2026-05-02 15:55:56'),
+(306, 113, 'TRF-20260502-7354', 'adult', 'JAAFER EL CHALL', 1, '2026-05-02 15:55:56'),
+(307, 113, 'TRF-20260502-7354', 'adult', 'JUNA BOLLACKE', 2, '2026-05-02 15:55:56'),
+(308, 114, 'TRF-20260502-3230', 'adult', 'Jacquelina Bollacke', 0, '2026-05-02 15:55:56'),
+(309, 114, 'TRF-20260502-3230', 'adult', 'JAAFER EL CHALL', 1, '2026-05-02 15:55:56'),
+(310, 114, 'TRF-20260502-3230', 'adult', 'JUNA BOLLACKE', 2, '2026-05-02 15:55:56'),
+(315, 116, 'TRF-20260502-5382', 'adult', 'ALPASLAN YALÇIN', 0, '2026-05-02 16:01:54'),
+(316, 116, 'TRF-20260502-5382', 'adult', 'HILAL SAVRAN', 1, '2026-05-02 16:01:54'),
+(317, 115, 'TRF-20260502-9921', 'adult', 'STEFAN BELL', 0, '2026-05-02 16:05:15'),
+(318, 115, 'TRF-20260502-9921', 'adult', 'GEMMA MARSHALL', 1, '2026-05-02 16:05:15'),
+(319, 115, 'TRF-20260502-9921', 'adult', 'LAILA MARSHALL', 2, '2026-05-02 16:05:15'),
+(320, 115, 'TRF-20260502-9921', 'adult', 'OLLIE BELL', 3, '2026-05-02 16:05:15'),
+(323, 117, 'TRF-20260502-1128', 'adult', 'DIANA RÜLANDER', 0, '2026-05-02 16:13:25'),
+(324, 117, 'TRF-20260502-1128', 'adult', 'PETRA HOFFMAN', 1, '2026-05-02 16:13:25'),
+(325, 118, 'TRF-20260502-7951', 'adult', 'DIANA RÜLANDER', 0, '2026-05-02 16:13:25'),
+(326, 118, 'TRF-20260502-7951', 'adult', 'PETRA HOFFMAN', 1, '2026-05-02 16:13:25'),
+(327, 119, 'TRF-20260502-5995', 'adult', 'NADINE RADES', 0, '2026-05-02 16:22:29'),
+(328, 119, 'TRF-20260502-5995', 'adult', 'SYLVIA RADES', 1, '2026-05-02 16:22:29'),
+(329, 119, 'TRF-20260502-5995', 'adult', 'RALF RADES', 2, '2026-05-02 16:22:29'),
+(330, 119, 'TRF-20260502-5995', 'adult', 'MARTIN STREICH', 3, '2026-05-02 16:22:29'),
+(331, 119, 'TRF-20260502-5995', 'adult', 'KAROLA STREICH', 4, '2026-05-02 16:22:29'),
+(332, 119, 'TRF-20260502-5995', 'adult', 'JÜRGEN STREICH', 5, '2026-05-02 16:22:29'),
+(333, 119, 'TRF-20260502-5995', 'adult', 'CINDY KOWALZIK', 6, '2026-05-02 16:22:29'),
+(334, 119, 'TRF-20260502-5995', 'adult', 'JULIANE KOWALZIK', 7, '2026-05-02 16:22:29'),
+(335, 120, 'TRF-20260502-2039', 'adult', 'NADINE RADES', 0, '2026-05-02 16:22:29'),
+(336, 120, 'TRF-20260502-2039', 'adult', 'SYLVIA RADES', 1, '2026-05-02 16:22:29'),
+(337, 120, 'TRF-20260502-2039', 'adult', 'RALF RADES', 2, '2026-05-02 16:22:29'),
+(338, 120, 'TRF-20260502-2039', 'adult', 'MARTIN STREICH', 3, '2026-05-02 16:22:29'),
+(339, 120, 'TRF-20260502-2039', 'adult', 'KAROLA STREICH', 4, '2026-05-02 16:22:29'),
+(340, 120, 'TRF-20260502-2039', 'adult', 'JÜRGEN STREICH', 5, '2026-05-02 16:22:29'),
+(341, 120, 'TRF-20260502-2039', 'adult', 'CINDY KOWALZIK', 6, '2026-05-02 16:22:29'),
+(342, 120, 'TRF-20260502-2039', 'adult', 'JULIANE KOWALZIK', 7, '2026-05-02 16:22:29'),
+(343, 121, 'TRF-20260502-3224', 'adult', 'GALINA STENNING', 0, '2026-05-02 19:03:14'),
+(346, 87, 'TRF-20260502-5072', 'adult', 'SHANTHOSAN SIVANDAN', 0, '2026-05-02 20:47:46'),
+(347, 87, 'TRF-20260502-5072', 'adult', 'KISHOK KUGANSEN', 1, '2026-05-02 20:47:46'),
+(348, 87, 'TRF-20260502-5072', 'adult', 'BAVIKESH SIVAKUMAR', 2, '2026-05-02 20:47:47'),
+(349, 87, 'TRF-20260502-5072', 'adult', 'UZEIR AHMED', 3, '2026-05-02 20:47:47');
 
 -- --------------------------------------------------------
 
@@ -332,7 +580,15 @@ INSERT INTO `destinations` (`id`, `title`, `slug`, `description`, `content`, `fe
 (15, 'Kızılot Transfer', 'kizilot-transfer', '', '', NULL, NULL, 'Antalya / Manavgat / Kızılot', NULL, NULL, NULL, '', '', 0.0, 0, 0, 0, 'Kızılot Transfer', '', 'published', 11, '2026-04-27 18:57:12', '2026-04-27 18:58:24'),
 (16, 'Okurcalar Transfer', 'okurcalar-transfer', '', '', NULL, NULL, 'Antalya / Alanya / Okurcalar', NULL, NULL, NULL, '', '', 0.0, 0, 0, 0, 'Okurcalar Transfer', '', 'published', 12, '2026-04-27 18:59:40', '2026-04-27 19:00:03'),
 (17, 'Avsallar Transfer', 'avsallar-transfer', '', '', NULL, NULL, 'Antalya / Alanya / Avsallar', NULL, NULL, NULL, '', '', 0.0, 0, 0, 0, 'Avsallar Transfer', '', 'published', 13, '2026-04-28 18:02:59', '2026-04-28 18:02:59'),
-(18, 'Türkler Transfer', 'turkler-transfer', '', '', NULL, NULL, 'Antalya / Alanya / Türkler', NULL, NULL, NULL, '', '', 0.0, 0, 0, 0, 'Türkler Transfer', '', 'published', 14, '2026-04-29 07:04:46', '2026-04-29 07:04:46');
+(18, 'Türkler Transfer', 'turkler-transfer', '', '', NULL, NULL, 'Antalya / Alanya / Türkler', NULL, NULL, NULL, '', '', 0.0, 0, 0, 0, 'Türkler Transfer', '', 'published', 14, '2026-04-29 07:04:46', '2026-04-29 07:04:46'),
+(19, 'Belek Transfer', 'belek-transfer', '', '', NULL, NULL, 'Antalya / Serik / Belek', NULL, NULL, NULL, '', '', 0.0, 0, 0, 0, 'Belek Transfer', '', 'published', 15, '2026-04-29 21:04:47', '2026-04-29 21:04:47'),
+(20, 'Kemer Transfer', 'kemer-transfer', '', '', NULL, NULL, '', NULL, NULL, NULL, '', '', 0.0, 0, 0, 0, 'Kemer Transfer', '', 'published', 16, '2026-04-29 21:24:27', '2026-04-29 21:24:27'),
+(21, 'Tekirova Transfer', 'tekirova-transfer', '', '', NULL, NULL, '', NULL, NULL, NULL, '', '', 0.0, 0, 0, 0, 'Tekirova Transfer', '', 'published', 17, '2026-04-29 21:24:40', '2026-04-29 21:24:40'),
+(22, 'Çamyuva Transfer', 'camyuva-transfer', '', '', NULL, NULL, '', NULL, NULL, NULL, '', '', 0.0, 0, 0, 0, 'Çamyuva Transfer', '', 'published', 18, '2026-04-29 21:24:53', '2026-04-29 21:24:53'),
+(23, 'Kiriş Transfer', 'kiris-transfer', '', '', NULL, NULL, '', NULL, NULL, NULL, '', '', 0.0, 0, 0, 0, 'Kiriş Transfer', '', 'published', 19, '2026-04-29 21:25:54', '2026-04-29 21:25:54'),
+(24, 'Beldibi Transfer', 'beldibi-transfer', '', '', NULL, NULL, 'Antalya / Kemer / Beldibi', NULL, NULL, NULL, '', '', 0.0, 0, 0, 0, 'Beldibi Transfer', '', 'published', 20, '2026-05-02 13:38:21', '2026-05-02 13:38:46'),
+(25, 'Boğazkent Transfer', 'bogazkent-transfer', '', '', NULL, NULL, 'Antalya / Serik / Boğazkent', NULL, NULL, NULL, '', '', 0.0, 0, 0, 0, 'Boğazkent Transfer', '', 'published', 21, '2026-05-02 13:48:10', '2026-05-02 13:48:10'),
+(26, 'Gündoğdu Transfer', 'gundogdu-transfer', '', '', NULL, NULL, 'Antalya / Manavgat / Gündoğdu', NULL, NULL, NULL, '', '', 0.0, 0, 0, 0, 'Gündoğdu Transfer', '', 'published', 22, '2026-05-02 15:32:11', '2026-05-02 15:32:38');
 
 -- --------------------------------------------------------
 
@@ -398,7 +654,15 @@ INSERT INTO `destination_translations` (`id`, `destination_id`, `language_code`,
 (299, 16, 'de', 'Okurcalar Transfer', 'okurcalar-transfer', '', '', '', '', 'Okurcalar Transfer', '', '2026-04-27 18:59:40', '2026-04-27 18:59:40'),
 (300, 16, 'tr', 'Okurcalar Transfer', 'okurcalar-transfer', '', '', '', '', 'Okurcalar Transfer', '', '2026-04-27 18:59:40', '2026-04-27 18:59:40'),
 (303, 17, 'tr', 'Avsallar Transfer', 'avsallar-transfer', '', '', '', '', 'Avsallar Transfer', '', '2026-04-28 18:02:59', '2026-04-28 18:02:59'),
-(307, 18, 'tr', 'Türkler Transfer', 'turkler-transfer', '', '', '', '', 'Türkler Transfer', '', '2026-04-29 07:04:46', '2026-04-29 07:04:46');
+(307, 18, 'tr', 'Türkler Transfer', 'turkler-transfer', '', '', '', '', 'Türkler Transfer', '', '2026-04-29 07:04:46', '2026-04-29 07:04:46'),
+(333, 19, 'tr', 'Belek Transfer', 'belek-transfer', '', '', '', '', 'Belek Transfer', '', '2026-04-29 21:04:47', '2026-04-29 21:04:47'),
+(334, 20, 'tr', 'Kemer Transfer', 'kemer-transfer', '', '', '', '', 'Kemer Transfer', '', '2026-04-29 21:24:27', '2026-04-29 21:24:27'),
+(335, 21, 'tr', 'Tekirova Transfer', 'tekirova-transfer', '', '', '', '', 'Tekirova Transfer', '', '2026-04-29 21:24:40', '2026-04-29 21:24:40'),
+(336, 22, 'tr', 'Çamyuva Transfer', 'camyuva-transfer', '', '', '', '', 'Çamyuva Transfer', '', '2026-04-29 21:24:53', '2026-04-29 21:24:53'),
+(337, 23, 'tr', 'Kiriş Transfer', 'kiris-transfer', '', '', '', '', 'Kiriş Transfer', '', '2026-04-29 21:25:54', '2026-04-29 21:25:54'),
+(338, 24, 'tr', 'Beldibi Transfer', 'beldibi-transfer', '', '', '', '', 'Beldibi Transfer', '', '2026-05-02 13:38:21', '2026-05-02 13:38:21'),
+(340, 25, 'tr', 'Boğazkent Transfer', 'bogazkent-transfer', '', '', '', '', 'Boğazkent Transfer', '', '2026-05-02 13:48:10', '2026-05-02 13:48:10'),
+(341, 26, 'tr', 'Gündoğdu Transfer', 'gundogdu-transfer', '', '', '', '', 'Gündoğdu Transfer', '', '2026-05-02 15:32:11', '2026-05-02 15:32:11');
 
 -- --------------------------------------------------------
 
@@ -647,22 +911,51 @@ CREATE TABLE `hotels` (
 --
 
 INSERT INTO `hotels` (`id`, `name`, `address`, `phone`, `distance_km`, `is_active`, `sort_order`, `created_at`, `updated_at`) VALUES
-(1, 'Sunis Kumkoy Beach', NULL, NULL, 72.00, 1, 0, '2026-04-27 17:14:33', '2026-04-28 20:30:45'),
-(2, 'Sunis Evren Beach', NULL, NULL, 70.00, 1, 0, '2026-04-27 17:16:34', '2026-04-28 20:30:49'),
-(3, 'Sunis Elita Beach', 'Kızılağaç', NULL, 85.00, 1, 0, '2026-04-27 17:16:51', NULL),
-(4, 'Riolavitas Resort', 'Sorgun', NULL, 74.00, 1, 0, '2026-04-27 17:17:10', NULL),
-(5, 'Royal Atlantis Icon', 'Gündoğdu', NULL, 70.00, 1, 0, '2026-04-27 22:17:01', '2026-04-29 08:39:13'),
-(7, 'Aska Just In Beach', NULL, NULL, NULL, 1, 0, '2026-04-28 18:05:44', NULL),
-(8, 'Lilyum Hotel', NULL, NULL, NULL, 1, 0, '2026-04-28 18:47:00', NULL),
-(9, 'Delphin Be Grand', NULL, NULL, NULL, 1, 0, '2026-04-28 23:21:24', NULL),
-(10, 'Lago Hotel', NULL, NULL, NULL, 1, 0, '2026-04-29 06:58:23', NULL),
-(11, 'Eftalia Splash', NULL, NULL, NULL, 1, 0, '2026-04-29 07:14:02', NULL),
-(12, 'Delphin Palace', NULL, NULL, NULL, 1, 0, '2026-04-29 07:31:22', NULL),
-(13, 'Port River Hotel', NULL, NULL, NULL, 1, 0, '2026-04-29 07:42:09', NULL),
-(14, 'Grand Park Lara', NULL, NULL, NULL, 1, 0, '2026-04-29 08:44:02', NULL),
-(15, 'Aydınbey Kings Palace', NULL, NULL, NULL, 1, 0, '2026-04-29 08:49:45', NULL),
-(16, 'The Sense Deluxe', NULL, NULL, NULL, 1, 0, '2026-04-29 08:53:25', NULL),
-(17, 'Kleopatra Royal Palm', NULL, NULL, NULL, 1, 0, '2026-04-29 09:03:05', NULL);
+(1, 'SUNIS KUMKÖY BEACH', 'KUMKÖY', NULL, 72.00, 1, 0, '2026-04-27 17:14:33', '2026-04-30 09:28:25'),
+(2, 'SUNIS EVREN BEACH', 'EVRENSEKİ', NULL, 57.00, 1, 0, '2026-04-27 17:16:34', '2026-04-30 09:28:07'),
+(3, 'SUNIS ELITA BEACH', 'KIZILAĞAÇ', NULL, 85.00, 1, 0, '2026-04-27 17:16:51', '2026-04-30 09:27:37'),
+(4, 'RIO LAVITAS RESORT', 'SORGUN', NULL, 74.00, 1, 0, '2026-04-27 17:17:10', '2026-04-30 09:26:10'),
+(5, 'ROYAL ATLANTIS ICON', 'GÜNDOĞDU', NULL, 53.00, 1, 0, '2026-04-27 22:17:01', '2026-04-30 09:26:56'),
+(7, 'ASKA JUST IN BEACH', 'AVSALLAR', NULL, 140.00, 1, 0, '2026-04-28 18:05:44', '2026-05-02 15:24:37'),
+(8, 'LILYUM HOTEL', 'EVRENSEKİ', NULL, 57.00, 1, 0, '2026-04-28 18:47:00', '2026-04-30 09:23:49'),
+(9, 'DELPHIN BE GRAND', 'KUNDU', NULL, 13.00, 1, 0, '2026-04-28 23:21:24', '2026-04-30 09:20:13'),
+(10, 'LAGO HOTEL', 'SORGUN', NULL, 70.00, 1, 0, '2026-04-29 06:58:23', '2026-04-30 09:23:26'),
+(11, 'EFTALIA SPLASH RESORT', 'TÜRKLER', NULL, 106.00, 1, 0, '2026-04-29 07:14:02', '2026-04-30 09:21:02'),
+(12, 'DELPHIN PALACE', 'KUNDU', NULL, 15.00, 1, 0, '2026-04-29 07:31:22', '2026-04-30 09:20:20'),
+(13, 'PORT RIVER HOTEL', 'SORGUN', NULL, 70.00, 1, 0, '2026-04-29 07:42:09', '2026-04-30 09:25:43'),
+(14, 'GRAND PARK LARA', 'KUNDU', NULL, 14.00, 1, 0, '2026-04-29 08:44:02', '2026-04-30 09:21:34'),
+(15, 'AYDIN BEY KINGS PALACE', 'EVRENSEKİ', NULL, 57.00, 1, 0, '2026-04-29 08:49:45', '2026-04-30 09:20:07'),
+(16, 'THE SENSE DELUXE', 'SİDE', NULL, 61.00, 1, 0, '2026-04-29 08:53:25', '2026-04-30 09:29:03'),
+(17, 'KLEOPATRA ROYAL PALM', 'ALANYA', NULL, 122.00, 1, 0, '2026-04-29 09:03:05', '2026-04-30 09:23:06'),
+(18, 'ETHNO BELEK', 'BELEK', NULL, 34.00, 1, 0, '2026-04-29 21:06:51', '2026-04-30 09:21:08'),
+(19, 'LIMAK LIMRA HOTEL', 'KİRİŞ', NULL, 65.00, 1, 0, '2026-04-29 21:27:30', '2026-04-30 09:24:54'),
+(20, 'ASKA LARA', 'KUNDU', NULL, 15.00, 1, 0, '2026-04-29 21:34:47', '2026-04-30 09:20:00'),
+(21, 'MIRACKLE RESORT', 'KUNDU', NULL, 13.00, 1, 0, '2026-04-29 21:44:06', '2026-04-30 09:25:05'),
+(22, 'SIDE CROWN PALACE', 'EVRENSEKİ', NULL, 57.00, 1, 0, '2026-04-29 21:58:57', '2026-04-30 09:27:08'),
+(23, 'DREAM FUN WORLD', 'KUMKÖY', NULL, 60.00, 1, 0, '2026-04-30 08:37:52', '2026-04-30 09:20:27'),
+(24, 'DREAM WORLD AQUA', 'KUMKÖY', NULL, 60.00, 1, 0, '2026-04-30 08:54:48', '2026-04-30 09:20:55'),
+(25, 'SUNBERK HOTEL', 'SİDE', NULL, 64.00, 1, 0, '2026-04-30 09:07:30', '2026-04-30 09:27:26'),
+(26, 'RIXOS PREMIUM BELEK', NULL, NULL, NULL, 1, 0, '2026-05-02 10:14:08', NULL),
+(27, 'PALORMA HOTEL', 'KUNDU', NULL, NULL, 1, 0, '2026-05-02 11:22:51', NULL),
+(28, 'RUBI PLATINUM SPA RESORT & SUITES', 'AVSALLAR', NULL, NULL, 1, 0, '2026-05-02 11:52:27', NULL),
+(29, 'ARCANUS SORGUN', 'SORGUN', NULL, NULL, 1, 0, '2026-05-02 12:30:19', NULL),
+(30, 'SÜRAL RESORT', 'ÇOLAKLI', NULL, NULL, 1, 0, '2026-05-02 12:40:54', NULL),
+(31, 'SULTAN OF SIDE', 'EVRENSEKİ', NULL, NULL, 1, 0, '2026-05-02 12:43:17', NULL),
+(32, 'SEAMELIA BEACH', 'EVRENSEKİ', NULL, NULL, 1, 0, '2026-05-02 12:53:57', NULL),
+(33, 'BARUT GOIA', 'SİDE', NULL, NULL, 1, 0, '2026-05-02 13:00:35', NULL),
+(34, 'LIMAK LARA DELUXE', 'KUNDU', NULL, NULL, 1, 0, '2026-05-02 13:08:39', NULL),
+(35, 'DREAM WATER WORLD', 'KUMKÖY', NULL, NULL, 1, 0, '2026-05-02 13:35:41', NULL),
+(36, 'JUJU PREMIER HOTEL', 'BELDİBİ', NULL, NULL, 1, 0, '2026-05-02 13:40:43', NULL),
+(37, 'SIDE MARE', 'KUMKÖY', NULL, NULL, 1, 0, '2026-05-02 14:48:27', NULL),
+(38, 'KIRMAN BELAZUR', 'BOĞAZKENT', NULL, NULL, 1, 0, '2026-05-02 14:55:59', NULL),
+(39, 'CLUB TURAN PRINCE WORLD', 'KIZILAĞAÇ', NULL, NULL, 1, 0, '2026-05-02 15:04:44', NULL),
+(40, 'WASHINGTON RESORT', 'KIZILAĞAÇ', NULL, NULL, 1, 0, '2026-05-02 15:09:32', NULL),
+(41, 'DELPHIN DELUXE', 'OKURCALAR', NULL, NULL, 1, 0, '2026-05-02 15:19:45', NULL),
+(42, 'TRENDY ASPENDOS BEACH', 'GÜNDOĞDU', NULL, NULL, 1, 0, '2026-05-02 15:29:01', NULL),
+(43, 'ROYAL HOLIDAY PALACE', 'KUNDU', NULL, NULL, 1, 0, '2026-05-02 15:37:33', NULL),
+(44, 'ALBA RESORT', 'ÇOLAKLI', NULL, NULL, 1, 0, '2026-05-02 15:49:15', NULL),
+(45, 'ARSI BLUE BEACH', 'ALANYA', NULL, NULL, 1, 0, '2026-05-02 15:57:49', NULL),
+(46, 'SIDE STORY HOTEL', 'EVRENSEKİ', NULL, NULL, 1, 0, '2026-05-02 16:19:26', NULL);
 
 -- --------------------------------------------------------
 
@@ -845,8 +1138,9 @@ CREATE TABLE `outsource_partners` (
 --
 
 INSERT INTO `outsource_partners` (`id`, `name`, `phone`, `notes`, `is_active`, `created_at`, `updated_at`) VALUES
-(10, 'Sezer BOZ', '+90 534 244 97 48', NULL, 1, '2026-04-28 23:06:09', NULL),
-(11, 'Ali Seydi Tuluk', '5320645407', NULL, 1, '2026-04-29 09:53:47', NULL);
+(10, 'Sezer BOZ', '+905342449748', NULL, 1, '2026-04-28 23:06:09', '2026-04-30 22:25:12'),
+(11, 'Ali Seydi Tuluk', '5320645407', NULL, 1, '2026-04-29 09:53:47', NULL),
+(12, 'Emre Boz', '5469406233', NULL, 1, '2026-04-30 12:05:52', NULL);
 
 -- --------------------------------------------------------
 
@@ -1451,7 +1745,7 @@ CREATE TABLE `users` (
 
 INSERT INTO `users` (`id`, `username`, `email`, `password`, `full_name`, `avatar`, `role`, `is_active`, `last_login`, `created_at`, `updated_at`) VALUES
 (1, 'admin', 'admin@example.com', '$2y$10$TE/2AViqJiIZHyIwRQ1XjeP87NcWnj5XoI1wo3S4pmDxa/D7TVao2', 'Administrator', NULL, 'admin', 1, '2026-02-13 19:37:56', '2026-01-17 22:22:32', '2026-02-13 19:37:56'),
-(2, 'sezer', 'sezerbz@gmail.com', '$2y$10$0uc7urfsSX3OcTqGIFgnj.DaMAlSfpsExjlKFprdbQgaGBxHoyRi6', 'Sezer Boz', NULL, 'admin', 1, '2026-04-29 10:16:39', '2026-02-13 22:09:08', '2026-04-29 10:16:39');
+(2, 'sezer', 'sezerbz@gmail.com', '$2y$10$0uc7urfsSX3OcTqGIFgnj.DaMAlSfpsExjlKFprdbQgaGBxHoyRi6', 'Sezer Boz', NULL, 'admin', 1, '2026-05-02 20:50:36', '2026-02-13 22:09:08', '2026-05-02 20:50:36');
 
 -- --------------------------------------------------------
 
@@ -1483,9 +1777,9 @@ CREATE TABLE `vehicles` (
 --
 
 INSERT INTO `vehicles` (`id`, `brand`, `model`, `capacity`, `luggage_capacity`, `child_seat_capacity`, `image`, `services`, `description`, `price_per_km`, `base_price`, `is_featured`, `is_active`, `sort_order`, `created_at`, `updated_at`) VALUES
-(1, 'Transporter', '.', 6, 2, 1, 'general/1777446325_d560d4fe2e513797.jpg', '[\"33\",\"34\",\"35\",\"36\",\"37\",\"38\",\"39\",\"40\",\"41\",\"42\",\"43\"]', '', NULL, NULL, 0, 1, 0, '2026-01-27 19:32:02', '2026-04-29 07:24:57'),
+(1, 'Transporter', '', 6, 2, 1, 'general/1777446325_d560d4fe2e513797.jpg', '[\"33\",\"34\",\"35\",\"36\",\"37\",\"38\",\"39\",\"40\",\"41\",\"42\",\"43\"]', '', NULL, NULL, 0, 1, 0, '2026-01-27 19:32:02', '2026-05-02 20:12:43'),
 (2, 'Vip Mercedes Vito - Maybach', 'Vito', 6, 2, 2, 'general/1769543525_f883265a7fcb7bdd.png', '[\"33\",\"34\",\"35\",\"36\",\"37\",\"38\",\"39\",\"40\",\"41\",\"42\",\"43\"]', '', NULL, NULL, 0, 1, 0, '2026-01-27 19:52:11', '2026-04-26 07:03:34'),
-(3, 'Sprinter/Crafter', '.', 17, 17, 4, 'general/1777419485_706f9d0d48995f5c.png', '[\"33\",\"34\",\"35\",\"36\",\"37\",\"38\",\"39\",\"40\",\"41\",\"42\",\"43\"]', '', NULL, NULL, 0, 1, 0, '2026-01-29 22:57:11', '2026-04-29 07:25:14');
+(3, 'Sprinter/Crafter', '', 17, 17, 4, 'general/1777419485_706f9d0d48995f5c.png', '[\"33\",\"34\",\"35\",\"36\",\"37\",\"38\",\"39\",\"40\",\"41\",\"42\",\"43\"]', '', NULL, NULL, 0, 1, 0, '2026-01-29 22:57:11', '2026-05-02 20:12:34');
 
 -- --------------------------------------------------------
 
@@ -1958,7 +2252,7 @@ ALTER TABLE `blog_post_translations`
 -- Tablo için AUTO_INCREMENT değeri `bookings`
 --
 ALTER TABLE `bookings`
-  MODIFY `id` int NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=62;
+  MODIFY `id` int NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=123;
 
 --
 -- Tablo için AUTO_INCREMENT değeri `booking_alert_translations`
@@ -1970,7 +2264,7 @@ ALTER TABLE `booking_alert_translations`
 -- Tablo için AUTO_INCREMENT değeri `booking_passengers`
 --
 ALTER TABLE `booking_passengers`
-  MODIFY `id` int NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=93;
+  MODIFY `id` int NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=350;
 
 --
 -- Tablo için AUTO_INCREMENT değeri `contacts`
@@ -1982,13 +2276,13 @@ ALTER TABLE `contacts`
 -- Tablo için AUTO_INCREMENT değeri `destinations`
 --
 ALTER TABLE `destinations`
-  MODIFY `id` int UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=19;
+  MODIFY `id` int UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=27;
 
 --
 -- Tablo için AUTO_INCREMENT değeri `destination_translations`
 --
 ALTER TABLE `destination_translations`
-  MODIFY `id` int UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=330;
+  MODIFY `id` int UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=343;
 
 --
 -- Tablo için AUTO_INCREMENT değeri `destination_vehicles`
@@ -2042,7 +2336,7 @@ ALTER TABLE `gallery_categories`
 -- Tablo için AUTO_INCREMENT değeri `hotels`
 --
 ALTER TABLE `hotels`
-  MODIFY `id` int NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=18;
+  MODIFY `id` int NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=47;
 
 --
 -- Tablo için AUTO_INCREMENT değeri `languages`
@@ -2078,7 +2372,7 @@ ALTER TABLE `menu_item_translations`
 -- Tablo için AUTO_INCREMENT değeri `outsource_partners`
 --
 ALTER TABLE `outsource_partners`
-  MODIFY `id` int UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=12;
+  MODIFY `id` int UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=13;
 
 --
 -- Tablo için AUTO_INCREMENT değeri `pages`

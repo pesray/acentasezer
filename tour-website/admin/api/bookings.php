@@ -340,13 +340,16 @@ switch ($action) {
             $stmt = $db->prepare("
                 SELECT b.is_completed, b.is_outsourced, b.outsource_name, b.outsource_price,
                        b.outsource_currency, b.currency, b.outsource_pickup_time,
-                       op.phone AS outsource_phone
+                       op.phone AS outsource_phone,
+                       d.id AS driver_id, d.name AS driver_name, d.surname AS driver_surname
                 FROM bookings b
                 LEFT JOIN outsource_partners op ON (
                     (b.outsource_partner_id IS NOT NULL AND op.id = b.outsource_partner_id)
                     OR
                     (b.outsource_partner_id IS NULL AND op.name = b.outsource_name AND op.is_active = 1)
                 )
+                LEFT JOIN booking_drivers bd ON b.id = bd.booking_id
+                LEFT JOIN drivers d ON bd.driver_id = d.id
                 WHERE b.id = ?
             ");
             $stmt->execute([$id]);
@@ -361,8 +364,48 @@ switch ($action) {
                 'outsource_price'       => $row['outsource_price'],
                 'outsource_currency'    => $row['outsource_currency'] ?: ($row['currency'] ?: 'TRY'),
                 'outsource_pickup_time' => $row['outsource_pickup_time'],
+                'driver_id'             => (int)($row['driver_id'] ?? 0),
+                'driver_name'           => $row['driver_name'] ?? '',
+                'driver_surname'        => $row['driver_surname'] ?? '',
             ]);
         } catch (Exception $e) {
+            jsonResponse(false, 'Hata: ' . $e->getMessage());
+        }
+        break;
+
+    case 'list_drivers':
+        try {
+            $stmt = $db->prepare("
+                SELECT d.id, d.name, d.surname, d.phone, d.plate, v.brand, v.model
+                FROM drivers d
+                LEFT JOIN vehicles v ON d.vehicle_id = v.id
+                ORDER BY d.name, d.surname
+            ");
+            $stmt->execute();
+            $drivers = $stmt->fetchAll(PDO::FETCH_ASSOC);
+            jsonResponse(true, 'OK', ['drivers' => $drivers]);
+        } catch (Exception $e) {
+            jsonResponse(false, 'Hata: ' . $e->getMessage());
+        }
+        break;
+
+    case 'set_driver':
+        $bookingId = (int)($_POST['booking_id'] ?? 0);
+        $driverId = (int)($_POST['driver_id'] ?? 0);
+        if (!$bookingId) jsonResponse(false, 'Geçersiz Booking ID');
+        try {
+            $db->beginTransaction();
+            // Mevcut şöförü sil
+            $db->prepare("DELETE FROM booking_drivers WHERE booking_id = ?")->execute([$bookingId]);
+            // Yeni şöförü ekle (boş değilse)
+            if ($driverId > 0) {
+                $stmt = $db->prepare("INSERT INTO booking_drivers (booking_id, driver_id) VALUES (?, ?)");
+                $stmt->execute([$bookingId, $driverId]);
+            }
+            $db->commit();
+            jsonResponse(true, 'Şöför kaydedildi.');
+        } catch (Exception $e) {
+            $db->rollBack();
             jsonResponse(false, 'Hata: ' . $e->getMessage());
         }
         break;

@@ -77,6 +77,9 @@ try {
         case 'outsource_partners':
             require_once __DIR__ . '/outsource_partners.php';
             break;
+        case 'drivers':
+            require_once __DIR__ . '/drivers.php';
+            break;
         default:
             jsonResponse(false, 'Geçersiz entity: ' . $entity);
     }

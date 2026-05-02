@@ -825,6 +825,10 @@ if ($siteLogo && defined('UPLOADS_URL')) {
             <i class="bi bi-car-front nav-link-icon"></i>
             <span class="nav-link-text">Araçlar</span>
         </a>
+        <a href="<?= ADMIN_URL ?>/drivers.php" class="nav-link <?= $currentPage === 'drivers' ? 'active' : '' ?>" title="Şöförler">
+            <i class="bi bi-person-badge nav-link-icon"></i>
+            <span class="nav-link-text">Şöförler</span>
+        </a>
         <a href="<?= ADMIN_URL ?>/hotels.php" class="nav-link <?= $currentPage === 'hotels' ? 'active' : '' ?>" title="Oteller">
             <i class="bi bi-building nav-link-icon"></i>
             <span class="nav-link-text">Oteller</span>

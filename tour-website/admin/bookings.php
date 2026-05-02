@@ -1436,6 +1436,33 @@ require_once __DIR__ . '/includes/header.php';
     </div>
 </div>
 
+<!-- ===================== ŞÖFÖR MODAL ===================== -->
+<div class="modal fade" id="driverSelectModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header" style="background:linear-gradient(135deg,#667eea,#764ba2);color:#fff;">
+                <h5 class="modal-title"><i class="bi bi-person-badge me-2"></i>İşi Yapan Şöförü Seç</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" style="filter:brightness(0) invert(1);"></button>
+            </div>
+            <div class="modal-body">
+                <input type="hidden" id="driver-modal-booking-id" value="">
+                <div class="mb-3">
+                    <label class="form-label fw-semibold">Şöför *</label>
+                    <select id="driver-modal-select" class="form-select" required>
+                        <option value="">-- Şöför Seç --</option>
+                    </select>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">İptal</button>
+                <button type="button" class="btn btn-primary btn-sm" id="driver-modal-save-btn">
+                    <i class="bi bi-check-lg me-1"></i>Kaydet
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
 <!-- ===================== İŞ DURUMU MODALı ===================== -->
 <div class="modal fade" id="opsStatusModal" tabindex="-1">
     <div class="modal-dialog modal-lg">
@@ -1454,6 +1481,19 @@ require_once __DIR__ . '/includes/header.php';
                 <!-- İş Durumu -->
                 <div id="ops-status-body">
                     <div class="text-center py-3"><span class="spinner-border spinner-border-sm"></span></div>
+                </div>
+                <!-- Şöför Seçimi -->
+                <div class="mt-4 pt-4" style="border-top:1px dashed #b8d4f0;">
+                    <h6 class="fw-bold mb-3"><i class="bi bi-person-badge me-2 text-primary"></i>Şöför Ata</h6>
+                    <div class="mb-3">
+                        <select id="ops-modal-driver" class="form-select" data-booking-id="">
+                            <option value="">-- Şöför Seç --</option>
+                        </select>
+                    </div>
+                    <button type="button" class="btn btn-primary btn-sm" id="ops-modal-driver-save">
+                        <i class="bi bi-check-lg me-1"></i>Kaydet
+                    </button>
+                    <span class="ops-modal-driver-status ms-2 small" style="display:none;"></span>
                 </div>
             </div>
         </div>
@@ -1974,11 +2014,45 @@ var outsourceSaved            = false;
 var outsourceChkRef           = null;
 var outsourceModalCurrentName = '';
 var outsourceModalCurrentPid  = 0;
+var completedSaved            = false;
+var completedChkRef           = null;
 
 document.addEventListener('change', function(e) {
     if (!e.target.classList.contains('ops-check')) return;
     const id    = e.target.dataset.id;
     const field = e.target.dataset.field;
+
+    if (field === 'is_completed') {
+        if (e.target.checked) {
+            // Şöför modal'ını aç
+            completedChkRef = e.target;
+            completedSaved = false;
+            document.getElementById('driver-modal-booking-id').value = id;
+            openDriverModal(id);
+        } else {
+            // Şöförü kaldır ve is_completed'ı 0 yap
+            const fd = new FormData();
+            fd.append('action', 'set_driver');
+            fd.append('booking_id', id);
+            fd.append('driver_id', 0);
+            fd.append('csrf_token', csrfToken);
+            fetch(apiUrl, {method:'POST', body:fd})
+                .then(r => r.json())
+                .then(d => {
+                    // is_completed'ı 0 yap
+                    const fdStatus = new FormData();
+                    fdStatus.append('action', 'update_ops');
+                    fdStatus.append('id', id);
+                    fdStatus.append('field', 'is_completed');
+                    fdStatus.append('value', 0);
+                    fdStatus.append('csrf_token', csrfToken);
+                    return fetch(apiUrl, {method:'POST', body:fdStatus}).then(r => r.json());
+                })
+                .then(d => showToast(d.message || 'İş yapıldı kaldırıldı', d.success))
+                .catch(() => showToast('Bir hata oluştu.', false));
+        }
+        return;
+    }
 
     if (field === 'is_outsourced') {
         if (e.target.checked) {
@@ -2313,6 +2387,9 @@ function openOpsStatus(id) {
         .then(function(d) {
             if (!d.success) { body.innerHTML = '<p class="text-danger mb-0">Veri alınamadı.</p>'; return; }
             const ops = d.data;
+            // Ops verilerini window'a kaydet (şöför seçimi için)
+            if (!window.bookingOpsData) window.bookingOpsData = {};
+            window.bookingOpsData[id] = ops;
             const yesNo = function(val, yesColor, noColor) {
                 return val
                     ? '<span class="badge bg-' + yesColor + '">Evet</span>'
@@ -2448,6 +2525,54 @@ function openOpsStatus(id) {
         })
         .catch(function(err) { body.innerHTML = '<p class="text-danger mb-0">Hata: ' + (err.message || 'Bağlantı hatası') + '</p>'; console.error('Ops Error:', err); })
         .finally(function() {
+            // Şöför listesini yükle
+            var fdDrivers = new FormData();
+            fdDrivers.append('action', 'list_drivers');
+            fdDrivers.append('csrf_token', csrfToken);
+            fetch(apiUrl, {method:'POST', body:fdDrivers})
+                .then(function(r) { return r.json(); })
+                .then(function(d) {
+                    if (d.success && d.data && d.data.drivers) {
+                        var $sel = $('#ops-modal-driver');
+                        var sel = document.getElementById('ops-modal-driver');
+                        var curDriverId = 0;
+                        // Mevcut şöförü kontrol et
+                        var bData = bookingsData.find(function(x) { return x.id == id; });
+                        if (bData && window.bookingOpsData && window.bookingOpsData[id]) {
+                            curDriverId = window.bookingOpsData[id].driver_id || 0;
+                        }
+
+                        // Select2'yi destroy et ve yeniden oluştur
+                        if ($sel.hasClass('select2-hidden-accessible')) {
+                            $sel.select2('destroy');
+                        }
+
+                        sel.innerHTML = '<option value=""></option>';
+                        (d.data.drivers || []).forEach(function(dr) {
+                            var txt = dr.name + ' ' + dr.surname;
+                            if (dr.plate) txt += ' • ' + dr.plate;
+                            if (dr.brand) txt += ' (' + dr.brand + ' ' + dr.model + ')';
+                            var opt = new Option(txt, dr.id, false, dr.id == curDriverId);
+                            $sel.append(opt);
+                        });
+
+                        // Select2 initialize et
+                        $sel.select2({
+                            theme: 'bootstrap-5',
+                            width: '100%',
+                            placeholder: 'Şöför seçin...',
+                            allowClear: true,
+                            dropdownParent: $('#opsStatusModal')
+                        });
+
+                        if (curDriverId > 0) {
+                            $sel.val(curDriverId).trigger('change');
+                        }
+
+                        sel.dataset.bookingId = id;
+                    }
+                }).catch(function(){});
+
             // Operasyon durumu yüklendikten sonra (veritabanı kilidini aşmamak için) kişi listesini çek
             var fdPax = new FormData();
             fdPax.append('action', 'get_passengers');
@@ -2656,5 +2781,152 @@ document.getElementById('quick-hotel-save-btn').addEventListener('click', functi
             btn.disabled = false;
             btn.innerHTML = '<i class="bi bi-plus-lg me-1"></i>Ekle ve Seç';
         });
+});
+
+// ─── Şöför Kaydet Handler ─────────────────────────────────────────────────────
+document.getElementById('ops-modal-driver-save').addEventListener('click', function() {
+    var sel = document.getElementById('ops-modal-driver');
+    var bookingId = parseInt(sel.dataset.bookingId || 0);
+    var driverId = parseInt(sel.value || 0);
+
+    if (!bookingId) return;
+
+    var btn = this;
+    var statusEl = document.querySelector('.ops-modal-driver-status');
+    btn.disabled = true;
+    btn.innerHTML = '<span class="spinner-border spinner-border-sm me-1" style="width:.7rem;height:.7rem;"></span>Kaydediliyor...';
+    statusEl.style.display = 'none';
+
+    var fd = new FormData();
+    fd.append('action', 'set_driver');
+    fd.append('booking_id', bookingId);
+    fd.append('driver_id', driverId);
+    fd.append('csrf_token', csrfToken);
+
+    fetch(apiUrl, {method:'POST', body:fd})
+        .then(function(r) { return r.json(); })
+        .then(function(d) {
+            btn.disabled = false;
+            btn.innerHTML = '<i class="bi bi-check-lg me-1"></i>Kaydet';
+            if (d.success) {
+                statusEl.textContent = '✓ Kaydedildi';
+                statusEl.className = 'ops-modal-driver-status ms-2 small text-success';
+                statusEl.style.display = 'inline';
+            } else {
+                statusEl.textContent = '✗ ' + (d.message || 'Hata');
+                statusEl.className = 'ops-modal-driver-status ms-2 small text-danger';
+                statusEl.style.display = 'inline';
+            }
+        })
+        .catch(function() {
+            btn.disabled = false;
+            btn.innerHTML = '<i class="bi bi-check-lg me-1"></i>Kaydet';
+            statusEl.textContent = '✗ Bağlantı hatası';
+            statusEl.className = 'ops-modal-driver-status ms-2 small text-danger';
+            statusEl.style.display = 'inline';
+        });
+});
+
+// ─── Şöför Seçim Modal (İş Yapıldı Checkbox) ─────────────────────────────────
+function openDriverModal(bookingId) {
+    const $sel = $('#driver-modal-select');
+
+    // Select2'yi yoksa initialize et
+    if (!$sel.hasClass('select2-hidden-accessible')) {
+        $sel.select2({
+            theme: 'bootstrap-5',
+            width: '100%',
+            placeholder: 'Şöför seçin...',
+            allowClear: true,
+            dropdownParent: $('#driverSelectModal')
+        });
+    }
+
+    $sel.empty().append('<option value=""></option>');
+
+    const fd = new FormData();
+    fd.append('action', 'list_drivers');
+    fd.append('csrf_token', csrfToken);
+
+    fetch(apiUrl, {method:'POST', body:fd})
+        .then(function(r) { return r.json(); })
+        .then(function(d) {
+            if (d.success && d.data && d.data.drivers) {
+                (d.data.drivers || []).forEach(function(dr) {
+                    var txt = dr.name + ' ' + dr.surname;
+                    if (dr.plate) txt += ' • ' + dr.plate;
+                    if (dr.brand) txt += ' (' + dr.brand + ' ' + dr.model + ')';
+                    const opt = new Option(txt, dr.id);
+                    $sel.append(opt);
+                });
+            }
+            $sel.trigger('change');
+            new bootstrap.Modal(document.getElementById('driverSelectModal')).show();
+        })
+        .catch(function() {
+            new bootstrap.Modal(document.getElementById('driverSelectModal')).show();
+        });
+}
+
+// Şöför seçim modal kaydet
+document.getElementById('driver-modal-save-btn').addEventListener('click', function() {
+    const sel = document.getElementById('driver-modal-select');
+    const bookingId = parseInt(document.getElementById('driver-modal-booking-id').value || 0);
+    const driverId = parseInt(sel.value || 0);
+
+    if (!bookingId) return;
+
+    const btn = this;
+    btn.disabled = true;
+    btn.innerHTML = '<span class="spinner-border spinner-border-sm me-1" style="width:.7rem;height:.7rem;"></span>Kaydediliyor...';
+
+    const fd = new FormData();
+    fd.append('action', 'set_driver');
+    fd.append('booking_id', bookingId);
+    fd.append('driver_id', driverId);
+    fd.append('csrf_token', csrfToken);
+
+    fetch(apiUrl, {method:'POST', body:fd})
+        .then(function(r) { return r.json(); })
+        .then(function(d) {
+            if (d.success) {
+                completedSaved = true;
+                // is_completed status'unu da kaydet
+                const fdStatus = new FormData();
+                fdStatus.append('action', 'update_ops');
+                fdStatus.append('id', bookingId);
+                fdStatus.append('field', 'is_completed');
+                fdStatus.append('value', 1);
+                fdStatus.append('csrf_token', csrfToken);
+
+                fetch(apiUrl, {method:'POST', body:fdStatus})
+                    .then(function(r) { return r.json(); })
+                    .then(function(d2) {
+                        bootstrap.Modal.getInstance(document.getElementById('driverSelectModal')).hide();
+                        showToast('Şöför kaydedildi ve iş yapıldı olarak işaretlendi.', true);
+                    })
+                    .catch(function() {
+                        bootstrap.Modal.getInstance(document.getElementById('driverSelectModal')).hide();
+                        showToast('Şöför kaydedildi fakat status güncellenemedi.', false);
+                    });
+            } else {
+                btn.disabled = false;
+                btn.innerHTML = '<i class="bi bi-check-lg me-1"></i>Kaydet';
+                showToast(d.message || 'Hata oluştu', false);
+            }
+        })
+        .catch(function() {
+            btn.disabled = false;
+            btn.innerHTML = '<i class="bi bi-check-lg me-1"></i>Kaydet';
+            showToast('Bir hata oluştu.', false);
+        });
+});
+
+// Modal iptal → checkbox'ı geri al
+document.getElementById('driverSelectModal').addEventListener('hide.bs.modal', function() {
+    if (!completedSaved && completedChkRef) {
+        completedChkRef.checked = false;
+    }
+    completedChkRef = null;
 });
 </script>
