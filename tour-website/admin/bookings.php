@@ -232,9 +232,7 @@ require_once __DIR__ . '/includes/header.php';
                         </div>
                     </div>
                     <div class="booking-customer mb-1"><i class="bi bi-person me-1"></i><?= e($pb['customer_name']) ?></div>
-                    <?php if ($pb['customer_phone']): ?>
-                    <div class="mb-1"><strong><i class="bi bi-telephone me-1"></i><?= e($pb['customer_phone']) ?></strong></div>
-                    <?php endif; ?>
+
                     <hr class="my-2">
                     <?php if ($dateField): ?>
                     <div>
@@ -308,52 +306,14 @@ require_once __DIR__ . '/includes/header.php';
     <div class="card-body">
 
     <style>
-#bookingsTable {
-    zoom: 0.95;
-}
-/* Mobile: bazı sütunları gizle, ferahlat */
+
+/* Mobile: sütun paddinglerini daralt */
 @media (max-width: 991.98px) {
-    #bookingsTable { zoom: 1; font-size: .8rem; }
     #bookingsTable th, #bookingsTable td { padding: .5rem .4rem; }
 }
-@media (max-width: 767.98px) {
-    /* all view: Geliş Saati(3), Gidiş Saati(5), Kişi(8), Otel(9), Araç(10), Durum(14) gizle
-       — Geliş Durumu(12) ve Dönüş Durumu(13) görünür kalır */
-    .view-all #bookingsTable th:nth-child(3),
-    .view-all #bookingsTable td:nth-child(3),
-    .view-all #bookingsTable th:nth-child(5),
-    .view-all #bookingsTable td:nth-child(5),
-    .view-all #bookingsTable th:nth-child(8),
-    .view-all #bookingsTable td:nth-child(8),
-    .view-all #bookingsTable th:nth-child(9),
-    .view-all #bookingsTable td:nth-child(9),
-    /* Masaüstü ve tabletler için gizleme kuralları (Mobilde DataTables yönetecek) */
-    @media (min-width: 768px) {
-        .view-all #bookingsTable th:nth-child(10),
-        .view-all #bookingsTable td:nth-child(10),
-        .view-all #bookingsTable th:nth-child(14),
-        .view-all #bookingsTable td:nth-child(14) { display: none; }
-
-        /* arrival: Yön(1), Alış Saati(4) gizle */
-        .view-arrival #bookingsTable th:nth-child(1),
-        .view-arrival #bookingsTable td:nth-child(1),
-        .view-arrival #bookingsTable th:nth-child(4),
-        .view-arrival #bookingsTable td:nth-child(4) { display: none; }
-
-        /* return: Yön(1) gizle */
-        .view-return #bookingsTable th:nth-child(1),
-        .view-return #bookingsTable td:nth-child(1) { display: none; }
-
-        /* daily: Saat(3), Alış Saati(4), Kişi(6), Araç(8) gizle */
-        .view-daily #bookingsTable th:nth-child(3),
-        .view-daily #bookingsTable td:nth-child(3),
-        .view-daily #bookingsTable th:nth-child(4),
-        .view-daily #bookingsTable td:nth-child(4),
-        .view-daily #bookingsTable th:nth-child(6),
-        .view-daily #bookingsTable td:nth-child(6),
-        .view-daily #bookingsTable th:nth-child(8),
-        .view-daily #bookingsTable td:nth-child(8) { display: none; }
-    }
+@media (min-width: 768px) {
+    /* Özel masaüstü gizleme kuralları iptal edildi, tüm sütunlar görünür */
+}
 
     /* Custom DTR Toggle Button (Mobile Child Row Açma Butonu) */
     table.dataTable.dtr-inline.collapsed > tbody > tr > td.dtr-control::before, 
@@ -521,22 +481,7 @@ require_once __DIR__ . '/includes/header.php';
         font-size: 1.1rem !important; /* İkonları netleştir ve büyüt */
     }
 
-    /* Masaüstü (Desktop) Görünümde "Tüm Rezervasyonlar"ın ekrana sığması için sıkıştırma */
-    @media (min-width: 992px) {
-        .view-all #bookingsTable {
-            font-size: 0.85rem;
-        }
-        .view-all #bookingsTable th,
-        .view-all #bookingsTable td {
-            padding: 0.5rem 0.4rem !important;
-            white-space: normal !important; /* Uzun otel/müşteri isimleri alt satıra geçerek yatayda yer açsın */
-            word-break: break-word;
-        }
-        .view-all #bookingsTable .btn-group .btn {
-            padding: 0.25rem 0.5rem;
-            font-size: 0.85rem;
-        }
-    }
+
 
     /* Tablet/Desktop için Custom Scroll (Mobilde DataTables Responsive çalışsın diye genişlik zorlamaz) */
     /* BU KISIM KALDIRILDI - BOOTSTRAP TABLE-RESPONSIVE KULLANILACAK */
@@ -560,8 +505,9 @@ require_once __DIR__ . '/includes/header.php';
             <tr>
                 <th class="all">Yön</th>
                 <th class="all">Tarih</th>
-                <th class="min-tablet">Saat</th>
                 <th class="min-tablet">Alış Saati</th>
+                <th class="min-tablet">Saat</th>
+                <th class="min-tablet">Uçuş Kodu</th>
                 <th class="min-tablet">Müşteri</th>
                 <th class="all">Kişi</th>
                 <th class="min-tablet">Otel Adı</th>
@@ -588,19 +534,22 @@ require_once __DIR__ . '/includes/header.php';
                 </td>
                 <td data-order="<?= $dateField ? date('Y-m-d', strtotime($dateField)) : '' ?>"><?= $dateField ? date('d.m.Y', strtotime($dateField)) : '-' ?></td>
                 <td>
-                    <?php if ($b['flight_time']): ?>
-                        <strong><?= date('H:i', strtotime($b['flight_time'])) ?></strong>
-                        <?php if ($b['flight_number']): ?><br><strong class="text-dark">(<?= e($b['flight_number']) ?>)</strong><?php endif; ?>
-                    <?php else: ?>-<?php endif; ?>
-                </td>
-                <td>
                     <?php if ($dir === 'return' && $b['pickup_time']): ?>
                         <strong><?= date('H:i', strtotime($b['pickup_time'])) ?></strong>
                     <?php else: ?>-<?php endif; ?>
                 </td>
                 <td>
-                    <?= e($b['customer_name']) ?><br>
-                    <strong><?= e($b['customer_phone'] ?? '') ?></strong>
+                    <?php if ($b['flight_time']): ?>
+                        <strong><?= date('H:i', strtotime($b['flight_time'])) ?></strong>
+                    <?php else: ?>-<?php endif; ?>
+                </td>
+                <td>
+                    <?php if ($b['flight_number']): ?>
+                        <strong><?= e($b['flight_number']) ?></strong>
+                    <?php else: ?>-<?php endif; ?>
+                </td>
+                <td>
+                    <?= e($b['customer_name']) ?>
                 </td>
                 <td><?= (int)$b['adults'] ?>Y<?= (int)$b['children'] > 0 ? ' +'.(int)$b['children'].'Ç' : '' ?></td>
                 <td><?= e(trim($b['hotel_address'] ?? '') ?: '-') ?></td>
@@ -689,10 +638,11 @@ require_once __DIR__ . '/includes/header.php';
             <tr>
                 <th class="all">Yön</th>
                 <th class="all">Tarih</th>
-                <th class="min-tablet">Saat</th>
                 <?php if ($view !== 'arrival'): ?>
                 <th class="min-tablet">Alış Saati</th>
                 <?php endif; ?>
+                <th class="min-tablet">Saat</th>
+                <th class="min-tablet">Uçuş Kodu</th>
                 <th class="min-tablet">Müşteri</th>
                 <th class="all">Kişi</th>
                 <th class="min-tablet">Otel Adı</th>
@@ -718,12 +668,6 @@ require_once __DIR__ . '/includes/header.php';
                     </span>
                 </td>
                 <td data-order="<?= $dateField ? date('Y-m-d', strtotime($dateField)) : '' ?>"><?= $dateField ? date('d.m.Y', strtotime($dateField)) : '-' ?></td>
-                <td>
-                    <?php if ($b['flight_time']): ?>
-                        <strong><?= date('H:i', strtotime($b['flight_time'])) ?></strong>
-                        <?php if ($b['flight_number']): ?><br><strong class="text-dark">(<?= e($b['flight_number']) ?>)</strong><?php endif; ?>
-                    <?php else: ?>-<?php endif; ?>
-                </td>
                 <?php if ($view !== 'arrival'): ?>
                 <td>
                     <?php if ($dir === 'return' && $b['pickup_time']): ?>
@@ -732,8 +676,17 @@ require_once __DIR__ . '/includes/header.php';
                 </td>
                 <?php endif; ?>
                 <td>
-                    <?= e($b['customer_name']) ?><br>
-                    <strong><?= e($b['customer_phone'] ?? '') ?></strong>
+                    <?php if ($b['flight_time']): ?>
+                        <strong><?= date('H:i', strtotime($b['flight_time'])) ?></strong>
+                    <?php else: ?>-<?php endif; ?>
+                </td>
+                <td>
+                    <?php if ($b['flight_number']): ?>
+                        <strong><?= e($b['flight_number']) ?></strong>
+                    <?php else: ?>-<?php endif; ?>
+                </td>
+                <td>
+                    <?= e($b['customer_name']) ?>
                 </td>
                 <td><?= (int)$b['adults'] ?>Y<?= (int)$b['children'] > 0 ? ' +'.(int)$b['children'].'Ç' : '' ?></td>
                 <td><?= e(trim($b['hotel_address'] ?? '') ?: '-') ?></td>
@@ -1591,7 +1544,7 @@ $(document).ready(function() {
     // all/daily/return: Yön(0) Tarih(1) Saat(2) AlışSaati(3) Müşteri(4) Kişi(5) Otel(6) Araç(7) Tutar(8) İşDurumu(9) Durum(10) İşlem(11)
     // arrival:      Yön(0) Tarih(1) Saat(2) Müşteri(3) Kişi(4) Otel(5) Araç(6) Tutar(7) İşDurumu(8) Durum(9) İşlem(10)
     const dateColIdxs  = [1];
-    const statusColIdx = currentView === 'arrival' ? 9 : 10;
+    const statusColIdx = currentView === 'arrival' ? 10 : 11;
 
     $.fn.dataTable.ext.search.push(function(settings, data) {
         if (settings.nTable.id !== 'bookingsTable') return true;
