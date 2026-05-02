@@ -553,204 +553,7 @@ require_once __DIR__ . '/includes/header.php';
     <div class="<?= $viewClass ?>">
     <div class="table-responsive">
 
-    <?php if ($view === 'all'): ?>
-    <!-- Tüm Rezervasyonlar: geliş+dönüş çifti tek satırda -->
-    <table id="bookingsTable" class="table table-hover" width="100%">
-        <thead>
-            <tr>
-                <th class="all">Yön</th>
-                <th class="all">Geliş Tarihi</th>
-                <th class="min-tablet">Geliş Saati</th>
-                <th class="min-tablet">Gidiş Tarihi</th>
-                <th class="min-tablet">Gidiş Saati</th>
-                <th class="min-tablet">Alış Saati</th>
-                <th class="min-tablet">Müşteri</th>
-                <th class="all">Kişi</th>
-                <th class="min-tablet">Otel Adı</th>
-                <th class="min-tablet">Araç</th>
-                <th class="min-tablet">Tutar</th>
-                <th class="min-tablet">Geliş Durumu</th>
-                <th class="min-tablet">Dönüş Durumu</th>
-                <th class="min-tablet">Durum</th>
-                <th class="min-tablet">İşlem</th>
-            </tr>
-        </thead>
-        <tbody>
-            <?php foreach ($tripGroups as $trip):
-                $out  = $trip['out'];
-                $ret  = $trip['ret'];
-                $base = $out ?? $ret;
-                if (!$base) continue;
-            ?>
-            <tr>
-                <td>
-                    <?php if ($out): ?>
-                    <span class="badge bg-primary"><i class="bi bi-box-arrow-in-down-right me-1"></i>Geliş</span>
-                    <?php endif; ?>
-                    <?php if ($ret): ?>
-                    <span class="badge bg-info"><i class="bi bi-box-arrow-up-right me-1"></i>Dönüş</span>
-                    <?php endif; ?>
-                </td>
-                <td><?= ($out && $out['flight_date']) ? date('d.m.Y', strtotime($out['flight_date'])) : '-' ?></td>
-                <td>
-                    <?php if ($out && $out['flight_time']): ?>
-                        <strong><?= date('H:i', strtotime($out['flight_time'])) ?></strong>
-                        <?php if ($out['flight_number']): ?><br><strong class="text-dark">(<?= e($out['flight_number']) ?>)</strong><?php endif; ?>
-                    <?php else: ?>-<?php endif; ?>
-                </td>
-                <td><?= ($ret && $ret['flight_date']) ? date('d.m.Y', strtotime($ret['flight_date'])) : '-' ?></td>
-                <td>
-                    <?php if ($ret && $ret['flight_time']): ?>
-                        <strong><?= date('H:i', strtotime($ret['flight_time'])) ?></strong>
-                        <?php if ($ret['flight_number']): ?><br><strong class="text-dark">(<?= e($ret['flight_number']) ?>)</strong><?php endif; ?>
-                    <?php else: ?>-<?php endif; ?>
-                </td>
-                <td>
-                    <?= ($ret && $ret['pickup_time']) ? '<strong>'.date('H:i', strtotime($ret['pickup_time'])).'</strong>' : '-' ?>
-                </td>
-                <td>
-                    <?= e($base['customer_name']) ?><br>
-                    <strong><?= e($base['customer_phone'] ?? '') ?></strong>
-                </td>
-                <td><?= (int)$base['adults'] ?>Y<?= (int)$base['children'] > 0 ? ' +'.(int)$base['children'].'Ç' : '' ?></td>
-                <td><?= e(trim($base['hotel_address'] ?? '') ?: '-') ?></td>
-                <td><?= e(trim($base['vehicle_name'] ?? '') ?: '-') ?></td>
-                <td>
-                    <?php if ($out && (float)$out['total_price'] > 0): ?>
-                        <small class="text-muted">G:</small> <strong><?= number_format((float)$out['total_price'], 0, ',', '.') ?></strong> <small><?= e($out['currency'] ?? 'TRY') ?></small>
-                    <?php endif; ?>
-                    <?php if ($ret && (float)$ret['total_price'] > 0): ?>
-                        <?php if ($out && (float)$out['total_price'] > 0): ?><br><?php endif; ?>
-                        <small class="text-muted">D:</small> <strong><?= number_format((float)$ret['total_price'], 0, ',', '.') ?></strong> <small><?= e($ret['currency'] ?? 'TRY') ?></small>
-                    <?php endif; ?>
-                    <?php if (!($out && (float)$out['total_price'] > 0) && !($ret && (float)$ret['total_price'] > 0)): ?>-<?php endif; ?>
-                </td>
-                <!-- Geliş Durumu -->
-                <td><?php if ($out): ?>
-                    <div class="ops-cell">
-                        <div class="form-check mb-1">
-                            <input type="checkbox" class="form-check-input ops-check" id="comp-<?= $out['id'] ?>"
-                                   data-id="<?= $out['id'] ?>" data-field="is_completed"
-                                   <?= !empty($out['is_completed']) ? 'checked' : '' ?>>
-                            <label class="form-check-label small" for="comp-<?= $out['id'] ?>">İş yapıldı</label>
-                        </div>
-                        <div class="form-check">
-                            <input type="checkbox" class="form-check-input ops-check ops-out-check" id="out-<?= $out['id'] ?>"
-                                   data-id="<?= $out['id'] ?>" data-field="is_outsourced"
-                                   data-outsource-name="<?= e($out['outsource_name'] ?? '') ?>"
-                                   data-outsource-partner-id="<?= (int)($out['outsource_partner_id'] ?? 0) ?>"
-                                   <?= !empty($out['is_outsourced']) ? 'checked' : '' ?>>
-                            <label class="form-check-label small" for="out-<?= $out['id'] ?>">Dışarıya verildi</label>
-                        </div>
-                        <div class="ops-price-wrap mt-1" <?= !empty($out['is_outsourced']) ? '' : 'style="display:none;"' ?>>
-                            <input type="number" class="form-control form-control-sm ops-price-input"
-                                   data-id="<?= $out['id'] ?>"
-                                   value="<?= e($out['outsource_price'] ?? '') ?>"
-                                   placeholder="Tutar..." min="0" step="0.01" style="width:90px;">
-                            <?php if (!empty($out['outsource_name'])): ?>
-                            <small class="ops-name-display text-muted d-block mt-1"><?= e($out['outsource_name']) ?></small>
-                            <?php else: ?>
-                            <small class="ops-name-display text-muted d-block mt-1" style="display:none!important;"></small>
-                            <?php endif; ?>
-                        </div>
-                    </div>
-                <?php else: ?>-<?php endif; ?></td>
-                <!-- Dönüş Durumu -->
-                <td><?php if ($ret): ?>
-                    <div class="ops-cell">
-                        <div class="form-check mb-1">
-                            <input type="checkbox" class="form-check-input ops-check" id="comp-<?= $ret['id'] ?>"
-                                   data-id="<?= $ret['id'] ?>" data-field="is_completed"
-                                   <?= !empty($ret['is_completed']) ? 'checked' : '' ?>>
-                            <label class="form-check-label small" for="comp-<?= $ret['id'] ?>">İş yapıldı</label>
-                        </div>
-                        <div class="form-check">
-                            <input type="checkbox" class="form-check-input ops-check ops-out-check" id="out-<?= $ret['id'] ?>"
-                                   data-id="<?= $ret['id'] ?>" data-field="is_outsourced"
-                                   data-outsource-name="<?= e($ret['outsource_name'] ?? '') ?>"
-                                   <?= !empty($ret['is_outsourced']) ? 'checked' : '' ?>>
-                            <label class="form-check-label small" for="out-<?= $ret['id'] ?>">Dışarıya verildi</label>
-                        </div>
-                        <div class="ops-price-wrap mt-1" <?= !empty($ret['is_outsourced']) ? '' : 'style="display:none;"' ?>>
-                            <input type="number" class="form-control form-control-sm ops-price-input"
-                                   data-id="<?= $ret['id'] ?>"
-                                   value="<?= e($ret['outsource_price'] ?? '') ?>"
-                                   placeholder="Tutar..." min="0" step="0.01" style="width:90px;">
-                            <?php if (!empty($ret['outsource_name'])): ?>
-                            <small class="ops-name-display text-muted d-block mt-1"><?= e($ret['outsource_name']) ?></small>
-                            <?php else: ?>
-                            <small class="ops-name-display text-muted d-block mt-1" style="display:none!important;"></small>
-                            <?php endif; ?>
-                        </div>
-                    </div>
-                <?php else: ?>-<?php endif; ?></td>
-                <td>
-                    <div class="d-flex flex-column gap-1" style="width:fit-content;">
-                    <?php if ($out): ?>
-                    <button type="button" class="btn btn-outline-primary" style="padding:2px 6px;" onclick="openOpsStatus(<?= $out['id'] ?>)" title="Geliş İş Durumu">
-                        <i class="bi bi-box-arrow-in-down-right"></i>
-                    </button>
-                    <?php endif; ?>
-                    <?php if ($ret): ?>
-                    <button type="button" class="btn btn-outline-info" style="padding:2px 6px;" onclick="openOpsStatus(<?= $ret['id'] ?>)" title="Dönüş İş Durumu">
-                        <i class="bi bi-box-arrow-up-right"></i>
-                    </button>
-                    <?php endif; ?>
-                    </div>
-                </td>
-                <td>
-                    <?php
-                        $vParts = [];
-                        if ($out) $vParts[] = 'out_id=' . $out['id'];
-                        if ($ret) $vParts[] = 'ret_id=' . $ret['id'];
-                        $vParams = implode('&', $vParts);
-                    ?>
-                    <div class="d-flex flex-column gap-1">
-                    <?php if ($out): ?>
-                        <div class="btn-group" style="width:fit-content;">
-                            <button type="button" class="btn btn-outline-primary" style="padding:2px 6px;" onclick="openBookingModal(<?= $out['id'] ?>)" title="Geliş Detayı">
-                                <i class="bi bi-box-arrow-in-down-right"></i>
-                            </button>
-
-                            <button type="button" class="btn btn-outline-danger" style="padding:2px 6px;" onclick="deleteBooking(<?= $out['id'] ?>)" title="Geliş Sil">
-                                <i class="bi bi-trash"></i>
-                            </button>
-                        </div>
-                    <?php endif; ?>
-                    <?php if ($ret): ?>
-                        <div class="btn-group" style="width:fit-content;">
-                            <button type="button" class="btn btn-outline-info" style="padding:2px 6px;" onclick="openBookingModal(<?= $ret['id'] ?>)" title="Dönüş Detayı">
-                                <i class="bi bi-box-arrow-up-right"></i>
-                            </button>
-
-                            <button type="button" class="btn btn-outline-danger" style="padding:2px 6px;" onclick="deleteBooking(<?= $ret['id'] ?>)" title="Dönüş Sil">
-                                <i class="bi bi-trash"></i>
-                            </button>
-                        </div>
-                    <?php endif; ?>
-                    <!-- Voucher (her zaman) -->
-                    <div class="btn-group" style="width:fit-content;">
-                        <a href="voucher.php?<?= $vParams ?>&lang=tr" target="_blank" class="btn btn-outline-success" style="padding:2px 6px;" title="Voucher (TR)">
-                            <i class="bi bi-file-earmark-pdf"></i>
-                        </a>
-                        <button type="button" class="btn btn-outline-success dropdown-toggle dropdown-toggle-split" style="padding:2px 4px;" data-bs-toggle="dropdown">
-                            <span class="visually-hidden">Dil Seç</span>
-                        </button>
-                        <ul class="dropdown-menu dropdown-menu-end">
-                            <li><a class="dropdown-item small" href="voucher.php?<?= $vParams ?>&lang=tr" target="_blank">🇹🇷 Türkçe</a></li>
-                            <li><a class="dropdown-item small" href="voucher.php?<?= $vParams ?>&lang=en" target="_blank">🇬🇧 English</a></li>
-                            <li><a class="dropdown-item small" href="voucher.php?<?= $vParams ?>&lang=de" target="_blank">🇩🇪 Deutsch</a></li>
-                            <li><a class="dropdown-item small" href="voucher.php?<?= $vParams ?>&lang=ru" target="_blank">🇷🇺 Русский</a></li>
-                        </ul>
-                    </div>
-                    </div>
-                </td>
-            </tr>
-            <?php endforeach; ?>
-        </tbody>
-    </table>
-
-    <?php elseif ($view === 'daily'): ?>
+    <?php if ($view === 'all' || $view === 'daily'): ?>
     <!-- Günlük Görünüm: her rezervasyon ayrı satırda -->
     <table id="bookingsTable" class="table table-hover" width="100%">
         <thead>
@@ -1781,15 +1584,14 @@ $(document).ready(function() {
         }
     });
 
-    // daily view ve geliş/dönüş: tarihe göre artan sıra
-    if (currentView === 'daily' || currentView === 'arrival' || currentView === 'return') {
+    // Tüm görünümlerde tarihe göre artan sıra
+    if (currentView === 'all' || currentView === 'daily' || currentView === 'arrival' || currentView === 'return') {
         table.order([[1, 'asc']]).draw();
     }
-    // all:     Yön(0) GelişTarihi(1) GelişSaati(2) GidişTarihi(3) GidişSaati(4) AlışSaati(5) Müşteri(6) Kişi(7) Otel(8) Araç(9) Tutar(10) GelişDurum(11) DönüşDurum(12) Durum(13) İşlem(14)
-    // daily/return: Yön(0) Tarih(1) Saat(2) AlışSaati(3) Müşteri(4) Kişi(5) Otel(6) Araç(7) Tutar(8) İşDurumu(9) Durum(10) İşlem(11)
+    // all/daily/return: Yön(0) Tarih(1) Saat(2) AlışSaati(3) Müşteri(4) Kişi(5) Otel(6) Araç(7) Tutar(8) İşDurumu(9) Durum(10) İşlem(11)
     // arrival:      Yön(0) Tarih(1) Saat(2) Müşteri(3) Kişi(4) Otel(5) Araç(6) Tutar(7) İşDurumu(8) Durum(9) İşlem(10)
-    const dateColIdxs  = currentView === 'all' ? [1, 3] : [1];
-    const statusColIdx = currentView === 'all' ? 11 : (currentView === 'arrival' ? 9 : 10);
+    const dateColIdxs  = [1];
+    const statusColIdx = currentView === 'arrival' ? 9 : 10;
 
     $.fn.dataTable.ext.search.push(function(settings, data) {
         if (settings.nTable.id !== 'bookingsTable') return true;
@@ -1800,7 +1602,11 @@ $(document).ready(function() {
                 var m = (data[dateColIdxs[i]] || '').match(/(\d{2})\.(\d{2})\.(\d{4})/);
                 if (m) {
                     var rowDate = m[3]+'-'+m[2]+'-'+m[1];
-                    if ((currentView === 'daily' || currentView === 'arrival' || currentView === 'return') ? (rowDate >= fd) : (rowDate === fd)) { matched = true; break; }
+                    if (currentView === 'daily') {
+                        if (rowDate === fd) { matched = true; break; }
+                    } else {
+                        if (rowDate >= fd) { matched = true; break; }
+                    }
                 }
             }
             if (!matched) return false;
@@ -1810,16 +1616,13 @@ $(document).ready(function() {
         return true;
     });
 
-    // Günlük görünüm, Geliş ve Dönüş sekmelerinde her halükarda bugünü default olarak seç
-    // Sadece "Tüm Rezervasyonlar" (all) görünümünde tarih boş gelsin.
-    if (currentView !== 'all') {
-        var today = new Date();
-        var todayStr = today.getFullYear() + '-'
-            + String(today.getMonth() + 1).padStart(2, '0') + '-'
-            + String(today.getDate()).padStart(2, '0');
-        $('#filter-date').val(todayStr);
-        table.draw();
-    }
+    // Tüm sekmelerde bugünü default olarak seç
+    var today = new Date();
+    var todayStr = today.getFullYear() + '-'
+        + String(today.getMonth() + 1).padStart(2, '0') + '-'
+        + String(today.getDate()).padStart(2, '0');
+    $('#filter-date').val(todayStr);
+    table.draw();
 
     $('#filter-date, #filter-status').on('change', function() { table.draw(); });
 
