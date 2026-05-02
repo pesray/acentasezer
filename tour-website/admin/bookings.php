@@ -1551,10 +1551,10 @@ require_once __DIR__ . '/includes/header.php';
                 <!-- Inputlar: mobilde alt alta, desktop tek satır -->
                 <div class="row g-2 align-items-end">
                     <!-- Ad Soyad / Firma -->
-                    <div class="col-12 col-md">
+                    <div class="col-12 col-md" style="min-width:200px; max-width:260px;">
                         <label class="form-label fw-semibold mb-1" style="font-size:.82rem;">Ad Soyad / Firma</label>
                         <div class="d-flex gap-1">
-                            <div class="flex-grow-1">
+                            <div class="flex-grow-1" style="min-width: 0;">
                                 <select id="outsource-name-input" class="form-select form-select-sm">
                                     <option value=""></option>
                                 </select>
@@ -1567,31 +1567,38 @@ require_once __DIR__ . '/includes/header.php';
                     <!-- Otelden Alış Saati (sadece dönüş) -->
                     <div class="col-6 col-md-auto" id="outsource-pickup-wrap" style="display:none;">
                         <label class="form-label fw-semibold mb-1" style="font-size:.82rem;">Alış Saati</label>
-                        <input type="time" id="outsource-pickup-input" class="form-control form-control-sm" style="width:130px;">
+                        <input type="time" id="outsource-pickup-input" class="form-control form-control-sm" style="width:90px;">
                     </div>
                     <!-- Tutar + Para Birimi -->
                     <div class="col-6 col-md-auto">
                         <label class="form-label fw-semibold mb-1" style="font-size:.82rem;">Tutar</label>
-                        <div class="d-flex gap-1">
-                            <input type="number" id="outsource-price-input" class="form-control form-control-sm" min="0" step="0.01" placeholder="0.00" style="width:100px;">
-                            <select id="outsource-currency-input" class="form-select form-select-sm" style="width:70px;">
-                                <option value="TRY">TRY</option>
-                                <option value="EUR" selected>EUR</option>
-                                <option value="USD">USD</option>
-                                <option value="GBP">GBP</option>
+                        <div class="input-group input-group-sm flex-nowrap" style="width:150px;">
+                            <select id="outsource-currency-input" class="form-select" style="max-width:75px; padding-left:0.4rem; padding-right:1.2rem;">
+                                <option value="TRY">₺ TRY</option>
+                                <option value="EUR" selected>€ EUR</option>
+                                <option value="USD">$ USD</option>
+                                <option value="GBP">£ GBP</option>
                             </select>
+                            <input type="number" id="outsource-price-input" class="form-control" min="0" step="0.01" placeholder="0.00">
                         </div>
                     </div>
-                    <!-- WP Mesaj At -->
-                    <div class="col-12 col-md-auto" id="outsource-wa-wrap">
-                        <div class="d-flex align-items-center gap-2 border rounded px-2" style="height:32px;background:#f6fff8;border-color:#25d366 !important;white-space:nowrap;width:fit-content;">
+                    <!-- WP Mesaj At ve Tahsilat Yok -->
+                    <div class="col-12 col-md-auto d-flex flex-wrap" id="outsource-wa-wrap">
+                        <div class="d-flex align-items-center  border rounded px-2" style="height:32px;background:#fff5f5;border-color:#dc3545 !important;white-space:nowrap;width:fit-content;">
+                            <div class="form-check form-switch mb-0" style="padding-left:2.2em;min-height:auto;">
+                                <input class="form-check-input mt-0" type="checkbox" id="outsource-no-collection" style="cursor:pointer;width:1.8em;height:.9em;">
+                            </div>
+                            <label for="outsource-no-collection" class="fw-bold mb-0" style="cursor:pointer;color:#dc3545;font-size:.8rem;line-height:1;">
+                                Tahsilat Yok
+                            </label>
+                        </div>
+                        <div class="d-flex align-items-center border rounded px-2" style="height:32px;background:#f6fff8;border-color:#25d366 !important;white-space:nowrap;width:fit-content;">
                             <div class="form-check form-switch mb-0" style="padding-left:2.2em;min-height:auto;">
                                 <input class="form-check-input mt-0" type="checkbox" id="outsource-wa-toggle" style="cursor:pointer;width:1.8em;height:.9em;">
                             </div>
                             <label for="outsource-wa-toggle" class="fw-bold mb-0" style="cursor:pointer;color:#25d366;font-size:.8rem;line-height:1;">
                                 <i class="bi bi-whatsapp"></i> WP Mesaj At
                             </label>
-                            <span class="small text-muted ms-1" id="outsource-wa-hint" style="font-size:.65rem;display:none;">(numara yok)</span>
                         </div>
                     </div>
                 </div>
@@ -2367,10 +2374,11 @@ document.getElementById('outsource-save-btn').addEventListener('click', function
 
                 // WhatsApp mesajı (toggle açık + telefon varsa)
                 const waToggle = document.getElementById('outsource-wa-toggle');
+                const noCollectionToggle = document.getElementById('outsource-no-collection');
                 const waPhone  = ($('#outsource-name-input').find('option:selected').data('phone') || '').toString().trim();
                 if (waToggle.checked && waPhone) {
                     var outCurrency = document.getElementById('outsource-currency-input').value || 'EUR';
-                    sendOutsourceWhatsApp(id, waPhone, name, price, pickupTime, outCurrency);
+                    sendOutsourceWhatsApp(id, waPhone, name, price, pickupTime, outCurrency, noCollectionToggle.checked);
                 }
 
                 bootstrap.Modal.getInstance(document.getElementById('outsourceModal')).hide();
@@ -2390,7 +2398,7 @@ document.addEventListener('blur', function(e) {
 }, true);
 
 // ─── Dışarıya Verilen Partnere WhatsApp Mesajı ────────────────────────────────
-function sendOutsourceWhatsApp(bookingId, partnerPhone, partnerName, partnerPrice, pickupTimeOverride, outsourceCurrency) {
+function sendOutsourceWhatsApp(bookingId, partnerPhone, partnerName, partnerPrice, pickupTimeOverride, outsourceCurrency, noCollection) {
     var bData = bookingsData.find(function(x) { return x.id == bookingId; });
     if (!bData) return;
 
@@ -2404,7 +2412,7 @@ function sendOutsourceWhatsApp(bookingId, partnerPhone, partnerName, partnerPric
         .then(function(r) { return r.json(); })
         .then(function(d) {
             var passengers = (d.success && d.data && d.data.passengers) ? d.data.passengers : [];
-            var msg = buildOutsourceMessage(bData, partnerPrice, pickupTimeOverride, passengers, outsourceCurrency);
+            var msg = buildOutsourceMessage(bData, partnerPrice, pickupTimeOverride, passengers, outsourceCurrency, noCollection);
             var waNumber = (partnerPhone || '').replace(/[^0-9]/g, '');
             if (!waNumber) return;
             var url = 'https://wa.me/' + waNumber + '?text=' + encodeURIComponent(msg);
@@ -2413,7 +2421,7 @@ function sendOutsourceWhatsApp(bookingId, partnerPhone, partnerName, partnerPric
         .catch(function() {});
 }
 
-function buildOutsourceMessage(b, partnerPrice, pickupTimeOverride, passengers, outsourceCurrency) {
+function buildOutsourceMessage(b, partnerPrice, pickupTimeOverride, passengers, outsourceCurrency, noCollection) {
     var AIRPORT  = 'ANTALYA AİRPORT AYT';
     var hotel    = b.hotel_address || '-';
     var isReturn = b.booking_direction === 'return';
@@ -2424,6 +2432,10 @@ function buildOutsourceMessage(b, partnerPrice, pickupTimeOverride, passengers, 
     var price  = b.total_price > 0
         ? (parseFloat(b.total_price).toLocaleString('tr-TR', {minimumFractionDigits:0}) + ' ' + (b.currency || 'EUR'))
         : '-';
+    
+    if (noCollection) {
+        price = 'YOK';
+    }
     var hakCur = outsourceCurrency || b.currency || 'EUR';
     var hak    = (partnerPrice && parseFloat(partnerPrice) > 0)
         ? (parseFloat(partnerPrice).toLocaleString('tr-TR', {minimumFractionDigits:0}) + ' ' + hakCur)
