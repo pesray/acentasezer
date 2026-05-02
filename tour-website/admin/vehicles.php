@@ -102,8 +102,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $isActive = isset($_POST['is_active']) ? 1 : 0;
     $sortOrder = (int)($_POST['sort_order'] ?? 0);
     
-    if (empty($brand) || empty($model)) {
-        setFlashMessage('error', 'Marka ve model alanları zorunludur.');
+    if (empty($brand)) {
+        setFlashMessage('error', 'Araç adı (marka) zorunludur.');
     } else {
         try {
             if ($id) {
@@ -244,8 +244,8 @@ if (empty($availableServices)) {
                             <input type="text" name="brand" class="form-control" value="<?= e($editData['brand'] ?? '') ?>" required placeholder="Mercedes-Benz, BMW, Audi...">
                         </div>
                         <div class="col-md-6">
-                            <label class="form-label">Model <span class="text-danger">*</span></label>
-                            <input type="text" name="model" class="form-control" value="<?= e($editData['model'] ?? '') ?>" required placeholder="Vito, E-Class, A6...">
+                            <label class="form-label">Model</label>
+                            <input type="text" name="model" class="form-control" value="<?= e($editData['model'] ?? '') ?>" placeholder="Vito, E-Class, A6...">
                         </div>
                         <div class="col-md-4">
                             <label class="form-label">Yolcu Kapasitesi</label>

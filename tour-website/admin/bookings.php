@@ -1919,11 +1919,10 @@ document.addEventListener('click', function(e) {
         adultsInput.value = adults;
     } else if (input === childrenInput) {
         if (op === 'plus')  children = Math.min(children + 1, capacity - adults);
-        if (op === 'minus') { children = Math.max(children - 1, 0); seats = Math.min(seats, children); }
+        if (op === 'minus') children = Math.max(children - 1, 0);
         childrenInput.value = children;
-        seatInput.value     = seats;
     } else if (input === seatInput) {
-        if (op === 'plus')  seats = Math.min(seats + 1, children);
+        if (op === 'plus')  seats = Math.min(seats + 1, capacity);
         if (op === 'minus') seats = Math.max(seats - 1, 0);
         seatInput.value = seats;
     }
@@ -2183,8 +2182,12 @@ function buildOutsourceMessage(b, partnerPrice, pickupTimeOverride, passengers, 
     var isReturn = b.booking_direction === 'return';
     var adults   = b.adults || 0;
     var children = b.children || 0;
+    var childSeat = b.child_seat || 0;
 
     var paxStr = adults + ' Yetişkin' + (children > 0 ? ' + ' + children + ' Çocuk' : '');
+    if (childSeat > 0) {
+        paxStr += ' (' + childSeat + ' Çocuk Koltuğu)';
+    }
     var price  = b.total_price > 0
         ? (parseFloat(b.total_price).toLocaleString('tr-TR', {minimumFractionDigits:0}) + ' ' + (b.currency || 'EUR'))
         : '-';
@@ -2211,11 +2214,11 @@ function buildOutsourceMessage(b, partnerPrice, pickupTimeOverride, passengers, 
         var pickupDate = fmtDate(b.flight_date);
         lines.push('*OTELDEN ALINIŞ: ' + pickupDate + ' - ' + pickupTime + '*');
         lines.push('Uçuş: ' + fmtDate(b.flight_date) + ' - ' + fmtTime(b.flight_time));
-        lines.push('Kişi: ' + paxStr);
+        lines.push('*Kişi: ' + paxStr + '*');
     } else {
         lines.push(AIRPORT + ' --> ' + hotel);
         lines.push(fmtDate(b.flight_date) + ' - ' + fmtTime(b.flight_time));
-        lines.push('Kişi: ' + paxStr);
+        lines.push('*Kişi: ' + paxStr + '*');
     }
     if (b.flight_number) {
         lines.push('Uçuş No: ' + b.flight_number);
@@ -2234,6 +2237,10 @@ function buildOutsourceMessage(b, partnerPrice, pickupTimeOverride, passengers, 
                 lines.push('• ' + p.full_name + tag);
             }
         });
+    }
+    if (b.notes && b.notes.trim() !== '') {
+        lines.push('');
+        lines.push('*Not:* ' + b.notes.trim());
     }
 
     return lines.join('\n');
@@ -2257,6 +2264,9 @@ function openOpsStatus(id) {
         }
         var rawTime = bData.flight_time ? bData.flight_time.substring(0, 5) : '—';
         var paxStr  = (bData.adults || 1) + ' Yetişkin' + ((bData.children || 0) > 0 ? ' + ' + bData.children + ' Çocuk' : '');
+        if (bData.child_seat > 0) {
+            paxStr += ' (' + bData.child_seat + ' Çocuk Koltuğu)';
+        }
         var priceVal = bData.total_price > 0
             ? (parseFloat(bData.total_price).toLocaleString('tr-TR', {minimumFractionDigits:2}) + ' ' + (bData.currency || 'EUR'))
             : '—';
@@ -2269,10 +2279,10 @@ function openOpsStatus(id) {
                 + '</div>';
         }
 
-        var infoHtml = infoCell('Rezervasyon No', '<span class="text-primary">#' + bData.booking_number + '</span>', true)
-            + infoCell('Müşteri', bData.customer_name)
+        var infoHtml = infoCell('Müşteri', bData.customer_name, true)
             + infoCell('Tarih', rawDate || '—')
-            + infoCell('Uçuş Saati', rawTime);
+            + infoCell('Uçuş Saati', rawTime)
+            + infoCell('Uçuş No', bData.flight_number);
 
         if (isReturn && bData.pickup_time) {
             infoHtml += infoCell('Alış Saati', '<span style="color:#1c4b56;">' + bData.pickup_time.substring(0, 5) + '</span>', true);
@@ -2280,9 +2290,10 @@ function openOpsStatus(id) {
 
         infoHtml += infoCell('Otel / Adres', bData.hotel_address)
             + infoCell('Araç', bData.vehicle_name)
-            + infoCell('Kişi', paxStr)
-            + infoCell('Uçuş No', bData.flight_number);
+            + infoCell('Kişi', paxStr);
 
+        infoHtml += '<div class="col-12 mt-2 pt-2" id="ops-modal-passengers-container" style="display:none; border-top:1px dashed #b8d4f0;"></div>';
+        
         infoHtml += '<div class="col-12 mt-2 pt-2" style="border-top:1px dashed #b8d4f0;">'
             + '<span class="text-muted" style="font-size:.75rem;">Rezervasyon Tutarı</span>'
             + '<span class="fw-bold ms-2" style="font-size:1.4rem;color:#1c4b56;">' + priceVal + '</span>'
@@ -2435,7 +2446,31 @@ function openOpsStatus(id) {
                 });
             }
         })
-        .catch(function() { body.innerHTML = '<p class="text-danger mb-0">Bağlantı hatası.</p>'; });
+        .catch(function(err) { body.innerHTML = '<p class="text-danger mb-0">Hata: ' + (err.message || 'Bağlantı hatası') + '</p>'; console.error('Ops Error:', err); })
+        .finally(function() {
+            // Operasyon durumu yüklendikten sonra (veritabanı kilidini aşmamak için) kişi listesini çek
+            var fdPax = new FormData();
+            fdPax.append('action', 'get_passengers');
+            fdPax.append('id', id);
+            fdPax.append('csrf_token', csrfToken);
+            fetch(apiUrl, {method:'POST', body:fdPax})
+                .then(function(r) { return r.json(); })
+                .then(function(d) {
+                    if (d.success && d.data && d.data.passengers && d.data.passengers.length > 0) {
+                        var pCont = document.getElementById('ops-modal-passengers-container');
+                        if (pCont) {
+                            var pNames = d.data.passengers.map(function(p) {
+                                return p.full_name ? (p.full_name + (p.passenger_type === 'child' ? ' <small class="text-muted">(Çocuk)</small>' : '')) : '';
+                            }).filter(function(n) { return n !== ''; });
+                            if (pNames.length > 0) {
+                                pCont.style.display = 'block';
+                                pCont.innerHTML = '<div class="text-muted mb-1" style="font-size:.72rem;text-transform:uppercase;letter-spacing:.4px;">Yolcu Listesi</div>'
+                                    + '<div class="fw-semibold" style="font-size:.85rem;line-height:1.4;">' + pNames.join('<br>') + '</div>';
+                            }
+                        }
+                    }
+                }).catch(function(){});
+        });
 }
 
 // ─── Outsource Partner Select2 ───────────────────────────────────────────────
@@ -2448,13 +2483,17 @@ function updateWaToggleState() {
     var toggle  = document.getElementById('outsource-wa-toggle');
     var hint    = document.getElementById('outsource-wa-hint');
     if (phone) {
-        toggle.disabled = false;
-        toggle.checked  = true;
-        hint.style.display = 'none';
+        if (toggle) {
+            toggle.disabled = false;
+            toggle.checked  = true;
+        }
+        if (hint) hint.style.display = 'none';
     } else {
-        toggle.disabled = true;
-        toggle.checked  = false;
-        hint.style.display = '';
+        if (toggle) {
+            toggle.disabled = true;
+            toggle.checked  = false;
+        }
+        if (hint) hint.style.display = '';
     }
 }
 

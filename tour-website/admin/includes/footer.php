@@ -186,7 +186,7 @@ $(document).ready(function() {
     });
     
     // Initialize DataTables
-    $('.datatable').DataTable();
+    $('.datatable').attr('width', '100%').DataTable();
     
     // Initialize Select2
     $('.select2').select2();
