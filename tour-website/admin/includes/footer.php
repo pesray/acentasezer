@@ -53,11 +53,7 @@ $(document).ready(function() {
     var overlay     = document.getElementById('sidebarOverlay');
     var isMobile    = function() { return window.matchMedia('(max-width: 991.98px)').matches; };
 
-    // Restore saved state (sadece desktop'ta)
-    if (!isMobile() && localStorage.getItem('sidebarCollapsed') === '1') {
-        sidebar.classList.add('collapsed');
-        mainContent.classList.add('sidebar-collapsed');
-    }
+    // Restore saved state (sadece desktop'ta) - FOUC engellemek için header.php'ye taşındı.
 
     function closeMobileSidebar() {
         sidebar.classList.remove('show');

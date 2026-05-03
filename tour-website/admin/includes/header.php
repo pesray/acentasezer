@@ -888,6 +888,15 @@ if ($siteLogo && defined('UPLOADS_URL')) {
 
 <!-- Main Content -->
 <div class="main-content" id="mainContent">
+<script>
+    /* FOUC (Flash of Unstyled Content) önlemek için anında uygula */
+    if (window.matchMedia && !window.matchMedia('(max-width: 991.98px)').matches) {
+        if (localStorage.getItem('sidebarCollapsed') === '1') {
+            document.getElementById('mainSidebar').classList.add('collapsed');
+            document.getElementById('mainContent').classList.add('sidebar-collapsed');
+        }
+    }
+</script>
     <!-- Top Navbar -->
     <div class="top-navbar">
         <div class="top-navbar-left">
