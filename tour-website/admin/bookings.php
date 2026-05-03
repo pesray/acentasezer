@@ -1616,6 +1616,19 @@ $(document).ready(function() {
         }
     });
 
+    // Accordion: bir satır açılınca diğer açık satırları kapat
+    $('#bookingsTable tbody').on('click', 'td.dtr-control', function() {
+        var tr = $(this).closest('tr');
+        var row = table.row(tr);
+        // Diğer açık child row'ları kapat
+        table.rows('.parent').every(function() {
+            if (this.index() !== row.index()) {
+                this.child.hide();
+                $(this.node()).removeClass('parent');
+            }
+        });
+    });
+
     // Tüm görünümlerde tarihe göre artan sıra
     if (currentView === 'all' || currentView === 'daily' || currentView === 'arrival' || currentView === 'return') {
         table.order([[1, 'asc']]).draw();
