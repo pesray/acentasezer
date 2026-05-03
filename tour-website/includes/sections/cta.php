@@ -17,15 +17,15 @@ $ctaImage = $settings['image'] ?? 'img/travel/showcase-3.webp';
           <span class="promo-badge"><?= e($section['subtitle'] ?? 'Limited Time Offer') ?></span>
         </div>
         <h2><?= e($section['title']) ?></h2>
-        <?= $section['content'] ?>
+        <?= strip_tags($section['content'], '<p><br><strong><em><b><i><a><ul><ol><li><span>') ?>
 
         <div class="action-section">
           <div class="main-actions">
-            <a href="<?= e($settings['button1_url'] ?? '/destinasyonlar') ?>" class="btn btn-explore">
+            <a href="<?= e(langUrl(ltrim($settings['button1_url'] ?? 'transfers', '/'))) ?>" class="btn btn-explore">
               <i class="<?= e($settings['button1_icon'] ?? 'bi bi-compass') ?>"></i>
               <?= e($settings['button1_text'] ?? 'Explore Now') ?>
             </a>
-            <a href="<?= e($settings['button2_url'] ?? '/turlar') ?>" class="btn btn-deals">
+            <a href="<?= e(langUrl(ltrim($settings['button2_url'] ?? 'tours', '/'))) ?>" class="btn btn-deals">
               <i class="<?= e($settings['button2_icon'] ?? 'bi bi-percent') ?>"></i>
               <?= e($settings['button2_text'] ?? 'View Deals') ?>
             </a>

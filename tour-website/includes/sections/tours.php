@@ -31,7 +31,9 @@ try {
   <!-- Section Title -->
   <div class="container section-title" data-aos="fade-up">
     <h2><?= e($section['title']) ?></h2>
-    <div><span>Check Our</span> <span class="description-title"><?= e($section['title']) ?></span></div>
+    <?php if (!empty($section['subtitle'])): ?>
+    <div><span><?= e($section['subtitle']) ?></span></div>
+    <?php endif; ?>
   </div><!-- End Section Title -->
 
   <div class="container" data-aos="fade-up" data-aos-delay="100">

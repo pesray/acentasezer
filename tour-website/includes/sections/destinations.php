@@ -32,7 +32,9 @@ try {
   <!-- Section Title -->
   <div class="container section-title" data-aos="fade-up">
     <h2><?= e($section['title']) ?></h2>
-    <div><span>Check Our</span> <span class="description-title"><?= e($section['title']) ?></span></div>
+    <?php if (!empty($section['subtitle'])): ?>
+    <div><span><?= e($section['subtitle']) ?></span></div>
+    <?php endif; ?>
   </div><!-- End Section Title -->
 
   <div class="container" data-aos="fade-up" data-aos-delay="100">
@@ -61,10 +63,16 @@ try {
                   <span><?= number_format($destinations[0]['rating'], 1) ?> (<?= (int)$destinations[0]['review_count'] ?>)</span>
                 </div>
               </div>
+              <?php
+              $mainPrice = $destinations[0]['min_price'] ?? $destinations[0]['starting_price'];
+              $mainCurrency = $destinations[0]['min_currency'] ?? 'EUR';
+              if ($mainPrice > 0):
+              ?>
               <div class="price-info">
                 <span class="starting-from"><?= __('starting_from', 'general') ?></span>
-                <span class="amount">$<?= number_format($destinations[0]['starting_price'], 0) ?></span>
+                <span class="amount"><?= number_format((float)$mainPrice, 0, ',', '.') ?> <?= e($mainCurrency) ?></span>
               </div>
+              <?php endif; ?>
               <a href="<?= langUrl($destinationPrefix . '/' . $destinations[0]['slug']) ?>" class="explore-btn">
                 <span><?= __('explore_now', 'general') ?></span>
                 <i class="bi bi-arrow-right"></i>
@@ -93,7 +101,13 @@ try {
                 <div class="stats-row">
                   <span class="tour-count"><i class="bi bi-calendar-check"></i> <?= (int)$dest['tour_count'] ?> <?= __('tours', 'general') ?></span>
                   <span class="rating"><i class="bi bi-star-fill"></i> <?= number_format($dest['rating'], 1) ?></span>
-                  <span class="price"><?= __('from', 'general') ?> $<?= number_format($dest['starting_price'], 0) ?></span>
+                  <?php
+                  $compactPrice = $dest['min_price'] ?? $dest['starting_price'];
+                  $compactCurrency = $dest['min_currency'] ?? 'EUR';
+                  if ($compactPrice > 0):
+                  ?>
+                  <span class="price"><?= __('from', 'general') ?> <?= number_format((float)$compactPrice, 0, ',', '.') ?> <?= e($compactCurrency) ?></span>
+                  <?php endif; ?>
                 </div>
                 <a href="<?= langUrl($destinationPrefix . '/' . $dest['slug']) ?>" class="quick-link"><?= __('view_details', 'general') ?> <i class="bi bi-chevron-right"></i></a>
               </div>

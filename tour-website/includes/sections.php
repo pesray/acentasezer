@@ -130,14 +130,28 @@ function getFeaturedDestinations($limit = 4) {
             SELECT d.*, 
                    COALESCE(dt.title, d.title) as title,
                    COALESCE(dt.slug, d.slug) as slug,
-                   COALESCE(dt.description, d.description) as description
+                   COALESCE(dt.description, d.description) as description,
+                   dv_min.min_price,
+                   dv_min.currency as min_currency
             FROM destinations d
             LEFT JOIN destination_translations dt ON d.id = dt.destination_id AND dt.language_code = ?
+            LEFT JOIN (
+                SELECT dv1.destination_id, dv1.price as min_price, dv1.currency
+                FROM destination_vehicles dv1
+                INNER JOIN (
+                    SELECT destination_id, MIN(price) as mp
+                    FROM destination_vehicles
+                    WHERE language_code = ?
+                    GROUP BY destination_id
+                ) dv2 ON dv1.destination_id = dv2.destination_id AND dv1.price = dv2.mp
+                WHERE dv1.language_code = ?
+                GROUP BY dv1.destination_id
+            ) dv_min ON d.id = dv_min.destination_id
             WHERE d.status = 'published' AND d.is_featured = 1
             ORDER BY d.sort_order
             LIMIT ?
         ");
-        $stmt->execute([$lang, $limit]);
+        $stmt->execute([$lang, $lang, $lang, $limit]);
         $cache[$cacheKey] = $stmt->fetchAll();
         return $cache[$cacheKey];
     } catch (Exception $e) {

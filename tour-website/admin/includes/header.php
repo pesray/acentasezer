@@ -865,6 +865,10 @@ if ($siteLogo && defined('UPLOADS_URL')) {
             <i class="bi bi-translate nav-link-icon"></i>
             <span class="nav-link-text">Diller</span>
         </a>
+        <a href="<?= ADMIN_URL ?>/translations.php" class="nav-link <?= $currentPage === 'translations' ? 'active' : '' ?>" title="Çeviriler">
+            <i class="bi bi-chat-square-text nav-link-icon"></i>
+            <span class="nav-link-text">Çeviriler</span>
+        </a>
         <a href="<?= ADMIN_URL ?>/settings.php" class="nav-link <?= $currentPage === 'settings' ? 'active' : '' ?>" title="Site Ayarları">
             <i class="bi bi-gear nav-link-icon"></i>
             <span class="nav-link-text">Site Ayarları</span>

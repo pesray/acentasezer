@@ -145,11 +145,34 @@ if (preg_match('#^' . preg_quote($blogSlug, '#') . '/([a-z0-9-]+)$#i', $path, $m
 if (empty($path)) {
     require_once INCLUDES_PATH . 'sections.php';
     
-    $pageTitle = getSetting('site_name', 'Tour');
-    $metaDescription = getSetting('site_description', '');
+    // Anasayfa SEO bilgilerini page_translations'tan çek
+    $homepageSeo = null;
+    try {
+        $hpStmt = $db->prepare("
+            SELECT pt.meta_title, pt.meta_description, pt.meta_keywords
+            FROM pages p
+            JOIN page_translations pt ON p.id = pt.page_id AND pt.language_code = ?
+            WHERE p.is_homepage = 1
+            LIMIT 1
+        ");
+        $hpStmt->execute([$lang]);
+        $homepageSeo = $hpStmt->fetch();
+    } catch (Exception $e) {}
+    
+    $pageTitle = !empty($homepageSeo['meta_title']) ? $homepageSeo['meta_title'] : getSetting('site_name', 'Tour');
+    $metaDescription = !empty($homepageSeo['meta_description']) ? $homepageSeo['meta_description'] : getSetting('site_description', '');
+    $metaKeywords = !empty($homepageSeo['meta_keywords']) ? $homepageSeo['meta_keywords'] : getSetting('site_keywords', '');
     $bodyClass = 'index-page';
     
-    $sections = getPageSections(1);
+    // Anasayfa page_id'sini dinamik al
+    $homepageId = 1;
+    try {
+        $hpIdStmt = $db->query("SELECT id FROM pages WHERE is_homepage = 1 LIMIT 1");
+        $hpIdRow = $hpIdStmt->fetch();
+        if ($hpIdRow) $homepageId = (int)$hpIdRow['id'];
+    } catch (Exception $e) {}
+    
+    $sections = getPageSections($homepageId);
     
     require_once INCLUDES_PATH . 'header.php';
     

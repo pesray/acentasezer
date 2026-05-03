@@ -331,10 +331,10 @@ function __($key, $group = 'general') {
         $translations = [];
         try {
             $db = getDB();
-            $stmt = $db->prepare("SELECT translation_key, translation_value, group_name FROM translations WHERE language_code = ?");
+            $stmt = $db->prepare("SELECT trans_key, trans_value, trans_group FROM translations WHERE language_code = ?");
             $stmt->execute([$lang]);
             while ($row = $stmt->fetch()) {
-                $translations[$row['group_name']][$row['translation_key']] = $row['translation_value'];
+                $translations[$row['trans_group']][$row['trans_key']] = $row['trans_value'];
             }
         } catch (Exception $e) {
             return $key;

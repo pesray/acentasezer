@@ -42,20 +42,20 @@ $socialYoutube = getSetting('social_youtube', '');
         <div class="col-lg-2 col-md-3 footer-links">
           <h4><?= __('footer_links_title', 'footer') ?></h4>
           <ul>
-            <li><i class="bi bi-chevron-right"></i> <a href="<?= SITE_URL ?>/"><?= __('menu_home', 'header') ?></a></li>
-            <li><i class="bi bi-chevron-right"></i> <a href="<?= SITE_URL ?>/hakkimizda"><?= __('menu_about', 'header') ?></a></li>
-            <li><i class="bi bi-chevron-right"></i> <a href="<?= SITE_URL ?>/turlar"><?= __('menu_tours', 'header') ?></a></li>
-            <li><i class="bi bi-chevron-right"></i> <a href="<?= SITE_URL ?>/iletisim"><?= __('menu_contact', 'header') ?></a></li>
+            <li><i class="bi bi-chevron-right"></i> <a href="<?= langUrl('') ?>"><?= __('menu_home', 'header') ?></a></li>
+            <li><i class="bi bi-chevron-right"></i> <a href="<?= langUrl('hakkimizda') ?>"><?= __('menu_about', 'header') ?></a></li>
+            <li><i class="bi bi-chevron-right"></i> <a href="<?= langUrl('turlar') ?>"><?= __('menu_tours', 'header') ?></a></li>
+            <li><i class="bi bi-chevron-right"></i> <a href="<?= langUrl('iletisim') ?>"><?= __('menu_contact', 'header') ?></a></li>
           </ul>
         </div>
 
         <div class="col-lg-2 col-md-3 footer-links">
           <h4><?= __('footer_services_title', 'footer') ?></h4>
           <ul>
-            <li><i class="bi bi-chevron-right"></i> <a href="<?= SITE_URL ?>/destinasyonlar"><?= __('menu_destinations', 'header') ?></a></li>
-            <li><i class="bi bi-chevron-right"></i> <a href="<?= SITE_URL ?>/galeri"><?= __('menu_gallery', 'header') ?></a></li>
-            <li><i class="bi bi-chevron-right"></i> <a href="<?= SITE_URL ?>/blog"><?= __('menu_blog', 'header') ?></a></li>
-            <li><i class="bi bi-chevron-right"></i> <a href="<?= SITE_URL ?>/sss"><?= __('faq', 'general') ?></a></li>
+            <li><i class="bi bi-chevron-right"></i> <a href="<?= langUrl('transferler') ?>"><?= __('menu_destinations', 'header') ?></a></li>
+            <li><i class="bi bi-chevron-right"></i> <a href="<?= langUrl('galeri') ?>"><?= __('menu_gallery', 'header') ?></a></li>
+            <li><i class="bi bi-chevron-right"></i> <a href="<?= langUrl('blog') ?>"><?= __('menu_blog', 'header') ?></a></li>
+            <li><i class="bi bi-chevron-right"></i> <a href="<?= langUrl('sss') ?>"><?= __('faq', 'general') ?></a></li>
           </ul>
         </div>
 

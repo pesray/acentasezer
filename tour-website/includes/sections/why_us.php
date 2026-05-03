@@ -15,7 +15,7 @@ $settings = $GLOBALS['section_settings'];
       <div class="col-lg-6" data-aos="fade-right" data-aos-delay="200">
         <div class="content">
           <h3><?= e($section['title']) ?></h3>
-          <?= $section['content'] ?>
+          <?= strip_tags($section['content'], '<p><br><strong><em><b><i><a><ul><ol><li><span><h1><h2><h3><h4><h5><h6>') ?>
           <div class="stats-row">
             <?php 
             $stats = $settings['stats'] ?? [

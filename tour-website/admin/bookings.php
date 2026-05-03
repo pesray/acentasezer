@@ -311,6 +311,17 @@ require_once __DIR__ . '/includes/header.php';
 @media (max-width: 991.98px) {
     #bookingsTable th, #bookingsTable td { padding: .5rem .4rem; }
 }
+
+/* Otel Adı: masaüstünde tam ad, mobilde sadece bölge */
+.hotel-short { display: none; }
+.hotel-full { display: inline; }
+@media (max-width: 991.98px) {
+    .hotel-short { display: inline; }
+    .hotel-full { display: none; }
+    /* Detay satırında tam otel adı görünsün */
+    .dtr-details .hotel-short { display: none; }
+    .dtr-details .hotel-full { display: inline; }
+}
 @media (min-width: 768px) {
     /* Özel masaüstü gizleme kuralları iptal edildi, tüm sütunlar görünür */
 }
@@ -504,13 +515,13 @@ require_once __DIR__ . '/includes/header.php';
         <thead>
             <tr>
                 <th class="all">Yön</th>
-                <th class="all">Tarih</th>
-                <th class="min-tablet">Alış Saati</th>
-                <th class="min-tablet">Saat</th>
+                <th class="min-tablet">Tarih</th>
+                <th class="all">Alış Saati</th>
+                <th class="all">Saat</th>
                 <th class="min-tablet">Uçuş Kodu</th>
                 <th class="min-tablet">Müşteri</th>
-                <th class="all">Kişi</th>
-                <th class="min-tablet">Otel Adı</th>
+                <th class="min-tablet">Kişi</th>
+                <th class="all">Otel Adı</th>
                 <th class="min-tablet">Araç</th>
                 <th class="min-tablet">Tutar</th>
                 <th class="min-tablet">İş Durumu</th>
@@ -552,7 +563,21 @@ require_once __DIR__ . '/includes/header.php';
                     <?= e($b['customer_name']) ?>
                 </td>
                 <td><?= (int)$b['adults'] ?>Y<?= (int)$b['children'] > 0 ? ' +'.(int)$b['children'].'Ç' : '' ?></td>
-                <td><?= e(trim($b['hotel_address'] ?? '') ?: '-') ?></td>
+                <?php
+                    $hotelFull = trim($b['hotel_address'] ?? '');
+                    $hotelShort = $hotelFull;
+                    if ($hotelFull && strpos($hotelFull, '—') !== false) {
+                        $parts = explode('—', $hotelFull);
+                        $hotelShort = trim(end($parts));
+                    } elseif ($hotelFull && strpos($hotelFull, '-') !== false) {
+                        $parts = explode('-', $hotelFull);
+                        $hotelShort = trim(end($parts));
+                    }
+                ?>
+                <td>
+                    <span class="hotel-full"><?= e($hotelFull ?: '-') ?></span>
+                    <span class="hotel-short"><?= e($hotelShort ?: '-') ?></span>
+                </td>
                 <td><?= e(trim($b['vehicle_name'] ?? '') ?: '-') ?></td>
                 <td>
                     <?php if ((float)$b['total_price'] > 0): ?>
@@ -637,15 +662,15 @@ require_once __DIR__ . '/includes/header.php';
         <thead>
             <tr>
                 <th class="all">Yön</th>
-                <th class="all">Tarih</th>
+                <th class="min-tablet">Tarih</th>
                 <?php if ($view !== 'arrival'): ?>
-                <th class="min-tablet">Alış Saati</th>
+                <th class="all">Alış Saati</th>
                 <?php endif; ?>
-                <th class="min-tablet">Saat</th>
+                <th class="all">Saat</th>
                 <th class="min-tablet">Uçuş Kodu</th>
                 <th class="min-tablet">Müşteri</th>
-                <th class="all">Kişi</th>
-                <th class="min-tablet">Otel Adı</th>
+                <th class="min-tablet">Kişi</th>
+                <th class="all">Otel Adı</th>
                 <th class="min-tablet">Araç</th>
                 <th class="min-tablet">Tutar</th>
                 <th class="min-tablet">İş Durumu</th>
@@ -689,7 +714,21 @@ require_once __DIR__ . '/includes/header.php';
                     <?= e($b['customer_name']) ?>
                 </td>
                 <td><?= (int)$b['adults'] ?>Y<?= (int)$b['children'] > 0 ? ' +'.(int)$b['children'].'Ç' : '' ?></td>
-                <td><?= e(trim($b['hotel_address'] ?? '') ?: '-') ?></td>
+                <?php
+                    $hotelFull = trim($b['hotel_address'] ?? '');
+                    $hotelShort = $hotelFull;
+                    if ($hotelFull && strpos($hotelFull, '—') !== false) {
+                        $parts = explode('—', $hotelFull);
+                        $hotelShort = trim(end($parts));
+                    } elseif ($hotelFull && strpos($hotelFull, '-') !== false) {
+                        $parts = explode('-', $hotelFull);
+                        $hotelShort = trim(end($parts));
+                    }
+                ?>
+                <td>
+                    <span class="hotel-full"><?= e($hotelFull ?: '-') ?></span>
+                    <span class="hotel-short"><?= e($hotelShort ?: '-') ?></span>
+                </td>
                 <td><?= e(trim($b['vehicle_name'] ?? '') ?: '-') ?></td>
                 <td>
                     <?php if ((float)$b['total_price'] > 0): ?>
@@ -703,7 +742,7 @@ require_once __DIR__ . '/includes/header.php';
                             <input type="checkbox" class="form-check-input ops-check" id="comp-<?= $b['id'] ?>"
                                    data-id="<?= $b['id'] ?>" data-field="is_completed"
                                    <?= !empty($b['is_completed']) ? 'checked' : '' ?>>
-                            <label class="form-check-label small" for="comp-<?= $b['id'] ?>">Iş yapıldı</label>
+                            <label class="form-check-label small" for="comp-<?= $b['id'] ?>">İş yapıldı</label>
                         </div>
                         <div class="form-check">
                             <input type="checkbox" class="form-check-input ops-check ops-out-check" id="out-<?= $b['id'] ?>"

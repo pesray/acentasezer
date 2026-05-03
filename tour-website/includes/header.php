@@ -32,8 +32,8 @@ $siteLogo = getSetting('site_logo', '');
   <meta property="og:type" content="website">
 
   <!-- Hreflang tags for SEO -->
-  <?php foreach ($languages as $lang): ?>
-  <link rel="alternate" hreflang="<?= e($lang['code']) ?>" href="<?= e(getAlternateLanguageUrl($lang['code'])) ?>">
+  <?php foreach ($languages as $hLang): ?>
+  <link rel="alternate" hreflang="<?= e($hLang['code']) ?>" href="<?= e(getAlternateLanguageUrl($hLang['code'])) ?>">
   <?php endforeach; ?>
 
   <!-- Favicons -->
@@ -111,10 +111,10 @@ $siteLogo = getSetting('site_logo', '');
               echo $currentLangData ? $currentLangData['flag'] . ' ' . e($currentLangData['native_name']) : strtoupper($currentLang);
             ?></span> <i class="bi bi-chevron-down toggle-dropdown"></i></a>
             <ul class="mobile-lang-dropdown">
-              <?php foreach ($languages as $lang): ?>
+              <?php foreach ($languages as $hLang): ?>
               <li>
-                <a href="<?= e(getAlternateLanguageUrl($lang['code'])) ?>" class="<?= $lang['code'] === $currentLang ? 'active' : '' ?>">
-                  <?= e($lang['flag']) ?> <?= e($lang['native_name']) ?>
+                <a href="<?= e(getAlternateLanguageUrl($hLang['code'])) ?>" class="<?= $hLang['code'] === $currentLang ? 'active' : '' ?>">
+                  <?= e($hLang['flag']) ?> <?= e($hLang['native_name']) ?>
                 </a>
               </li>
               <?php endforeach; ?>
@@ -132,11 +132,11 @@ $siteLogo = getSetting('site_logo', '');
           ?>
         </button>
         <ul class="dropdown-menu dropdown-menu-end">
-          <?php foreach ($languages as $lang): ?>
+          <?php foreach ($languages as $hLang): ?>
           <li>
-            <a class="dropdown-item <?= $lang['code'] === $currentLang ? 'active' : '' ?>" 
-               href="<?= e(getAlternateLanguageUrl($lang['code'])) ?>">
-              <?= e($lang['flag']) ?> <?= e($lang['native_name']) ?>
+            <a class="dropdown-item <?= $hLang['code'] === $currentLang ? 'active' : '' ?>" 
+               href="<?= e(getAlternateLanguageUrl($hLang['code'])) ?>">
+              <?= e($hLang['flag']) ?> <?= e($hLang['native_name']) ?>
             </a>
           </li>
           <?php endforeach; ?>

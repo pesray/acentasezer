@@ -489,9 +489,34 @@ input:checked + .toggle-slider:before { transform: translateX(20px); }
                                value="<?= e(getSectionSetting($sectionTrans, $section, $sectionId, $code, 'form_title', 'Plan Your Adventure')) ?>">
                     </div>
                     <div class="col-md-4">
-                        <label class="form-label-sm">Buton Metni</label>
+                        <label class="form-label-sm">Form Buton Metni</label>
                         <input type="text" name="sections[<?= $sectionId ?>][translations][<?= e($code) ?>][settings][form_button_text]" class="form-control"
-                               value="<?= e(getSectionSetting($sectionTrans, $section, $sectionId, $code, 'form_button_text', 'Find Your Perfect Trip')) ?>">
+                               value="<?= e(getSectionSetting($sectionTrans, $section, $sectionId, $code, 'form_button_text', 'Find Your Transfer')) ?>">
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label-sm">Destinasyon Etiketi</label>
+                        <input type="text" name="sections[<?= $sectionId ?>][translations][<?= e($code) ?>][settings][label_destination]" class="form-control"
+                               value="<?= e(getSectionSetting($sectionTrans, $section, $sectionId, $code, 'label_destination', 'Destination')) ?>">
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label-sm">Destinasyon Placeholder</label>
+                        <input type="text" name="sections[<?= $sectionId ?>][translations][<?= e($code) ?>][settings][placeholder_destination]" class="form-control"
+                               value="<?= e(getSectionSetting($sectionTrans, $section, $sectionId, $code, 'placeholder_destination', 'Choose your destination')) ?>">
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label-sm">Transfer Tarihi Etiketi</label>
+                        <input type="text" name="sections[<?= $sectionId ?>][translations][<?= e($code) ?>][settings][label_departure]" class="form-control"
+                               value="<?= e(getSectionSetting($sectionTrans, $section, $sectionId, $code, 'label_departure', 'Transfer Date')) ?>">
+                    </div>
+                    <div class="col-md-3">
+                        <label class="form-label-sm">Yetişkin Etiketi</label>
+                        <input type="text" name="sections[<?= $sectionId ?>][translations][<?= e($code) ?>][settings][label_adults]" class="form-control"
+                               value="<?= e(getSectionSetting($sectionTrans, $section, $sectionId, $code, 'label_adults', 'Adults')) ?>">
+                    </div>
+                    <div class="col-md-3">
+                        <label class="form-label-sm">Çocuk Etiketi</label>
+                        <input type="text" name="sections[<?= $sectionId ?>][translations][<?= e($code) ?>][settings][label_children]" class="form-control"
+                               value="<?= e(getSectionSetting($sectionTrans, $section, $sectionId, $code, 'label_children', 'Children')) ?>">
                     </div>
                 </div>
 

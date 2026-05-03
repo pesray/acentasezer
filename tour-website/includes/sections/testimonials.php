@@ -13,7 +13,9 @@ $testimonials = getTestimonials($limit);
   <!-- Section Title -->
   <div class="container section-title" data-aos="fade-up">
     <h2><?= e($section['title']) ?></h2>
-    <div><span>What Our Customers</span> <span class="description-title">Are Saying</span></div>
+    <?php if (!empty($section['subtitle'])): ?>
+    <div><span><?= e($section['subtitle']) ?></span></div>
+    <?php endif; ?>
   </div><!-- End Section Title -->
 
   <div class="container" data-aos="fade-up" data-aos-delay="100">
@@ -24,7 +26,7 @@ $testimonials = getTestimonials($limit);
           "loop": true,
           "speed": 600,
           "autoplay": {
-            "delay": 5000
+            "delay": <?= (int)($settings['autoplay_delay'] ?? 5000) ?>
           },
           "slidesPerView": "auto",
           "pagination": {

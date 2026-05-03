@@ -80,6 +80,9 @@ try {
         case 'drivers':
             require_once __DIR__ . '/drivers.php';
             break;
+        case 'translations':
+            require_once __DIR__ . '/translations.php';
+            break;
         default:
             jsonResponse(false, 'Geçersiz entity: ' . $entity);
     }
