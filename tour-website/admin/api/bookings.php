@@ -291,6 +291,7 @@ switch ($action) {
             $db->prepare("
                 UPDATE bookings
                 SET is_outsourced = 0,
+                    is_completed = 0,
                     outsource_name = NULL,
                     outsource_partner_id = NULL,
                     outsource_price = NULL,
@@ -318,6 +319,7 @@ switch ($action) {
             $db->prepare("
                 UPDATE bookings
                 SET is_outsourced = 1,
+                    is_completed = 1,
                     outsource_partner_id = ?,
                     outsource_name = ?,
                     outsource_price = ?,

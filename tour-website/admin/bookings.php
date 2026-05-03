@@ -1483,7 +1483,7 @@ require_once __DIR__ . '/includes/header.php';
                     <div class="text-center py-3"><span class="spinner-border spinner-border-sm"></span></div>
                 </div>
                 <!-- Şöför Seçimi -->
-                <div class="mt-4 pt-4" style="border-top:1px dashed #b8d4f0;">
+                <div id="ops-driver-section" class="mt-4 pt-4" style="border-top:1px dashed #b8d4f0; display:none;">
                     <h6 class="fw-bold mb-3"><i class="bi bi-person-badge me-2 text-primary"></i>Şöför Ata</h6>
                     <div class="mb-3">
                         <select id="ops-modal-driver" class="form-select" data-booking-id="">
@@ -1545,7 +1545,7 @@ const currentView = '<?= $view ?>';
 
 <script>
 $(document).ready(function() {
-    var table = $('#bookingsTable').DataTable({
+    var table = window.bookingsTable = $('#bookingsTable').DataTable({
         language: {
             url: 'https://cdn.datatables.net/plug-ins/1.13.6/i18n/tr.json'
         },
@@ -2123,6 +2123,16 @@ document.addEventListener('change', function(e) {
             if (priceInp) priceInp.value = '';
             if (nameDisp) { nameDisp.textContent = ''; nameDisp.style.display = 'none'; }
             e.target.dataset.outsourceName = '';
+            
+            // Dışarıya verilmediyse iş de yapılmamıştır, 'is_completed' checkbox'ını da kaldır
+            const tr = e.target.closest('tr');
+            if (tr) {
+                const completedChk = tr.querySelector('.ops-check[data-field="is_completed"]');
+                if (completedChk && completedChk.checked) {
+                    completedChk.checked = false;
+                }
+            }
+
             var fdClear = new FormData();
             fdClear.append('action', 'clear_outsource');
             fdClear.append('id', id);
@@ -2209,6 +2219,11 @@ document.getElementById('outsource-save-btn').addEventListener('click', function
                     var outCurrency = document.getElementById('outsource-currency-input').value || 'EUR';
                     sendOutsourceWhatsApp(id, waPhone, name, price, pickupTime, outCurrency, noCollectionToggle.checked);
                 }
+
+                // is_completed checkbox'unu işaretle (DB'de save_outsource zaten 1 yaptı)
+                document.querySelectorAll('.ops-check[data-field="is_completed"][data-id="' + id + '"]').forEach(function(chk) {
+                    chk.checked = true;
+                });
 
                 bootstrap.Modal.getInstance(document.getElementById('outsourceModal')).hide();
             }
@@ -2460,6 +2475,12 @@ function openOpsStatus(id) {
 
             html += '</div>';
             body.innerHTML = html;
+
+            // Şöför ata bölümünü: dışarıya verilmediyse göster, verildiyse gizle
+            var driverSection = document.getElementById('ops-driver-section');
+            if (driverSection) {
+                driverSection.style.display = ops.is_outsourced ? 'none' : '';
+            }
 
             // Verilen Tutar kaydet butonu handler
             var priceInput = document.getElementById('ops-modal-price');
