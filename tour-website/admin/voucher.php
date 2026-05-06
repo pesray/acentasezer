@@ -65,6 +65,52 @@ $siteWeb   = getSetting('site_url', '');
 // WhatsApp numarası: başındaki + ve boşlukları temizle
 $waNumber = preg_replace('/[^0-9]/', '', $sitePhone);
 
+// DeepL ile notu hedef dile çevir (TR dışındaki voucher'lar için)
+function translateNoteDeepL($text, $targetLang) {
+    if (empty(trim($text)) || strtolower($targetLang) === 'tr') {
+        return $text;
+    }
+    $apiKey = env('DEEPL_API_KEY', '');
+    if ($apiKey === '') return $text;
+
+    $apiUrl = env('DEEPL_API_URL', 'https://api-free.deepl.com/v2/translate');
+
+    $langMap = ['EN' => 'EN-GB', 'PT' => 'PT-PT'];
+    $tl = strtoupper($targetLang);
+    $deeplTarget = isset($langMap[$tl]) ? $langMap[$tl] : $tl;
+
+    $postData = http_build_query([
+        'text'        => $text,
+        'source_lang' => 'TR',
+        'target_lang' => $deeplTarget,
+    ]);
+
+    $ch = curl_init();
+    curl_setopt_array($ch, [
+        CURLOPT_URL            => $apiUrl,
+        CURLOPT_POST           => true,
+        CURLOPT_POSTFIELDS     => $postData,
+        CURLOPT_RETURNTRANSFER => true,
+        CURLOPT_TIMEOUT        => 10,
+        CURLOPT_SSL_VERIFYPEER => false,
+        CURLOPT_HTTPHEADER     => [
+            'Content-Type: application/x-www-form-urlencoded',
+            'Authorization: DeepL-Auth-Key ' . $apiKey,
+        ],
+    ]);
+    $response = curl_exec($ch);
+    $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+    curl_close($ch);
+
+    if ($httpCode === 200) {
+        $result = json_decode($response, true);
+        if (isset($result['translations'][0]['text'])) {
+            return $result['translations'][0]['text'];
+        }
+    }
+    return $text;
+}
+
 // Dil etiketleri
 $labels = [
     'tr' => [
@@ -609,6 +655,7 @@ function voucherLangUrl($l, $outId, $retId) {
     <!-- Notlar -->
     <?php $noteText = trim(($out ? ($out['notes'] ?? '') : '') ?: ($ret ? ($ret['notes'] ?? '') : '')); ?>
     <?php if ($noteText): ?>
+    <?php $noteText = translateNoteDeepL($noteText, $lang); ?>
     <div class="notes-box">
         <strong><?= $L['notes'] ?>:</strong> <?= nl2br(e($noteText)) ?>
     </div>

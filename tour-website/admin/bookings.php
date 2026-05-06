@@ -2433,14 +2433,45 @@ function openOpsStatus(id) {
             + infoCell('Araç', bData.vehicle_name)
             + infoCell('Kişi', paxStr);
 
-        infoHtml += '<div class="col-12 mt-2 pt-2" id="ops-modal-passengers-container" style="display:none; border-top:1px dashed #b8d4f0;"></div>';
-        
+        // Yolcu Listesi + Müşteri Notu + Rezervasyon Tutarı yan yana
         infoHtml += '<div class="col-12 mt-2 pt-2" style="border-top:1px dashed #b8d4f0;">'
-            + '<span class="text-muted" style="font-size:.75rem;">Rezervasyon Tutarı</span>'
-            + '<span class="fw-bold ms-2" style="font-size:1.4rem;color:#1c4b56;">' + priceVal + '</span>'
+            + '<div class="row g-2">'
+            + '<div class="col-md-4" id="ops-modal-passengers-container" style="display:none;"></div>'
+            + '<div class="col-md-4" id="ops-modal-notes-container"' + (bData.notes && bData.notes.trim() ? '' : ' style="display:none;"') + '>'
+            +   '<div class="text-muted" style="font-size:.72rem;text-transform:uppercase;letter-spacing:.4px;"><i class="bi bi-chat-left-text me-1"></i>Müşteri Notu</div>'
+            +   '<div class="fw-semibold" style="white-space:pre-wrap;">' + (bData.notes || '') + '</div>'
+            + '</div>'
+            + '<div class="col-md-4">'
+            +   '<div class="text-muted" style="font-size:.72rem;text-transform:uppercase;letter-spacing:.4px;">Rezervasyon Tutarı</div>'
+            +   '<div class="fw-bold" style="font-size:1.4rem;color:#1c4b56;">' + priceVal + '</div>'
+            + '</div>'
+            + '</div>'
             + '</div>';
 
         infoBox.innerHTML = infoHtml;
+
+        // Yolcu listesini hemen çek (ops'tan bağımsız)
+        var fdPax2 = new FormData();
+        fdPax2.append('action', 'get_passengers');
+        fdPax2.append('id', id);
+        fdPax2.append('csrf_token', csrfToken);
+        fetch(apiUrl, {method:'POST', body:fdPax2})
+            .then(function(r) { return r.json(); })
+            .then(function(d) {
+                if (d.success && d.data && d.data.passengers && d.data.passengers.length > 0) {
+                    var pCont = document.getElementById('ops-modal-passengers-container');
+                    if (pCont) {
+                        var pNames = d.data.passengers.map(function(p) {
+                            return p.full_name ? (p.full_name + (p.passenger_type === 'child' ? ' <small class="text-muted">(Çocuk)</small>' : '')) : '';
+                        }).filter(function(n) { return n !== ''; });
+                        if (pNames.length > 0) {
+                            pCont.style.display = 'block';
+                            pCont.innerHTML = '<div class="text-muted mb-1" style="font-size:.72rem;text-transform:uppercase;letter-spacing:.4px;">Yolcu Listesi</div>'
+                                + '<div class="fw-semibold" style="font-size:.85rem;line-height:1.4;">' + pNames.join('<br>') + '</div>';
+                        }
+                    }
+                }
+            }).catch(function(){});
     }
 
     // Operasyonel durumu AJAX ile çek
@@ -2646,28 +2677,6 @@ function openOpsStatus(id) {
                     }
                 }).catch(function(){});
 
-            // Operasyon durumu yüklendikten sonra (veritabanı kilidini aşmamak için) kişi listesini çek
-            var fdPax = new FormData();
-            fdPax.append('action', 'get_passengers');
-            fdPax.append('id', id);
-            fdPax.append('csrf_token', csrfToken);
-            fetch(apiUrl, {method:'POST', body:fdPax})
-                .then(function(r) { return r.json(); })
-                .then(function(d) {
-                    if (d.success && d.data && d.data.passengers && d.data.passengers.length > 0) {
-                        var pCont = document.getElementById('ops-modal-passengers-container');
-                        if (pCont) {
-                            var pNames = d.data.passengers.map(function(p) {
-                                return p.full_name ? (p.full_name + (p.passenger_type === 'child' ? ' <small class="text-muted">(Çocuk)</small>' : '')) : '';
-                            }).filter(function(n) { return n !== ''; });
-                            if (pNames.length > 0) {
-                                pCont.style.display = 'block';
-                                pCont.innerHTML = '<div class="text-muted mb-1" style="font-size:.72rem;text-transform:uppercase;letter-spacing:.4px;">Yolcu Listesi</div>'
-                                    + '<div class="fw-semibold" style="font-size:.85rem;line-height:1.4;">' + pNames.join('<br>') + '</div>';
-                            }
-                        }
-                    }
-                }).catch(function(){});
         });
 }
 
