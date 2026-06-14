@@ -161,6 +161,43 @@ require_once __DIR__ . '/includes/header.php';
 .row-completed:hover td {
     background-color: #00ff3c9b !important;
 }
+
+.customer-autocomplete-wrap {
+    position: relative;
+}
+.customer-autocomplete-wrap .form-control[readonly],
+#modal-customer-email[readonly],
+#add-customer-email[readonly] {
+    background-color: #fff !important;
+    opacity: 1;
+}
+.customer-autocomplete-list {
+    position: absolute;
+    top: 100%;
+    left: 0;
+    right: 0;
+    z-index: 1050;
+    background: #fff;
+    border: 1px solid #ced4da;
+    border-radius: 0.375rem;
+    max-height: 200px;
+    overflow-y: auto;
+    margin-top: 2px;
+}
+.customer-autocomplete-item {
+    padding: 8px 12px;
+    cursor: pointer;
+    border-bottom: 1px solid #f1f1f1;
+    font-size: 0.9rem;
+    text-align: left;
+}
+.customer-autocomplete-item:last-child {
+    border-bottom: none;
+}
+.customer-autocomplete-item:hover {
+    background-color: #f8f9fa;
+    color: #0d6efd;
+}
 </style>
 
 <!-- Toast -->
@@ -832,6 +869,7 @@ require_once __DIR__ . '/includes/header.php';
             <form id="bookingEditForm">
                 <input type="hidden" name="action" value="update">
                 <input type="hidden" name="id" id="modal-booking-id">
+                <input type="hidden" name="customer_id" id="modal-customer-id" value="">
 
                 <div class="modal-body">
                     <!-- Üst bilgi kartları -->
@@ -880,17 +918,19 @@ require_once __DIR__ . '/includes/header.php';
                     <!-- Müşteri -->
                     <h6 class="mb-3"><i class="bi bi-person me-2"></i>Müşteri Bilgileri</h6>
                     <div class="row mb-4">
-                        <div class="col-md-4">
+                        <div class="col-md-4 customer-autocomplete-wrap">
                             <label class="form-label">Ad Soyad *</label>
-                            <input type="text" name="customer_name" id="modal-customer-name" class="form-control" required>
+                            <input type="text" name="customer_name" id="modal-customer-name" class="form-control" autocomplete="new-password" readonly onfocus="this.removeAttribute('readonly');" onblur="this.setAttribute('readonly', 'readonly');" required>
+                            <div class="customer-autocomplete-list list-group shadow" style="display: none;"></div>
                         </div>
                         <div class="col-md-4">
                             <label class="form-label">E-posta</label>
-                            <input type="email" name="customer_email" id="modal-customer-email" class="form-control">
+                            <input type="email" name="customer_email" id="modal-customer-email" class="form-control" autocomplete="new-password" readonly onfocus="this.removeAttribute('readonly');" onblur="this.setAttribute('readonly', 'readonly');">
                         </div>
-                        <div class="col-md-4">
+                        <div class="col-md-4 customer-autocomplete-wrap">
                             <label class="form-label">Telefon</label>
-                            <input type="text" name="customer_phone" id="modal-customer-phone" class="form-control">
+                            <input type="text" name="customer_phone" id="modal-customer-phone" class="form-control" autocomplete="new-password" readonly onfocus="this.removeAttribute('readonly');" onblur="this.setAttribute('readonly', 'readonly');">
+                            <div class="customer-autocomplete-list list-group shadow" style="display: none;"></div>
                         </div>
                     </div>
 
@@ -1062,6 +1102,7 @@ require_once __DIR__ . '/includes/header.php';
             </div>
             <form id="addBookingForm">
                 <input type="hidden" name="action" value="create">
+                <input type="hidden" name="customer_id" id="add-customer-id" value="">
 
                 <div class="modal-body" style="max-height:75vh;overflow-y:auto;">
 
@@ -1093,17 +1134,19 @@ require_once __DIR__ . '/includes/header.php';
                     <!-- Müşteri -->
                     <h6 class="mb-3"><i class="bi bi-person me-2"></i>Müşteri Bilgileri</h6>
                     <div class="row mb-4">
-                        <div class="col-md-4">
+                        <div class="col-md-4 customer-autocomplete-wrap">
                             <label class="form-label">Ad Soyad *</label>
-                            <input type="text" name="customer_name" id="add-customer-name" class="form-control" required>
+                            <input type="text" name="customer_name" id="add-customer-name" class="form-control" autocomplete="new-password" readonly onfocus="this.removeAttribute('readonly');" onblur="this.setAttribute('readonly', 'readonly');" required>
+                            <div class="customer-autocomplete-list list-group shadow" style="display: none;"></div>
                         </div>
                         <div class="col-md-4">
                             <label class="form-label">E-posta</label>
-                            <input type="email" name="customer_email" class="form-control">
+                            <input type="email" name="customer_email" id="add-customer-email" class="form-control" autocomplete="new-password" readonly onfocus="this.removeAttribute('readonly');" onblur="this.setAttribute('readonly', 'readonly');">
                         </div>
-                        <div class="col-md-4">
+                        <div class="col-md-4 customer-autocomplete-wrap">
                             <label class="form-label">Telefon</label>
-                            <input type="text" name="customer_phone" class="form-control">
+                            <input type="text" name="customer_phone" id="add-customer-phone" class="form-control" autocomplete="new-password" readonly onfocus="this.removeAttribute('readonly');" onblur="this.setAttribute('readonly', 'readonly');">
+                            <div class="customer-autocomplete-list list-group shadow" style="display: none;"></div>
                         </div>
                     </div>
 
@@ -1551,6 +1594,7 @@ require_once __DIR__ . '/includes/header.php';
 const bookingsData = <?= json_encode(array_map(function($b) {
     return [
         'id'                => $b['id'],
+        'customer_id'       => (int)($b['customer_id'] ?? 0),
         'booking_number'    => $b['booking_number'],
         'booking_type'      => $b['booking_type'],
         'booking_direction' => $b['booking_direction'] ?? 'outbound',
@@ -1788,6 +1832,131 @@ document.getElementById('add-customer-name').addEventListener('input', function(
     if (firstPax) firstPax.value = this.value;
 });
 
+// ─── Müşteri Otomatik Tamamlama (Autocomplete) ────────────────────────────────
+function initCustomerAutocomplete(inputId, phoneId, emailId, hiddenId) {
+    const nameInput = document.getElementById(inputId);
+    const phoneInput = document.getElementById(phoneId);
+    const emailInput = document.getElementById(emailId);
+    const hiddenInput = document.getElementById(hiddenId);
+
+    if (!nameInput || !phoneInput) return;
+
+    let isSelecting = false;
+
+    function hideAllLists() {
+        document.querySelectorAll('.customer-autocomplete-list').forEach(l => {
+            l.style.display = 'none';
+            l.innerHTML = '';
+        });
+    }
+
+    function escapeHtml(text) {
+        if (!text) return '';
+        return text.toString()
+            .replace(/&/g, "&amp;")
+            .replace(/</g, "&lt;")
+            .replace(/>/g, "&gt;")
+            .replace(/"/g, "&quot;")
+            .replace(/'/g, "&#039;");
+    }
+
+    function selectCustomer(cust) {
+        isSelecting = true;
+        nameInput.value = cust.name || '';
+        phoneInput.value = cust.phone || '';
+        if (emailInput) emailInput.value = cust.email || '';
+        hiddenInput.value = cust.id;
+        
+        // Tetikleyici olayları çalıştır (ad-customer-name gibi input dinleyicileri için)
+        nameInput.dispatchEvent(new Event('input'));
+        
+        isSelecting = false;
+        hideAllLists();
+    }
+
+    function handleInput(e, inputEl) {
+        if (isSelecting) return;
+
+        const query = inputEl.value.trim();
+        const listEl = inputEl.parentNode.querySelector('.customer-autocomplete-list');
+        
+        if (query.length < 2) {
+            if (listEl) {
+                listEl.style.display = 'none';
+                listEl.innerHTML = '';
+            }
+            return;
+        }
+
+        hiddenInput.value = '';
+
+        const fd = new FormData();
+        fd.append('action', 'search_customers');
+        fd.append('q', query);
+        fd.append('csrf_token', csrfToken);
+
+        fetch(apiUrl, { method: 'POST', body: fd })
+            .then(r => r.json())
+            .then(res => {
+                if (res.success && res.data && res.data.customers && res.data.customers.length > 0) {
+                    listEl.innerHTML = '';
+                    res.data.customers.forEach(cust => {
+                        const item = document.createElement('div');
+                        item.className = 'customer-autocomplete-item';
+                        
+                        let details = [];
+                        if (cust.phone) details.push(cust.phone);
+                        if (cust.email) details.push(cust.email);
+                        const detailStr = details.length > 0 ? ` (${details.join(' - ')})` : '';
+                        
+                        item.innerHTML = `<strong>${escapeHtml(cust.name)}</strong>${escapeHtml(detailStr)}`;
+                        
+                        item.addEventListener('click', function() {
+                            selectCustomer(cust);
+                        });
+                        listEl.appendChild(item);
+                    });
+                    listEl.style.display = 'block';
+                } else {
+                    listEl.style.display = 'none';
+                    listEl.innerHTML = '';
+                }
+            })
+            .catch(err => {
+                console.error(err);
+            });
+    }
+
+    let debounceTimer;
+    function debounceInput(e, inputEl) {
+        clearTimeout(debounceTimer);
+        debounceTimer = setTimeout(() => handleInput(e, inputEl), 250);
+    }
+
+    nameInput.addEventListener('input', function(e) {
+        debounceInput(e, this);
+    });
+
+    phoneInput.addEventListener('input', function(e) {
+        debounceInput(e, this);
+    });
+
+    document.addEventListener('click', function(e) {
+        if (!nameInput.contains(e.target) && !phoneInput.contains(e.target) && !e.target.closest('.customer-autocomplete-list')) {
+            hideAllLists();
+        }
+    });
+
+    document.addEventListener('keydown', function(e) {
+        if (e.key === 'Escape') {
+            hideAllLists();
+        }
+    });
+}
+
+initCustomerAutocomplete('add-customer-name', 'add-customer-phone', 'add-customer-email', 'add-customer-id');
+initCustomerAutocomplete('modal-customer-name', 'modal-customer-phone', 'modal-customer-email', 'modal-customer-id');
+
 // ─── Geliş otel adresi → dönüş otel adresi (dönüş açıksa) ────────────────────
 $('#add-hotel-address').on('change', function() {
     if (document.getElementById('add-has-return').checked) {
@@ -1811,6 +1980,7 @@ function openBookingModal(id) {
     const statusEl = document.getElementById('status-' + b.booking_status);
     if (statusEl) statusEl.checked = true;
 
+    document.getElementById('modal-customer-id').value    = b.customer_id    || '';
     document.getElementById('modal-customer-name').value  = b.customer_name  || '';
     document.getElementById('modal-customer-email').value = b.customer_email || '';
     document.getElementById('modal-customer-phone').value = b.customer_phone || '';
@@ -2063,6 +2233,7 @@ function collectPassengerNames(mode) {
 
 // Add modal sıfırla
 document.getElementById('addBookingModal').addEventListener('show.bs.modal', function() {
+    document.getElementById('add-customer-id').value = '';
     document.getElementById('add-adults').value     = 1;
     document.getElementById('add-children').value   = 0;
     document.getElementById('add-child-seat').value = 0;
@@ -2354,6 +2525,11 @@ function sendOutsourceWhatsApp(bookingId, partnerPhone, partnerName, partnerPric
             var passengers = (d.success && d.data && d.data.passengers) ? d.data.passengers : [];
             var msg = buildOutsourceMessage(bData, partnerPrice, pickupTimeOverride, passengers, outsourceCurrency, noCollection);
             var waNumber = (partnerPhone || '').replace(/[^0-9]/g, '');
+            if (waNumber.length === 10 && waNumber.startsWith('5')) {
+                waNumber = '90' + waNumber;
+            } else if (waNumber.length === 11 && waNumber.startsWith('05')) {
+                waNumber = '90' + waNumber.substring(1);
+            }
             if (!waNumber) return;
             var url = 'https://wa.me/' + waNumber + '?text=' + encodeURIComponent(msg);
             window.open(url, '_blank');

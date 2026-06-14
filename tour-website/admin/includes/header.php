@@ -837,6 +837,10 @@ if ($siteLogo && defined('UPLOADS_URL')) {
             <i class="bi bi-people nav-link-icon"></i>
             <span class="nav-link-text">Dış Partnerler</span>
         </a>
+        <a href="<?= ADMIN_URL ?>/customers.php" class="nav-link <?= $currentPage === 'customers' ? 'active' : '' ?>" title="Müşteriler">
+            <i class="bi bi-person-lines-fill nav-link-icon"></i>
+            <span class="nav-link-text">Müşteriler</span>
+        </a>
 
         <div class="nav-section">İçerik</div>
         <a href="<?= ADMIN_URL ?>/homepage.php" class="nav-link <?= $currentPage === 'homepage' ? 'active' : '' ?>" title="Anasayfa">

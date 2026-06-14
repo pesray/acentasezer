@@ -33,6 +33,26 @@ switch ($action) {
             // En az biri olmak zorunda; hiçbiri yoksa varsayılan geliş
             if (!$hasOutbound && !$hasReturn) $hasOutbound = true;
 
+            $cName = trim($_POST['customer_name'] ?? '');
+            $cEmail = trim($_POST['customer_email'] ?? '') ?: null;
+            $cPhone = trim($_POST['customer_phone'] ?? '') ?: null;
+            $customerId = (int)($_POST['customer_id'] ?? 0);
+
+            if (!$customerId && $cName !== '') {
+                // Müşteri ara
+                $stmtCheck = $db->prepare("SELECT id FROM customers WHERE name = ? AND phone = ?");
+                $stmtCheck->execute([$cName, $cPhone]);
+                $existingCust = $stmtCheck->fetch();
+                if ($existingCust) {
+                    $customerId = (int)$existingCust['id'];
+                } else {
+                    // Müşteri oluştur
+                    $stmtInsertCust = $db->prepare("INSERT INTO customers (name, email, phone) VALUES (?, ?, ?)");
+                    $stmtInsertCust->execute([$cName, $cEmail, $cPhone]);
+                    $customerId = (int)$db->lastInsertId();
+                }
+            }
+
             $insertBooking = $db->prepare("
                 INSERT INTO bookings (
                     booking_number, booking_type, booking_status, booking_direction,
@@ -41,7 +61,7 @@ switch ($action) {
                     flight_date, flight_time, flight_number, hotel_address, pickup_time,
                     adults, children, child_seat,
                     total_price, currency,
-                    notes, admin_notes, created_at
+                    notes, admin_notes, created_at, customer_id
                 ) VALUES (
                     ?, 'transfer', 'confirmed', ?,
                     ?, ?,
@@ -49,15 +69,15 @@ switch ($action) {
                     ?, ?, ?, ?, ?,
                     ?, ?, ?,
                     ?, ?,
-                    ?, ?, NOW()
+                    ?, ?, NOW(), ?
                 )
             ");
 
             $commonFields = [
                 $destinationId ?: null, $vehicleId ?: null,
-                trim($_POST['customer_name'] ?? ''),
-                trim($_POST['customer_email'] ?? ''),
-                trim($_POST['customer_phone'] ?? ''),
+                $cName,
+                $cEmail,
+                $cPhone,
             ];
             $passengerFields = [
                 (int)($_POST['adults'] ?? 1),
@@ -88,7 +108,8 @@ switch ($action) {
                     ],
                     $passengerFields,
                     [(float)($_POST['total_price'] ?? 0), trim($_POST['currency'] ?? 'TRY')],
-                    $noteFields
+                    $noteFields,
+                    [$customerId ?: null]
                 ));
                 $outboundId = (int)$db->lastInsertId();
                 savePassengers($db, $outboundId, $numOutbound, $adultNames, $childNames);
@@ -110,7 +131,8 @@ switch ($action) {
                     ],
                     $passengerFields,
                     [(float)($_POST['return_total_price'] ?? 0), trim($_POST['return_currency'] ?? $_POST['currency'] ?? 'TRY')],
-                    $noteFields
+                    $noteFields,
+                    [$customerId ?: null]
                 ));
                 $returnId = (int)$db->lastInsertId();
                 savePassengers($db, $returnId, $numReturn, $adultNames, $childNames);
@@ -129,6 +151,26 @@ switch ($action) {
         if (!$id) jsonResponse(false, 'Geçersiz ID');
 
         try {
+            $cName = trim($_POST['customer_name'] ?? '');
+            $cEmail = trim($_POST['customer_email'] ?? '') ?: null;
+            $cPhone = trim($_POST['customer_phone'] ?? '') ?: null;
+            $customerId = (int)($_POST['customer_id'] ?? 0);
+
+            if (!$customerId && $cName !== '') {
+                // Müşteri ara
+                $stmtCheck = $db->prepare("SELECT id FROM customers WHERE name = ? AND phone = ?");
+                $stmtCheck->execute([$cName, $cPhone]);
+                $existingCust = $stmtCheck->fetch();
+                if ($existingCust) {
+                    $customerId = (int)$existingCust['id'];
+                } else {
+                    // Müşteri oluştur
+                    $stmtInsertCust = $db->prepare("INSERT INTO customers (name, email, phone) VALUES (?, ?, ?)");
+                    $stmtInsertCust->execute([$cName, $cEmail, $cPhone]);
+                    $customerId = (int)$db->lastInsertId();
+                }
+            }
+
             $stmt = $db->prepare("
                 UPDATE bookings SET
                     destination_id = ?, vehicle_id = ?,
@@ -139,15 +181,16 @@ switch ($action) {
                     total_price = ?, currency = ?,
                     notes = ?, admin_notes = ?,
                     booking_status = ?,
+                    customer_id = ?,
                     updated_at = NOW()
                 WHERE id = ?
             ");
             $stmt->execute([
                 ((int)($_POST['destination_id'] ?? 0)) ?: null,
                 ((int)($_POST['vehicle_id'] ?? 0)) ?: null,
-                trim($_POST['customer_name'] ?? ''),
-                trim($_POST['customer_email'] ?? ''),
-                trim($_POST['customer_phone'] ?? ''),
+                $cName,
+                $cEmail,
+                $cPhone,
                 trim($_POST['pickup_location'] ?? '') ?: null,
                 ($_POST['pickup_date'] ?? '') ?: null,
                 ($_POST['pickup_time'] ?? '') ?: null,
@@ -164,6 +207,7 @@ switch ($action) {
                 trim($_POST['notes'] ?? '') ?: null,
                 trim($_POST['admin_notes'] ?? '') ?: null,
                 $_POST['booking_status'] ?? 'pending',
+                $customerId ?: null,
                 $id
             ]);
             // Yolcuları güncelle
@@ -408,6 +452,27 @@ switch ($action) {
             jsonResponse(true, 'Şöför kaydedildi.');
         } catch (Exception $e) {
             $db->rollBack();
+            jsonResponse(false, 'Hata: ' . $e->getMessage());
+        }
+        break;
+
+    case 'search_customers':
+        $q = trim($_POST['q'] ?? $_GET['q'] ?? '');
+        if (strlen($q) < 2) {
+            jsonResponse(true, 'OK', ['customers' => []]);
+        }
+        try {
+            $stmt = $db->prepare("
+                SELECT id, name, email, phone 
+                FROM customers 
+                WHERE name LIKE ? OR phone LIKE ? 
+                ORDER BY name ASC 
+                LIMIT 20
+            ");
+            $stmt->execute(['%' . $q . '%', '%' . $q . '%']);
+            $customers = $stmt->fetchAll(PDO::FETCH_ASSOC);
+            jsonResponse(true, 'OK', ['customers' => $customers]);
+        } catch (Exception $e) {
             jsonResponse(false, 'Hata: ' . $e->getMessage());
         }
         break;

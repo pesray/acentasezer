@@ -65,9 +65,16 @@ require_once __DIR__ . '/includes/header.php';
                             <?php endif; ?>
                         </td>
                         <td>
-                            <?php if ($p['phone']): ?>
-                            <a href="tel:<?= e($p['phone']) ?>" class="text-decoration-none">
-                                <i class="bi bi-telephone me-1 text-muted"></i><?= e($p['phone']) ?>
+                            <?php if ($p['phone']): 
+                                $phoneClean = preg_replace('/[^0-9]/', '', $p['phone']);
+                                if (strlen($phoneClean) === 10 && strpos($phoneClean, '5') === 0) {
+                                    $phoneClean = '90' . $phoneClean;
+                                } elseif (strlen($phoneClean) === 11 && strpos($phoneClean, '05') === 0) {
+                                    $phoneClean = '90' . substr($phoneClean, 1);
+                                }
+                            ?>
+                            <a href="https://wa.me/<?= $phoneClean ?>" target="_blank" class="text-decoration-none text-success" title="WhatsApp ile Mesaj Gönder">
+                                <i class="bi bi-whatsapp me-1"></i><?= e($p['phone']) ?>
                             </a>
                             <?php else: ?>
                             <span class="text-muted">-</span>

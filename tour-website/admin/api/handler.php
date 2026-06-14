@@ -77,6 +77,9 @@ try {
         case 'outsource_partners':
             require_once __DIR__ . '/outsource_partners.php';
             break;
+        case 'customers':
+            require_once __DIR__ . '/customers.php';
+            break;
         case 'drivers':
             require_once __DIR__ . '/drivers.php';
             break;
