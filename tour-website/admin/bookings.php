@@ -153,6 +153,14 @@ require_once __DIR__ . '/includes/header.php';
 .passenger-name-group .passenger-name-row { display: flex; align-items: center; gap: .5rem; margin-bottom: .4rem; }
 .passenger-name-group .passenger-name-row input { flex: 1; }
 .passenger-name-group h6 { font-size: .8rem; font-weight: 700; text-transform: uppercase; letter-spacing: .5px; color: #858796; margin-bottom: .5rem; }
+
+.row-completed td {
+    background-color: #00ff3c86 !important; /* Daha belirgin yeşil */
+    transition: background-color 0.3s ease;
+}
+.row-completed:hover td {
+    background-color: #00ff3c9b !important;
+}
 </style>
 
 <!-- Toast -->
@@ -292,10 +300,10 @@ require_once __DIR__ . '/includes/header.php';
 
             <div class="d-flex gap-2 align-items-center">
                 <select id="filter-status" class="form-select form-select-sm" style="width:160px;">
-                    <option value="">Tüm Durumlar</option>
-                    <option value="Onay Bekliyor">Onay Bekliyor</option>
-                    <option value="Onaylandı">Onaylandı</option>
-                    <option value="İptal Edildi">İptal Edildi</option>
+                    <option value="yapilmadi" <?= $view === 'daily' ? 'selected' : '' ?>>Yapılmadı</option>
+                    <option value="is_yapildi">İş Yapıldı</option>
+                    <option value="disariya_verildi">Dışarıya Verildi</option>
+                    <option value="" <?= $view !== 'daily' ? 'selected' : '' ?>>Tüm Durumlar</option>
                 </select>
                 <button type="button" id="filter-clear" class="btn btn-sm btn-outline-secondary" title="Filtreleri Temizle">
                     <i class="bi bi-x-lg"></i>
@@ -537,7 +545,7 @@ require_once __DIR__ . '/includes/header.php';
                 $dateField = $b['flight_date'] ?: ($b['pickup_date'] ?: null);
                 $bVParam   = ($dir === 'return') ? 'ret_id=' . $b['id'] : 'out_id=' . $b['id'];
             ?>
-            <tr>
+            <tr class="<?= (!empty($b['is_completed']) ? 'row-completed' : '') ?>">
                 <td>
                     <span class="badge bg-<?= $dirLabel[1] ?>">
                         <i class="bi bi-<?= $dirIcon ?> me-1"></i><?= $dirLabel[0] ?>
@@ -686,7 +694,7 @@ require_once __DIR__ . '/includes/header.php';
                 $dateField = $b['flight_date'] ?: ($b['pickup_date'] ?: null);
                 $bVParam   = ($dir === 'return') ? 'ret_id=' . $b['id'] : 'out_id=' . $b['id'];
             ?>
-            <tr>
+            <tr class="<?= (!empty($b['is_completed']) ? 'row-completed' : '') ?>">
                 <td>
                     <span class="badge bg-<?= $dirLabel[1] ?>">
                         <i class="bi bi-<?= $dirIcon ?> me-1"></i><?= $dirLabel[0] ?>
@@ -1638,7 +1646,7 @@ $(document).ready(function() {
     const dateColIdxs  = [1];
     const statusColIdx = currentView === 'arrival' ? 10 : 11;
 
-    $.fn.dataTable.ext.search.push(function(settings, data) {
+    $.fn.dataTable.ext.search.push(function(settings, data, dataIndex) {
         if (settings.nTable.id !== 'bookingsTable') return true;
         const fd = $('#filter-date').val();
         if (fd) {
@@ -1657,7 +1665,18 @@ $(document).ready(function() {
             if (!matched) return false;
         }
         const fs = $('#filter-status').val();
-        if (fs && (data[statusColIdx] || '').indexOf(fs) === -1) return false;
+        if (fs) {
+            var rowNode = settings.aoData[dataIndex].nTr;
+            var isCompleted = $(rowNode).find('input[data-field="is_completed"]').is(':checked');
+            var isOutsourced = $(rowNode).find('input[data-field="is_outsourced"]').is(':checked');
+            if (fs === 'yapilmadi') {
+                if (isCompleted || isOutsourced) return false;
+            } else if (fs === 'is_yapildi') {
+                if (!isCompleted) return false;
+            } else if (fs === 'disariya_verildi') {
+                if (!isOutsourced) return false;
+            }
+        }
         return true;
     });
 
@@ -1686,7 +1705,11 @@ $(document).ready(function() {
 
     $('#filter-clear').on('click', function() {
         $('#filter-date').val('');
+        <?php if ($view === 'daily'): ?>
+        $('#filter-status').val('yapilmadi');
+        <?php else: ?>
         $('#filter-status').val('');
+        <?php endif; ?>
         table.draw();
     });
     table.draw();
@@ -2057,7 +2080,12 @@ function updateOps(id, field, value) {
     fd.append('csrf_token', csrfToken);
     fetch(apiUrl, {method:'POST', body:fd})
         .then(r => r.json())
-        .then(d => showToast(d.message, d.success))
+        .then(d => {
+            showToast(d.message, d.success);
+            if (d.success && typeof table !== 'undefined') {
+                table.draw();
+            }
+        })
         .catch(() => showToast('Bir hata oluştu.', false));
 }
 
@@ -2100,7 +2128,14 @@ document.addEventListener('change', function(e) {
                     fdStatus.append('csrf_token', csrfToken);
                     return fetch(apiUrl, {method:'POST', body:fdStatus}).then(r => r.json());
                 })
-                .then(d => showToast(d.message || 'İş yapıldı kaldırıldı', d.success))
+                .then(d => {
+                    showToast(d.message || 'İş yapıldı kaldırıldı', d.success);
+                    if (d.success) {
+                        const tr = e.target.closest('tr');
+                        if (tr) tr.classList.remove('row-completed');
+                        if (typeof table !== 'undefined') table.draw();
+                    }
+                })
                 .catch(() => showToast('Bir hata oluştu.', false));
         }
         return;
@@ -2191,7 +2226,13 @@ document.addEventListener('change', function(e) {
             fdClear.append('csrf_token', csrfToken);
             fetch(apiUrl, {method:'POST', body:fdClear})
                 .then(function(r) { return r.json(); })
-                .then(function(d) { showToast(d.message, d.success); })
+                .then(function(d) {
+                    showToast(d.message, d.success);
+                    if (d.success) {
+                        if (tr) tr.classList.remove('row-completed');
+                        if (typeof table !== 'undefined') table.draw();
+                    }
+                })
                 .catch(function() { showToast('Bir hata oluştu.', false); });
         }
         return;
@@ -2275,7 +2316,10 @@ document.getElementById('outsource-save-btn').addEventListener('click', function
                 // is_completed checkbox'unu işaretle (DB'de save_outsource zaten 1 yaptı)
                 document.querySelectorAll('.ops-check[data-field="is_completed"][data-id="' + id + '"]').forEach(function(chk) {
                     chk.checked = true;
+                    const tr = chk.closest('tr');
+                    if (tr) tr.classList.add('row-completed');
                 });
+                if (typeof table !== 'undefined') table.draw();
 
                 bootstrap.Modal.getInstance(document.getElementById('outsourceModal')).hide();
             }
@@ -2986,6 +3030,11 @@ document.getElementById('driver-modal-save-btn').addEventListener('click', funct
                     .then(function(d2) {
                         bootstrap.Modal.getInstance(document.getElementById('driverSelectModal')).hide();
                         showToast('Şöför kaydedildi ve iş yapıldı olarak işaretlendi.', true);
+                        if (completedChkRef) {
+                            const tr = completedChkRef.closest('tr');
+                            if (tr) tr.classList.add('row-completed');
+                        }
+                        if (typeof table !== 'undefined') table.draw();
                     })
                     .catch(function() {
                         bootstrap.Modal.getInstance(document.getElementById('driverSelectModal')).hide();
