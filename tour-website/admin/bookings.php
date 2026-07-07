@@ -368,6 +368,9 @@ require_once __DIR__ . '/includes/header.php';
                 <button type="button" id="date-next" class="btn btn-sm btn-outline-primary" title="Sonraki Gün">
                     <i class="bi bi-chevron-right"></i>
                 </button>
+                <button type="button" id="date-clear" class="btn btn-sm btn-outline-secondary" title="Tarihi Temizle">
+                    <i class="bi bi-x-lg"></i>
+                </button>
             </div>
 
             <div class="d-flex gap-2 align-items-center">
@@ -1922,9 +1925,11 @@ $(document).ready(function() {
     }
     $('#date-prev').on('click', function() { shiftDate(-1); });
     $('#date-next').on('click', function() { shiftDate(1); });
+    $('#date-clear').on('click', function() {
+        $('#filter-date').val('').trigger('change');
+    });
 
     $('#filter-clear').on('click', function() {
-        $('#filter-date').val('');
         <?php if ($view === 'daily'): ?>
         $('#filter-status').val('yapilmadi');
         <?php else: ?>
