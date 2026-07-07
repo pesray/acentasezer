@@ -32,3 +32,6 @@ claudesidian/
 # Eski yedekler
 *.bak
 *.backup
+
+# cPanel deploy target folder
+app/
