@@ -34,14 +34,19 @@ switch ($action) {
             if (!$hasOutbound && !$hasReturn) $hasOutbound = true;
 
             $cName = trim($_POST['customer_name'] ?? '');
-            $cEmail = trim($_POST['customer_email'] ?? '') ?: null;
+            $cEmail = trim($_POST['customer_email'] ?? '');
             $cPhone = trim($_POST['customer_phone'] ?? '') ?: null;
             $customerId = (int)($_POST['customer_id'] ?? 0);
 
             if (!$customerId && $cName !== '') {
-                // Müşteri ara
-                $stmtCheck = $db->prepare("SELECT id FROM customers WHERE name = ? AND phone = ?");
-                $stmtCheck->execute([$cName, $cPhone]);
+                // Müşteri ara (boş/null telefonları doğru eşleştirmek için)
+                if ($cPhone === null || $cPhone === '') {
+                    $stmtCheck = $db->prepare("SELECT id FROM customers WHERE name = ? AND (phone IS NULL OR phone = '')");
+                    $stmtCheck->execute([$cName]);
+                } else {
+                    $stmtCheck = $db->prepare("SELECT id FROM customers WHERE name = ? AND phone = ?");
+                    $stmtCheck->execute([$cName, $cPhone]);
+                }
                 $existingCust = $stmtCheck->fetch();
                 if ($existingCust) {
                     $customerId = (int)$existingCust['id'];
@@ -167,14 +172,19 @@ switch ($action) {
 
         try {
             $cName = trim($_POST['customer_name'] ?? '');
-            $cEmail = trim($_POST['customer_email'] ?? '') ?: null;
+            $cEmail = trim($_POST['customer_email'] ?? '');
             $cPhone = trim($_POST['customer_phone'] ?? '') ?: null;
             $customerId = (int)($_POST['customer_id'] ?? 0);
 
             if (!$customerId && $cName !== '') {
-                // Müşteri ara
-                $stmtCheck = $db->prepare("SELECT id FROM customers WHERE name = ? AND phone = ?");
-                $stmtCheck->execute([$cName, $cPhone]);
+                // Müşteri ara (boş/null telefonları doğru eşleştirmek için)
+                if ($cPhone === null || $cPhone === '') {
+                    $stmtCheck = $db->prepare("SELECT id FROM customers WHERE name = ? AND (phone IS NULL OR phone = '')");
+                    $stmtCheck->execute([$cName]);
+                } else {
+                    $stmtCheck = $db->prepare("SELECT id FROM customers WHERE name = ? AND phone = ?");
+                    $stmtCheck->execute([$cName, $cPhone]);
+                }
                 $existingCust = $stmtCheck->fetch();
                 if ($existingCust) {
                     $customerId = (int)$existingCust['id'];
@@ -448,7 +458,7 @@ switch ($action) {
 
         try {
             $db->beginTransaction();
-            $stmt = $db->prepare("DELETE FROM bookings WHERE id = ?");
+            $stmt = $db->prepare("UPDATE bookings SET is_deleted = 1 WHERE id = ?");
             $deletedCount = 0;
             foreach ($ids as $id) {
                 $stmt->execute([(int)$id]);
@@ -464,6 +474,36 @@ switch ($action) {
         } catch (Exception $e) {
             $db->rollBack();
             jsonResponse(false, 'Silme hatası: ' . $e->getMessage());
+        }
+        break;
+
+    // === Rezervasyon Geri Yükle ===
+    case 'restore':
+        $ids = $_POST['ids'] ?? [];
+        if (empty($ids)) {
+            $id = (int)($_POST['id'] ?? 0);
+            if ($id) $ids = [$id];
+        }
+        if (empty($ids)) jsonResponse(false, 'Geçersiz ID');
+
+        try {
+            $db->beginTransaction();
+            $stmt = $db->prepare("UPDATE bookings SET is_deleted = 0 WHERE id = ?");
+            $restoredCount = 0;
+            foreach ($ids as $id) {
+                $stmt->execute([(int)$id]);
+                $restoredCount += $stmt->rowCount();
+            }
+            $db->commit();
+
+            if ($restoredCount === 0) {
+                jsonResponse(false, 'Kayıt bulunamadı');
+            }
+
+            jsonResponse(true, 'Rezervasyon(lar) geri yüklendi.');
+        } catch (Exception $e) {
+            $db->rollBack();
+            jsonResponse(false, 'Geri yükleme hatası: ' . $e->getMessage());
         }
         break;
 

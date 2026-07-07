@@ -46,7 +46,7 @@ $pendingBookings = $db->query("
     LEFT JOIN tours t ON b.tour_id = t.id
     LEFT JOIN destinations d ON b.destination_id = d.id
     LEFT JOIN vehicles v ON b.vehicle_id = v.id
-    WHERE b.booking_status = 'pending' $dirWhere
+    WHERE b.booking_status = 'pending' AND b.is_deleted = 0 $dirWhere
     ORDER BY b.created_at DESC
 ")->fetchAll();
 
@@ -61,7 +61,7 @@ $allBookings = $db->query("
     LEFT JOIN tours t ON b.tour_id = t.id
     LEFT JOIN destinations d ON b.destination_id = d.id
     LEFT JOIN vehicles v ON b.vehicle_id = v.id
-    WHERE 1=1 $dirWhere
+    WHERE b.is_deleted = 0 $dirWhere
     ORDER BY b.created_at DESC
 ")->fetchAll();
 
@@ -139,6 +139,41 @@ require_once __DIR__ . '/includes/header.php';
 .modal-booking .modal-header .btn-close { filter:brightness(0) invert(1); }
 .status-select-group .btn { font-size:.85rem; padding:.35rem .75rem; }
 #bookingModal .modal-body { max-height:75vh; overflow-y:auto; }
+
+/* Mobilde Rezervasyon Ekle/Düzenle Modallarını Tam Ekran Yap ve Butonları Alta Yasla */
+@media (max-width: 575.98px) {
+    .modal-booking.modal {
+        padding-left: 0 !important;
+        padding-right: 0 !important;
+    }
+    .modal-booking .modal-dialog {
+        margin: 0 !important;
+        max-width: 100% !important;
+        width: 100% !important;
+        height: 100vh !important;
+        max-height: 100vh !important;
+    }
+    .modal-booking .modal-content {
+        height: 100% !important;
+        max-height: 100% !important;
+        border-radius: 0 !important;
+        border: none !important;
+        display: flex !important;
+        flex-direction: column !important;
+    }
+    .modal-booking .modal-body {
+        flex: 1 1 auto !important;
+        max-height: calc(100vh - 125px) !important;
+        overflow-y: auto !important;
+    }
+    .modal-booking .modal-footer {
+        margin-top: auto !important;
+        border-radius: 0 !important;
+        background-color: var(--bs-modal-bg, #fff) !important;
+        padding: 0.75rem 1rem !important;
+        border-top: 1px solid #dee2e6 !important;
+    }
+}
 .return-section { background:#f0f7ff; border:1px solid #b8d4f0; border-radius:.5rem; padding:1rem 1.25rem; }
 .view-tab.active { font-weight:600; }
 
@@ -1602,8 +1637,8 @@ require_once __DIR__ . '/includes/header.php';
 
 <!-- ===================== ŞÖFÖR MODAL ===================== -->
 <div class="modal fade" id="driverSelectModal" tabindex="-1">
-    <div class="modal-dialog modal-lg">
-        <div class="modal-content">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 shadow">
             <div class="modal-header" style="background:linear-gradient(135deg,#667eea,#764ba2);color:#fff;">
                 <h5 class="modal-title"><i class="bi bi-person-badge me-2"></i>İşi Yapan Şöförü Seç</h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal" style="filter:brightness(0) invert(1);"></button>
@@ -1615,6 +1650,16 @@ require_once __DIR__ . '/includes/header.php';
                     <select id="driver-modal-select" class="form-select" required>
                         <option value="">-- Şöför Seç --</option>
                     </select>
+                </div>
+                
+                <!-- WP Mesaj At Toggle -->
+                <div class="d-flex align-items-center border rounded px-2" style="height:32px;background:#f6fff8;border-color:#25d366 !important;white-space:nowrap;width:fit-content;">
+                    <div class="form-check form-switch mb-0" style="padding-left:2.2em;min-height:auto;">
+                        <input class="form-check-input mt-0" type="checkbox" id="driver-wa-toggle" style="cursor:pointer;width:1.8em;height:.9em;" checked>
+                    </div>
+                    <label for="driver-wa-toggle" class="fw-bold mb-0" style="cursor:pointer;color:#25d366;font-size:.8rem;line-height:1;">
+                        <i class="bi bi-whatsapp"></i> WP Mesaj At
+                    </label>
                 </div>
             </div>
             <div class="modal-footer">
@@ -1649,11 +1694,25 @@ require_once __DIR__ . '/includes/header.php';
                 <!-- Şöför Seçimi -->
                 <div id="ops-driver-section" class="mt-4 pt-4" style="border-top:1px dashed #b8d4f0; display:none;">
                     <h6 class="fw-bold mb-3"><i class="bi bi-person-badge me-2 text-primary"></i>Şöför Ata</h6>
-                    <div class="mb-3">
-                        <select id="ops-modal-driver" class="form-select" data-booking-id="">
-                            <option value="">-- Şöför Seç --</option>
-                        </select>
+                    <div class="row g-2 align-items-center mb-3">
+                        <div class="col-md-8">
+                            <select id="ops-modal-driver" class="form-select" data-booking-id="">
+                                <option value="">-- Şöför Seç --</option>
+                            </select>
+                        </div>
+                        <div class="col-md-4">
+                            <!-- WP Mesaj At Toggle -->
+                            <div class="d-flex align-items-center border rounded px-2" style="height:38px;background:#f6fff8;border-color:#25d366 !important;white-space:nowrap;width:fit-content;">
+                                <div class="form-check form-switch mb-0" style="padding-left:2.2em;min-height:auto;">
+                                    <input class="form-check-input mt-0" type="checkbox" id="ops-modal-driver-wa-toggle" style="cursor:pointer;width:1.8em;height:.9em;" checked>
+                                </div>
+                                <label for="ops-modal-driver-wa-toggle" class="fw-bold mb-0" style="cursor:pointer;color:#25d366;font-size:.8rem;line-height:1;">
+                                    <i class="bi bi-whatsapp"></i> WP Mesaj At
+                                </label>
+                            </div>
+                        </div>
                     </div>
+
                     <button type="button" class="btn btn-primary btn-sm" id="ops-modal-driver-save">
                         <i class="bi bi-check-lg me-1"></i>Kaydet
                     </button>
@@ -1987,6 +2046,11 @@ function initCustomerAutocomplete(inputId, phoneId, emailId, hiddenId) {
         // Tetikleyici olayları çalıştır (ad-customer-name gibi input dinleyicileri için)
         nameInput.dispatchEvent(new Event('input'));
         
+        // Yarış durumunu önlemek için debounce sıfırlama zamanlayıcısını temizle
+        if (typeof debounceTimer !== 'undefined') {
+            clearTimeout(debounceTimer);
+        }
+        
         isSelecting = false;
         hideAllLists();
     }
@@ -2234,6 +2298,26 @@ function openBookingModal(id) {
 // ─── AJAX ─────────────────────────────────────────────────────────────────────
 const apiUrl    = window.ADMIN_URL + '/api/handler.php?entity=bookings';
 const csrfToken = document.querySelector('meta[name="csrf-token"]').content;
+
+<?php
+$wpTemplatesRaw = $db->query("SELECT template_key, content FROM whatsapp_templates")->fetchAll(PDO::FETCH_KEY_PAIR);
+?>
+const wpTemplates = <?php echo json_encode($wpTemplatesRaw ?: []); ?>;
+const AIRPORT_NAME = <?php echo json_encode(getSetting('airport_name', 'ANTALYA AİRPORT AYT')); ?>;
+
+function parseWhatsAppTemplate(templateKey, placeholders) {
+    var raw = wpTemplates[templateKey] || '';
+    if (!raw) return '';
+    
+    var msg = raw;
+    for (var key in placeholders) {
+        if (placeholders.hasOwnProperty(key)) {
+            var val = placeholders[key] !== null && placeholders[key] !== undefined ? placeholders[key] : '';
+            msg = msg.split(key).join(val);
+        }
+    }
+    return msg;
+}
 
 function showToast(msg, ok) {
     const t = document.getElementById('ajaxToast');
@@ -2834,7 +2918,7 @@ function sendOutsourceWhatsApp(bookingId, partnerPhone, partnerName, partnerPric
         .then(function(r) { return r.json(); })
         .then(function(d) {
             var passengers = (d.success && d.data && d.data.passengers) ? d.data.passengers : [];
-            var msg = buildOutsourceMessage(bData, partnerPrice, pickupTimeOverride, passengers, outsourceCurrency, noCollection);
+            var msg = buildOutsourceMessage(bData, partnerPrice, pickupTimeOverride, passengers, outsourceCurrency, noCollection, partnerName);
             var waNumber = (partnerPhone || '').replace(/[^0-9]/g, '');
             if (waNumber.length === 10 && waNumber.startsWith('5')) {
                 waNumber = '90' + waNumber;
@@ -2848,8 +2932,8 @@ function sendOutsourceWhatsApp(bookingId, partnerPhone, partnerName, partnerPric
         .catch(function() {});
 }
 
-function buildOutsourceMessage(b, partnerPrice, pickupTimeOverride, passengers, outsourceCurrency, noCollection) {
-    var AIRPORT  = 'ANTALYA AİRPORT AYT';
+function buildOutsourceMessage(b, partnerPrice, pickupTimeOverride, passengers, outsourceCurrency, noCollection, partnerName) {
+    var AIRPORT  = AIRPORT_NAME;
     var hotel    = b.hotel_address || '-';
     var isReturn = b.booking_direction === 'return';
     var adults   = b.adults || 0;
@@ -2879,43 +2963,38 @@ function buildOutsourceMessage(b, partnerPrice, pickupTimeOverride, passengers, 
     }
     function fmtTime(t) { return t ? t.substring(0, 5) : ''; }
 
-    var lines = [];
-    if (isReturn) {
-        lines.push(hotel + ' --> ' + AIRPORT);
-        var pickupTime = pickupTimeOverride || (b.pickup_time ? b.pickup_time.substring(0,5) : '');
-        var pickupDate = fmtDate(b.flight_date);
-        lines.push('*OTELDEN ALINIŞ: ' + pickupDate + ' - ' + pickupTime + '*');
-        lines.push('Uçuş: ' + fmtDate(b.flight_date) + ' - ' + fmtTime(b.flight_time));
-        lines.push('*Kişi: ' + paxStr + '*');
-    } else {
-        lines.push(AIRPORT + ' --> ' + hotel);
-        lines.push(fmtDate(b.flight_date) + ' - ' + fmtTime(b.flight_time));
-        lines.push('*Kişi: ' + paxStr + '*');
-    }
-    if (b.flight_number) {
-        lines.push('Uçuş No: ' + b.flight_number);
-    }
+    var route = isReturn ? (hotel + ' --> ' + AIRPORT) : (AIRPORT + ' --> ' + hotel);
+    var flightDateFormatted = fmtDate(b.flight_date);
+    var flightTimeFormatted = fmtTime(b.flight_time);
+    var pickupTimeFormatted = isReturn ? (pickupTimeOverride || (b.pickup_time ? b.pickup_time.substring(0,5) : '')) : '';
+    var pickupDateFormatted = isReturn ? fmtDate(b.flight_date) : '';
 
-    lines.push('');
-    lines.push('*TAHSİLAT: ' + price + '*');
-    lines.push('HAKEDİŞ: ' + hak);
+    var passengerLines = [];
+    passengers.forEach(function(p) {
+        if (p.full_name) {
+            var tag = p.passenger_type === 'child' ? ' (Çocuk)' : '';
+            passengerLines.push('• ' + p.full_name + tag);
+        }
+    });
+    var passengersStr = passengerLines.join('\n');
 
-    if (passengers && passengers.length > 0) {
-        lines.push('');
-        lines.push('*YOLCULAR*');
-        passengers.forEach(function(p) {
-            if (p.full_name) {
-                var tag = p.passenger_type === 'child' ? ' (Çocuk)' : '';
-                lines.push('• ' + p.full_name + tag);
-            }
-        });
-    }
-    if (b.notes && b.notes.trim() !== '') {
-        lines.push('');
-        lines.push('*Not:* ' + b.notes.trim());
-    }
+    var placeholders = {
+        '{ROUTE}': route,
+        '{FLIGHT_DATE}': flightDateFormatted,
+        '{FLIGHT_TIME}': flightTimeFormatted,
+        '{PICKUP_DATE}': pickupDateFormatted,
+        '{PICKUP_TIME}': pickupTimeFormatted,
+        '{FLIGHT_NO}': b.flight_number || '-',
+        '{HOTEL}': hotel,
+        '{PAX}': paxStr,
+        '{PASSENGERS}': passengersStr,
+        '{PRICE}': price,
+        '{NOTES}': b.notes ? b.notes.trim() : '-',
+        '{PARTNER_NAME}': partnerName || '-',
+        '{PARTNER_HAKEDIS}': hak
+    };
 
-    return lines.join('\n');
+    return parseWhatsAppTemplate('outsource_transfer', placeholders);
 }
 
 // ─── İş Durumu Modalı ─────────────────────────────────────────────────────────
@@ -2924,6 +3003,11 @@ function openOpsStatus(id) {
     const infoBox = document.getElementById('ops-booking-info');
     body.innerHTML    = '<div class="text-center py-3"><span class="spinner-border spinner-border-sm"></span></div>';
     infoBox.innerHTML = '<div class="col-12 text-center py-2"><span class="spinner-border spinner-border-sm"></span></div>';
+    
+    // WP toggle'ı varsayılan açık yap
+    const waToggle = document.getElementById('ops-modal-driver-wa-toggle');
+    if (waToggle) waToggle.checked = true;
+
     new bootstrap.Modal(document.getElementById('opsStatusModal')).show();
 
     // Rezervasyon bilgilerini bookingsData'dan hemen doldur
@@ -3188,6 +3272,8 @@ function openOpsStatus(id) {
                             if (dr.plate) txt += ' • ' + dr.plate;
                             if (dr.brand) txt += ' (' + dr.brand + ' ' + dr.model + ')';
                             var opt = new Option(txt, dr.id, false, dr.id == curDriverId);
+                            opt.dataset.phone = dr.phone || '';
+                            opt.dataset.name = dr.name + ' ' + dr.surname;
                             $sel.append(opt);
                         });
 
@@ -3425,6 +3511,17 @@ document.getElementById('ops-modal-driver-save').addEventListener('click', funct
                 statusEl.textContent = '✓ Kaydedildi';
                 statusEl.className = 'ops-modal-driver-status ms-2 small text-success';
                 statusEl.style.display = 'inline';
+
+                // WhatsApp Mesajı Gönder (Eğer check edilmişse)
+                const waToggle = document.getElementById('ops-modal-driver-wa-toggle');
+                if (waToggle && waToggle.checked) {
+                    const selectedOption = sel.options[sel.selectedIndex];
+                    const driverPhone = selectedOption ? selectedOption.dataset.phone : '';
+                    const driverName = selectedOption ? selectedOption.dataset.name : '';
+                    if (driverPhone) {
+                        sendDriverWhatsApp(bookingId, driverPhone, driverName);
+                    }
+                }
             } else {
                 statusEl.textContent = '✗ ' + (d.message || 'Hata');
                 statusEl.className = 'ops-modal-driver-status ms-2 small text-danger';
@@ -3441,6 +3538,90 @@ document.getElementById('ops-modal-driver-save').addEventListener('click', funct
 });
 
 // ─── Şöför Seçim Modal (İş Yapıldı Checkbox) ─────────────────────────────────
+// ─── Şöför WhatsApp Mesajı Gönder ───────────────────────────────────────────
+function sendDriverWhatsApp(bookingId, driverPhone, driverName) {
+    var bData = bookingsData.find(function(x) { return x.id == bookingId; });
+    if (!bData) return;
+
+    var fdp = new FormData();
+    fdp.append('action', 'get_passengers');
+    fdp.append('id', bookingId);
+    fdp.append('csrf_token', csrfToken);
+
+    fetch(apiUrl, {method:'POST', body:fdp})
+        .then(function(r) { return r.json(); })
+        .then(function(d) {
+            var passengers = (d.success && d.data && d.data.passengers) ? d.data.passengers : [];
+            var msg = buildDriverMessage(bData, driverName, passengers);
+            var waNumber = (driverPhone || '').replace(/[^0-9]/g, '');
+            if (waNumber.length === 10 && waNumber.startsWith('5')) {
+                waNumber = '90' + waNumber;
+            } else if (waNumber.length === 11 && waNumber.startsWith('05')) {
+                waNumber = '90' + waNumber.substring(1);
+            }
+            if (!waNumber) return;
+            var url = 'https://wa.me/' + waNumber + '?text=' + encodeURIComponent(msg);
+            window.open(url, '_blank');
+        })
+        .catch(function() {});
+}
+
+function buildDriverMessage(b, driverName, passengers) {
+    var AIRPORT  = AIRPORT_NAME;
+    var hotel    = b.hotel_address || '-';
+    var isReturn = b.booking_direction === 'return';
+    var adults   = b.adults || 0;
+    var children = b.children || 0;
+    var childSeat = b.child_seat || 0;
+
+    var paxStr = adults + ' Yetişkin' + (children > 0 ? ' + ' + children + ' Çocuk' : '');
+    if (childSeat > 0) {
+        paxStr += ' (' + childSeat + ' Çocuk Koltuğu)';
+    }
+    var price  = b.total_price > 0
+        ? (parseFloat(b.total_price).toLocaleString('tr-TR', {minimumFractionDigits:0}) + ' ' + (b.currency || 'EUR'))
+        : '-';
+
+    function fmtDate(d) {
+        if (!d) return '';
+        var dt = new Date(d);
+        return dt.toLocaleDateString('tr-TR', {day:'2-digit', month:'2-digit', year:'numeric'});
+    }
+    function fmtTime(t) { return t ? t.substring(0, 5) : ''; }
+
+    var route = isReturn ? (hotel + ' --> ' + AIRPORT) : (AIRPORT + ' --> ' + hotel);
+    var flightDateFormatted = fmtDate(b.flight_date);
+    var flightTimeFormatted = fmtTime(b.flight_time);
+    var pickupTimeFormatted = isReturn ? (b.pickup_time ? b.pickup_time.substring(0,5) : '') : '';
+    var pickupDateFormatted = isReturn ? fmtDate(b.flight_date) : '';
+
+    var passengerLines = [];
+    passengers.forEach(function(p) {
+        if (p.full_name) {
+            var tag = p.passenger_type === 'child' ? ' (Çocuk)' : '';
+            passengerLines.push('• ' + p.full_name + tag);
+        }
+    });
+    var passengersStr = passengerLines.join('\n');
+
+    var placeholders = {
+        '{ROUTE}': route,
+        '{FLIGHT_DATE}': flightDateFormatted,
+        '{FLIGHT_TIME}': flightTimeFormatted,
+        '{PICKUP_DATE}': pickupDateFormatted,
+        '{PICKUP_TIME}': pickupTimeFormatted,
+        '{FLIGHT_NO}': b.flight_number || '-',
+        '{HOTEL}': hotel,
+        '{PAX}': paxStr,
+        '{PASSENGERS}': passengersStr,
+        '{PRICE}': price,
+        '{NOTES}': b.notes ? b.notes.trim() : '-',
+        '{DRIVER_NAME}': driverName || '-'
+    };
+
+    return parseWhatsAppTemplate('driver_transfer', placeholders);
+}
+
 function openDriverModal(bookingId) {
     const $sel = $('#driver-modal-select');
 
@@ -3470,10 +3651,17 @@ function openDriverModal(bookingId) {
                     if (dr.plate) txt += ' • ' + dr.plate;
                     if (dr.brand) txt += ' (' + dr.brand + ' ' + dr.model + ')';
                     const opt = new Option(txt, dr.id);
+                    opt.dataset.phone = dr.phone || '';
+                    opt.dataset.name = dr.name + ' ' + dr.surname;
                     $sel.append(opt);
                 });
             }
             $sel.trigger('change');
+            
+            // WP Toggle'ı varsayılan açık yap
+            const waToggle = document.getElementById('driver-wa-toggle');
+            if (waToggle) waToggle.checked = true;
+
             new bootstrap.Modal(document.getElementById('driverSelectModal')).show();
         })
         .catch(function() {
@@ -3504,6 +3692,7 @@ document.getElementById('driver-modal-save-btn').addEventListener('click', funct
         .then(function(d) {
             if (d.success) {
                 completedSaved = true;
+
                 // is_completed status'unu da kaydet
                 const fdStatus = new FormData();
                 fdStatus.append('action', 'update_ops');
@@ -3522,6 +3711,17 @@ document.getElementById('driver-modal-save-btn').addEventListener('click', funct
                             if (tr) tr.classList.add('row-completed');
                         }
                         if (typeof table !== 'undefined') table.draw();
+
+                        // WhatsApp Mesajı Gönder (Eğer check edilmişse, durum güncellendikten sonra açılır)
+                        const waToggle = document.getElementById('driver-wa-toggle');
+                        if (waToggle && waToggle.checked) {
+                            const selectedOption = sel.options[sel.selectedIndex];
+                            const driverPhone = selectedOption ? selectedOption.dataset.phone : '';
+                            const driverName = selectedOption ? selectedOption.dataset.name : '';
+                            if (driverPhone) {
+                                sendDriverWhatsApp(bookingId, driverPhone, driverName);
+                            }
+                        }
                     })
                     .catch(function() {
                         bootstrap.Modal.getInstance(document.getElementById('driverSelectModal')).hide();
@@ -3540,11 +3740,18 @@ document.getElementById('driver-modal-save-btn').addEventListener('click', funct
         });
 });
 
-// Modal iptal → checkbox'ı geri al
+// Modal iptal → checkbox'ı geri al ve save butonunu sıfırla
 document.getElementById('driverSelectModal').addEventListener('hide.bs.modal', function() {
     if (!completedSaved && completedChkRef) {
         completedChkRef.checked = false;
     }
     completedChkRef = null;
+    
+    // Buton durumunu sıfırla
+    const btn = document.getElementById('driver-modal-save-btn');
+    if (btn) {
+        btn.disabled = false;
+        btn.innerHTML = '<i class="bi bi-check-lg me-1"></i>Kaydet';
+    }
 });
 </script>

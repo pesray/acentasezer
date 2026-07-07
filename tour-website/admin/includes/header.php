@@ -769,13 +769,13 @@ if ($siteLogo && defined('UPLOADS_URL')) {
 
         <!-- Rezervasyonlar (flyout destekli) -->
         <div class="nav-item-group">
-            <a href="#bookingsSubmenu" class="nav-link <?= $currentPage === 'bookings' ? 'active' : '' ?>"
-               data-bs-toggle="collapse" role="button" aria-expanded="<?= $currentPage === 'bookings' ? 'true' : 'false' ?>" title="Rezervasyonlar">
+            <a href="#bookingsSubmenu" class="nav-link <?= ($currentPage === 'bookings' || $currentPage === 'deleted_bookings') ? 'active' : '' ?>"
+               data-bs-toggle="collapse" role="button" aria-expanded="<?= ($currentPage === 'bookings' || $currentPage === 'deleted_bookings') ? 'true' : 'false' ?>" title="Rezervasyonlar">
                 <i class="bi bi-calendar2-check nav-link-icon"></i>
                 <span class="nav-link-text">Rezervasyonlar</span>
                 <i class="bi bi-chevron-down sidebar-chevron"></i>
             </a>
-            <div class="collapse <?= $currentPage === 'bookings' ? 'show' : '' ?>" id="bookingsSubmenu">
+            <div class="collapse <?= ($currentPage === 'bookings' || $currentPage === 'deleted_bookings') ? 'show' : '' ?>" id="bookingsSubmenu">
                 <div class="nav-submenu">
                     <a href="<?= ADMIN_URL ?>/bookings.php?view=daily" class="nav-link <?= ($currentPage === 'bookings' && ($_GET['view'] ?? '') === 'daily') ? 'active' : '' ?>">
                         <i class="bi bi-calendar-day nav-link-icon"></i>
@@ -793,6 +793,10 @@ if ($siteLogo && defined('UPLOADS_URL')) {
                         <i class="bi bi-airplane nav-link-icon"></i>
                         <span class="nav-link-text">Depar</span>
                     </a>
+                    <a href="<?= ADMIN_URL ?>/deleted_bookings.php" class="nav-link <?= $currentPage === 'deleted_bookings' ? 'active' : '' ?>">
+                        <i class="bi bi-trash nav-link-icon text-danger"></i>
+                        <span class="nav-link-text text-danger">Silinen Rezervasyonlar</span>
+                    </a>
                 </div>
             </div>
             <!-- Collapsed flyout -->
@@ -809,6 +813,9 @@ if ($siteLogo && defined('UPLOADS_URL')) {
                 </a>
                 <a href="<?= ADMIN_URL ?>/bookings.php?view=return" class="flyout-item <?= ($currentPage === 'bookings' && ($_GET['view'] ?? '') === 'return') ? 'active' : '' ?>">
                     <i class="bi bi-airplane"></i> Depar
+                </a>
+                <a href="<?= ADMIN_URL ?>/deleted_bookings.php" class="flyout-item <?= $currentPage === 'deleted_bookings' ? 'active' : '' ?> text-danger">
+                    <i class="bi bi-trash text-danger"></i> Silinenler
                 </a>
             </div>
         </div>
@@ -840,6 +847,10 @@ if ($siteLogo && defined('UPLOADS_URL')) {
         <a href="<?= ADMIN_URL ?>/customers.php" class="nav-link <?= $currentPage === 'customers' ? 'active' : '' ?>" title="Müşteriler">
             <i class="bi bi-person-lines-fill nav-link-icon"></i>
             <span class="nav-link-text">Müşteriler</span>
+        </a>
+        <a href="<?= ADMIN_URL ?>/whatsapp_templates.php" class="nav-link <?= $currentPage === 'whatsapp_templates' ? 'active' : '' ?>" title="WP Şablonları">
+            <i class="bi bi-whatsapp nav-link-icon"></i>
+            <span class="nav-link-text">WP Şablonları</span>
         </a>
 
         <div class="nav-section">İçerik</div>
