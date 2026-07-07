@@ -195,6 +195,7 @@ require_once __DIR__ . '/includes/header.php';
 <?php
 $extraJs = '
 <script>
+const csrfToken = document.querySelector(\'meta[name="csrf-token"]\').content;
 var templateModal = new bootstrap.Modal(document.getElementById("templateModal"));
 
 function showToast(message, success) {
