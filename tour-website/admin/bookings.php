@@ -12,8 +12,8 @@ $defaultView = defined('BOOKINGS_AS_DASHBOARD') ? 'daily' : 'arrival';
 $view = $_GET['view'] ?? $defaultView;
 if (!in_array($view, ['arrival', 'return', 'all', 'daily'])) $view = $defaultView;
 
-$viewTitleMap = ['return' => 'Dönüş Rezervasyonları', 'all' => 'Tüm Rezervasyonlar', 'daily' => 'Günlük Görünüm'];
-$viewTitle = $viewTitleMap[$view] ?? 'Geliş Rezervasyonları';
+$viewTitleMap = ['return' => 'Depar Rezervasyonları', 'all' => 'Tüm Rezervasyonlar', 'daily' => 'Günlük Görünüm'];
+$viewTitle = $viewTitleMap[$view] ?? 'Arrival Rezervasyonları';
 
 $statusLabels = [
     'pending'   => ['Onay Bekliyor', 'warning', 'bi-hourglass-split'],
@@ -22,8 +22,8 @@ $statusLabels = [
 ];
 
 $directionLabels = [
-    'outbound' => ['Geliş', 'primary'],
-    'return'   => ['Dönüş', 'info'],
+    'outbound' => ['Arrival', 'primary'],
+    'return'   => ['Depar', 'info'],
 ];
 
 // WHERE koşulu view'a göre
@@ -90,7 +90,7 @@ $hotelOptions = $db->query("
     ORDER BY name ASC
 ")->fetchAll();
 
-// Tüm Rezervasyonlar: geliş-dönüş çiftlerini eşleştir
+// Tüm Rezervasyonlar: arrival-depar çiftlerini eşleştir
 $tripGroups = [];
 if ($view === 'all') {
     foreach ($allBookings as $b) {
@@ -238,12 +238,12 @@ require_once __DIR__ . '/includes/header.php';
     </li>
     <li class="nav-item">
         <a class="nav-link view-tab <?= $view === 'arrival' ? 'active' : '' ?>" href="?view=arrival">
-            <i class="bi bi-box-arrow-in-down-right me-1"></i>Geliş Rezervasyonları
+            <i class="bi bi-box-arrow-in-down-right me-1"></i>Arrival Rezervasyonları
         </a>
     </li>
     <li class="nav-item">
         <a class="nav-link view-tab <?= $view === 'return' ? 'active' : '' ?>" href="?view=return">
-            <i class="bi bi-box-arrow-up-right me-1"></i>Dönüş Rezervasyonları
+            <i class="bi bi-box-arrow-up-right me-1"></i>Depar Rezervasyonları
         </a>
     </li>
 </ul>
@@ -259,7 +259,7 @@ require_once __DIR__ . '/includes/header.php';
     <div class="row g-2">
         <?php foreach ($pendingBookings as $pb):
             $dir      = $pb['booking_direction'] ?? 'outbound';
-            $dirLabel = $directionLabels[$dir] ?? ['Geliş','primary'];
+            $dirLabel = $directionLabels[$dir] ?? ['Arrival','primary'];
             $dateField = $pb['pickup_date'] ?: $pb['flight_date'];
         ?>
         <div class="col-lg-4 col-xl-3">
@@ -577,7 +577,7 @@ require_once __DIR__ . '/includes/header.php';
         <tbody>
             <?php foreach ($allBookings as $b):
                 $dir      = $b['booking_direction'] ?? 'outbound';
-                $dirLabel = $directionLabels[$dir] ?? ['Geliş','primary'];
+                $dirLabel = $directionLabels[$dir] ?? ['Arrival','primary'];
                 $dirIcon  = $dir === 'return' ? 'box-arrow-up-right' : 'box-arrow-in-down-right';
                 $dateField = $b['flight_date'] ?: ($b['pickup_date'] ?: null);
                 $bVParam   = ($dir === 'return') ? 'ret_id=' . $b['id'] : 'out_id=' . $b['id'];
@@ -702,7 +702,7 @@ require_once __DIR__ . '/includes/header.php';
     </table>
 
     <?php else: ?>
-    <!-- Geliş / Dönüş view: günlük görünüm ile aynı sütunlar -->
+    <!-- Arrival / Depar view: günlük görünüm ile aynı sütunlar -->
     <table id="bookingsTable" class="table table-hover" width="100%">
         <thead>
             <tr>
@@ -726,7 +726,7 @@ require_once __DIR__ . '/includes/header.php';
         <tbody>
             <?php foreach ($allBookings as $b):
                 $dir      = $b['booking_direction'] ?? 'outbound';
-                $dirLabel = $directionLabels[$dir] ?? ['Geliş','primary'];
+                $dirLabel = $directionLabels[$dir] ?? ['Arrival','primary'];
                 $dirIcon  = $dir === 'return' ? 'box-arrow-up-right' : 'box-arrow-in-down-right';
                 $dateField = $b['flight_date'] ?: ($b['pickup_date'] ?: null);
                 $bVParam   = ($dir === 'return') ? 'ret_id=' . $b['id'] : 'out_id=' . $b['id'];
@@ -869,6 +869,8 @@ require_once __DIR__ . '/includes/header.php';
             <form id="bookingEditForm">
                 <input type="hidden" name="action" value="update">
                 <input type="hidden" name="id" id="modal-booking-id">
+                <input type="hidden" name="outbound_id" id="modal-outbound-id" value="">
+                <input type="hidden" name="return_id" id="modal-return-id" value="">
                 <input type="hidden" name="customer_id" id="modal-customer-id" value="">
 
                 <div class="modal-body">
@@ -973,65 +975,137 @@ require_once __DIR__ . '/includes/header.php';
                                 <input type="time" name="pickup_time" id="modal-pickup-time" class="form-control">
                             </div>
                             <div class="col-md-3">
-                                <label class="form-label">Dönüş Saati</label>
+                                <label class="form-label">Depar Saati</label>
                                 <input type="time" name="return_time" id="modal-return-time" class="form-control">
                             </div>
                         </div>
                     </div>
 
-                    <!-- Transfer alanları (Geliş veya Dönüş — yöne göre başlık) -->
+                    <!-- Transfer alanları -->
                     <div id="modal-transfer-fields" style="display:none;">
-                        <h6 class="mb-3" id="modal-direction-header">
-                            <i class="bi bi-box-arrow-in-down-right me-2"></i><span id="modal-direction-text">Uçuş Bilgileri</span>
-                        </h6>
-                        <div class="row mb-3">
-                            <div class="col-md-4">
-                                <label class="form-label">Uçuş Tarihi</label>
-                                <input type="date" name="flight_date" id="modal-flight-date" class="form-control">
-                            </div>
-                            <div class="col-md-4">
-                                <label class="form-label">Uçuş Saati</label>
-                                <input type="time" name="flight_time" id="modal-flight-time" class="form-control">
-                            </div>
-                            <div class="col-md-4">
-                                <label class="form-label">Uçuş Numarası</label>
-                                <input type="text" name="flight_number" id="modal-flight-number" class="form-control flight-number-upper" style="text-transform:uppercase;">
-                            </div>
+                        <!-- Arrival toggle -->
+                        <div class="form-check form-switch mb-3" id="modal-outbound-toggle-wrap">
+                            <input class="form-check-input" type="checkbox" id="modal-has-outbound" name="has_outbound" value="1">
+                            <label class="form-check-label fw-bold" for="modal-has-outbound">
+                                <i class="bi bi-box-arrow-in-down-right me-1 text-primary"></i>Arrival Transferi Ekle
+                            </label>
                         </div>
-                        <div class="row mb-3">
-                            <div class="col-md-7">
-                                <label class="form-label">Otel / Adres</label>
-                                <div class="d-flex gap-2">
-                                    <div class="flex-grow-1">
-                                        <select name="hotel_address" id="modal-hotel-address" class="form-select hotel-select-edit">
-                                            <option value=""></option>
-                                            <?php foreach ($hotelOptions as $ho): ?>
-                                            <option value="<?= e($ho['name'] . ($ho['address'] ? ' — ' . $ho['address'] : '')) ?>">
-                                                <?= e($ho['name']) ?><?= $ho['distance_km'] !== null ? ' (' . number_format((float)$ho['distance_km'], 0) . ' km)' : '' ?>
-                                            </option>
-                                            <?php endforeach; ?>
-                                        </select>
-                                    </div>
-                                    <button type="button" class="btn btn-outline-success btn-quick-hotel flex-shrink-0"
-                                            data-target="modal-hotel-address" title="Hızlı Otel Ekle" style="height:38px;">
-                                        <i class="bi bi-plus-lg"></i>
-                                    </button>
+
+                        <!-- ARRIVAL alanları -->
+                        <div id="modal-outbound-section">
+                            <h6 class="mb-3 text-primary"><i class="bi bi-box-arrow-in-down-right me-2"></i>Arrival Uçuş Bilgileri</h6>
+                            <div class="row mb-3">
+                                <div class="col-md-4">
+                                    <label class="form-label">Uçuş Tarihi</label>
+                                    <input type="date" name="flight_date" id="modal-flight-date" class="form-control">
+                                </div>
+                                <div class="col-md-4">
+                                    <label class="form-label">Uçuş Saati</label>
+                                    <input type="time" name="flight_time" id="modal-flight-time" class="form-control">
+                                </div>
+                                <div class="col-md-4">
+                                    <label class="form-label">Uçuş Numarası</label>
+                                    <input type="text" name="flight_number" id="modal-flight-number" class="form-control flight-number-upper" style="text-transform:uppercase;">
                                 </div>
                             </div>
-                            <div class="col-md-2" id="modal-pickup-wrap" style="display:none;">
-                                <label class="form-label">Otelden Alış</label>
-                                <input type="time" name="pickup_time" id="modal-pickup-time-transfer" class="form-control">
+                            <div class="row mb-3">
+                                <div class="col-md-7">
+                                    <label class="form-label">Otel / Adres</label>
+                                    <div class="d-flex gap-2">
+                                        <div class="flex-grow-1">
+                                            <select name="hotel_address" id="modal-hotel-address" class="form-select hotel-select-edit">
+                                                <option value=""></option>
+                                                <?php foreach ($hotelOptions as $ho): ?>
+                                                <option value="<?= e($ho['name'] . ($ho['address'] ? ' — ' . $ho['address'] : '')) ?>">
+                                                    <?= e($ho['name']) ?><?= $ho['distance_km'] !== null ? ' (' . number_format((float)$ho['distance_km'], 0) . ' km)' : '' ?>
+                                                </option>
+                                                <?php endforeach; ?>
+                                            </select>
+                                        </div>
+                                        <button type="button" class="btn btn-outline-success btn-quick-hotel flex-shrink-0"
+                                                data-target="modal-hotel-address" title="Hızlı Otel Ekle" style="height:38px;">
+                                            <i class="bi bi-plus-lg"></i>
+                                        </button>
+                                    </div>
+                                </div>
+                                <div class="col-md-5">
+                                    <label class="form-label">Arrival Fiyatı</label>
+                                    <div class="input-group">
+                                        <select name="currency" id="modal-currency" class="form-select" style="max-width:90px;">
+                                            <option value="TRY">₺ TRY</option>
+                                            <option value="EUR">€ EUR</option>
+                                            <option value="USD">$ USD</option>
+                                            <option value="GBP">£ GBP</option>
+                                        </select>
+                                        <input type="number" name="total_price" id="modal-total-price" class="form-control" min="0" step="0.01" placeholder="0.00">
+                                    </div>
+                                </div>
                             </div>
-                            <div id="modal-price-wrap" class="col-md-3">
-                                <label class="form-label">Fiyat</label>
-                                <div class="input-group">
-                                    <select name="currency" id="modal-currency" class="form-select" style="max-width:90px;">
-                                        <option value="TRY">₺ TRY</option>
-                                        <option value="EUR">€ EUR</option>
-                                        <option value="USD">$ USD</option>
-                                        <option value="GBP">£ GBP</option>
-                                    </select>
-                                    <input type="number" name="total_price" id="modal-total-price" class="form-control" min="0" step="0.01" placeholder="0.00">
+                            <hr>
+                        </div>
+
+                        <!-- Depar toggle -->
+                        <div class="form-check form-switch mb-3" id="modal-return-toggle-wrap">
+                            <input class="form-check-input" type="checkbox" id="modal-has-return" name="has_return" value="1">
+                            <label class="form-check-label fw-bold" for="modal-has-return">
+                                <i class="bi bi-box-arrow-up-right me-1 text-info"></i>Depar Transferi Ekle
+                            </label>
+                        </div>
+
+                        <!-- DEPAR alanları -->
+                        <div id="modal-return-section" class="return-section mb-4">
+                            <h6 class="mb-3 text-info"><i class="bi bi-box-arrow-up-right me-2"></i>Depar Uçuş Bilgileri</h6>
+                            <div class="row mb-3">
+                                <div class="col-md-4">
+                                    <label class="form-label">Depar Uçuş Tarihi</label>
+                                    <input type="date" name="return_flight_date" id="modal-return-flight-date" class="form-control">
+                                </div>
+                                <div class="col-md-4">
+                                    <label class="form-label">Depar Uçuş Saati</label>
+                                    <input type="time" name="return_flight_time" id="modal-return-flight-time" class="form-control">
+                                </div>
+                                <div class="col-md-4">
+                                    <label class="form-label">Depar Uçuş Numarası</label>
+                                    <input type="text" name="return_flight_number" id="modal-return-flight-number" class="form-control flight-number-upper" style="text-transform:uppercase;">
+                                </div>
+                            </div>
+                            <div class="row mb-3">
+                                <div class="col-md-9">
+                                    <label class="form-label">Otel / Adres</label>
+                                    <div class="d-flex gap-2">
+                                        <div class="flex-grow-1">
+                                            <select name="return_hotel_address" id="modal-return-hotel-address" class="form-select hotel-select-edit">
+                                                <option value=""></option>
+                                                <?php foreach ($hotelOptions as $ho): ?>
+                                                <option value="<?= e($ho['name'] . ($ho['address'] ? ' — ' . $ho['address'] : '')) ?>">
+                                                    <?= e($ho['name']) ?><?= $ho['distance_km'] !== null ? ' (' . number_format((float)$ho['distance_km'], 0) . ' km)' : '' ?>
+                                                </option>
+                                                <?php endforeach; ?>
+                                            </select>
+                                        </div>
+                                        <button type="button" class="btn btn-outline-success btn-quick-hotel flex-shrink-0"
+                                                data-target="modal-return-hotel-address" title="Hızlı Otel Ekle" style="height:38px;">
+                                            <i class="bi bi-plus-lg"></i>
+                                        </button>
+                                    </div>
+                                </div>
+                                <div class="col-md-3">
+                                    <label class="form-label">Otelden Alış Saati</label>
+                                    <input type="time" name="return_pickup_time" id="modal-return-pickup-time" class="form-control">
+                                </div>
+                            </div>
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <label class="form-label">Depar Fiyatı</label>
+                                    <div class="input-group">
+                                        <select name="return_currency" id="modal-return-currency" class="form-select" style="max-width:90px;">
+                                            <option value="TRY">₺ TRY</option>
+                                            <option value="EUR">€ EUR</option>
+                                            <option value="USD">$ USD</option>
+                                            <option value="GBP">£ GBP</option>
+                                        </select>
+                                        <input type="number" name="return_total_price" id="modal-return-price" class="form-control" min="0" step="0.01" placeholder="0.00">
+                                    </div>
                                 </div>
                             </div>
                         </div>
@@ -1152,18 +1226,18 @@ require_once __DIR__ . '/includes/header.php';
 
                     <hr>
 
-                    <!-- Geliş toggle -->
+                    <!-- Arrival toggle -->
                     <div class="form-check form-switch mb-3">
                         <input class="form-check-input" type="checkbox" id="add-has-outbound" name="has_outbound" value="1"
                             <?= $view !== 'return' ? 'checked' : '' ?>>
                         <label class="form-check-label fw-bold" for="add-has-outbound">
-                            <i class="bi bi-box-arrow-in-down-right me-1 text-primary"></i>Geliş Transferi Ekle
+                            <i class="bi bi-box-arrow-in-down-right me-1 text-primary"></i>Arrival Transferi Ekle
                         </label>
                     </div>
 
-                    <!-- GELİŞ alanları -->
+                    <!-- ARRIVAL alanları -->
                     <div id="outbound-section" style="<?= $view !== 'return' ? '' : 'display:none;' ?>">
-                        <h6 class="mb-3 text-primary"><i class="bi bi-box-arrow-in-down-right me-2"></i>Geliş Uçuş Bilgileri</h6>
+                        <h6 class="mb-3 text-primary"><i class="bi bi-box-arrow-in-down-right me-2"></i>Arrival Uçuş Bilgileri</h6>
                         <div class="row mb-3">
                             <div class="col-md-4">
                                 <label class="form-label">Uçuş Tarihi</label>
@@ -1199,7 +1273,7 @@ require_once __DIR__ . '/includes/header.php';
                                 </div>
                             </div>
                             <div class="col-md-5">
-                                <label class="form-label">Geliş Fiyatı</label>
+                                <label class="form-label">Arrival Fiyatı</label>
                                 <div class="input-group">
                                     <select name="currency" id="add-currency" class="form-select" style="max-width:90px;">
                                         <option value="TRY">₺ TRY</option>
@@ -1214,29 +1288,29 @@ require_once __DIR__ . '/includes/header.php';
                         <hr>
                     </div>
 
-                    <!-- Dönüş toggle -->
+                    <!-- Depar toggle -->
                     <div class="form-check form-switch mb-3">
                         <input class="form-check-input" type="checkbox" id="add-has-return" name="has_return" value="1"
                             <?= $view === 'return' ? 'checked' : '' ?>>
                         <label class="form-check-label fw-bold" for="add-has-return">
-                            <i class="bi bi-box-arrow-up-right me-1 text-info"></i>Dönüş Transferi Ekle
+                            <i class="bi bi-box-arrow-up-right me-1 text-info"></i>Depar Transferi Ekle
                         </label>
                     </div>
 
-                    <!-- DÖNÜŞ alanları -->
+                    <!-- DEPAR alanları -->
                     <div id="return-section" class="return-section mb-4" style="<?= $view === 'return' ? '' : 'display:none;' ?>">
-                        <h6 class="mb-3 text-info"><i class="bi bi-box-arrow-up-right me-2"></i>Dönüş Uçuş Bilgileri</h6>
+                        <h6 class="mb-3 text-info"><i class="bi bi-box-arrow-up-right me-2"></i>Depar Uçuş Bilgileri</h6>
                         <div class="row mb-3">
                             <div class="col-md-4">
-                                <label class="form-label">Dönüş Uçuş Tarihi</label>
+                                <label class="form-label">Depar Uçuş Tarihi</label>
                                 <input type="date" name="return_flight_date" class="form-control">
                             </div>
                             <div class="col-md-4">
-                                <label class="form-label">Dönüş Uçuş Saati</label>
+                                <label class="form-label">Depar Uçuş Saati</label>
                                 <input type="time" name="return_flight_time" class="form-control">
                             </div>
                             <div class="col-md-4">
-                                <label class="form-label">Dönüş Uçuş Numarası</label>
+                                <label class="form-label">Depar Uçuş Numarası</label>
                                 <input type="text" name="return_flight_number" class="form-control flight-number-upper" style="text-transform:uppercase;">
                             </div>
                         </div>
@@ -1267,7 +1341,7 @@ require_once __DIR__ . '/includes/header.php';
                         </div>
                         <div class="row">
                             <div class="col-md-6">
-                                <label class="form-label">Dönüş Fiyatı</label>
+                                <label class="form-label">Depar Fiyatı</label>
                                 <div class="input-group">
                                     <select name="return_currency" id="add-return-currency" class="form-select" style="max-width:90px;">
                                         <option value="TRY">₺ TRY</option>
@@ -1410,7 +1484,7 @@ require_once __DIR__ . '/includes/header.php';
                             </button>
                         </div>
                     </div>
-                    <!-- Otelden Alış Saati (sadece dönüş) -->
+                    <!-- Otelden Alış Saati (sadece depar) -->
                     <div class="col-6 col-md-auto" id="outsource-pickup-wrap" style="display:none;">
                         <label class="form-label fw-semibold mb-1" style="font-size:.82rem;">Alış Saati</label>
                         <input type="time" id="outsource-pickup-input" class="form-control form-control-sm" style="width:90px;">
@@ -1588,7 +1662,49 @@ require_once __DIR__ . '/includes/header.php';
             </div>
         </div>
     </div>
+<!-- ===================== SİLME ONAY MODALı ===================== -->
+<div class="modal fade" id="deleteBookingModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 shadow">
+            <div class="modal-header bg-danger text-white">
+                <h5 class="modal-title"><i class="bi bi-exclamation-triangle me-2"></i>Rezervasyon Sil</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body" id="delete-modal-body">
+                <!-- JS ile doldurulacak -->
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">
+                    <i class="bi bi-x-lg me-1"></i>İptal
+                </button>
+                <button type="button" class="btn btn-danger btn-sm" id="confirm-delete-btn">
+                    <i class="bi bi-trash me-1"></i>Seçilenleri Sil
+                </button>
+            </div>
+        </div>
+    </div>
 </div>
+
+<?php
+$dirWhereJs = str_replace('b.booking_direction', 'b2.booking_direction', $dirWhere);
+$jsBookings = $db->query("
+    SELECT b.*,
+           t.title AS tour_title,
+           d.title AS destination_title,
+           CONCAT(v.brand,' ',v.model) AS vehicle_name,
+           COALESCE(v.capacity, 20) AS vehicle_capacity
+    FROM bookings b
+    LEFT JOIN tours t ON b.tour_id = t.id
+    LEFT JOIN destinations d ON b.destination_id = d.id
+    LEFT JOIN vehicles v ON b.vehicle_id = v.id
+    WHERE (1=1 $dirWhere) OR b.id IN (
+        SELECT COALESCE(b2.related_booking_id, 0)
+        FROM bookings b2
+        WHERE 1=1 $dirWhereJs
+    )
+    ORDER BY b.created_at DESC
+")->fetchAll();
+?>
 
 <script>
 const bookingsData = <?= json_encode(array_map(function($b) {
@@ -1626,8 +1742,9 @@ const bookingsData = <?= json_encode(array_map(function($b) {
         'outsource_partner_id' => (int)($b['outsource_partner_id'] ?? 0),
         'outsource_name'       => $b['outsource_name'] ?? '',
         'created_at'           => $b['created_at'],
+        'related_booking_id'   => (int)($b['related_booking_id'] ?? 0),
     ];
-}, $allBookings), JSON_UNESCAPED_UNICODE) ?>;
+}, $jsBookings), JSON_UNESCAPED_UNICODE) ?>;
 
 const currentView = '<?= $view ?>';
 </script>
@@ -1799,7 +1916,7 @@ document.addEventListener('input', function(e) {
     }
 });
 
-// ─── Geliş toggle ────────────────────────────────────────────────────────────
+// ─── Arrival toggle ────────────────────────────────────────────────────────────
 document.getElementById('add-has-outbound').addEventListener('change', function() {
     document.getElementById('outbound-section').style.display = this.checked ? 'block' : 'none';
     // En az biri seçili olmalı
@@ -1809,10 +1926,10 @@ document.getElementById('add-has-outbound').addEventListener('change', function(
     }
 });
 
-// ─── Dönüş toggle ────────────────────────────────────────────────────────────
+// ─── Depar toggle ────────────────────────────────────────────────────────────
 document.getElementById('add-has-return').addEventListener('change', function() {
     document.getElementById('return-section').style.display = this.checked ? 'block' : 'none';
-    // Dönüş açılınca otel adresini otomatik kopyala
+    // Depar açılınca otel adresini otomatik kopyala
     if (this.checked) {
         var gelisVal = $('#add-hotel-address').val();
         if (gelisVal && !$('#add-return-hotel-address').val()) {
@@ -1957,10 +2074,41 @@ function initCustomerAutocomplete(inputId, phoneId, emailId, hiddenId) {
 initCustomerAutocomplete('add-customer-name', 'add-customer-phone', 'add-customer-email', 'add-customer-id');
 initCustomerAutocomplete('modal-customer-name', 'modal-customer-phone', 'modal-customer-email', 'modal-customer-id');
 
-// ─── Geliş otel adresi → dönüş otel adresi (dönüş açıksa) ────────────────────
+// ─── Arrival otel adresi → depar otel adresi (depar açıksa) ────────────────────
 $('#add-hotel-address').on('change', function() {
     if (document.getElementById('add-has-return').checked) {
         $('#add-return-hotel-address').val($(this).val()).trigger('change');
+    }
+});
+
+// Edit modal Arrival toggle
+document.getElementById('modal-has-outbound').addEventListener('change', function() {
+    document.getElementById('modal-outbound-section').style.display = this.checked ? 'block' : 'none';
+    if (!this.checked && !document.getElementById('modal-has-return').checked) {
+        document.getElementById('modal-has-return').checked = true;
+        document.getElementById('modal-has-return').dispatchEvent(new Event('change'));
+    }
+});
+
+// Edit modal Depar toggle
+document.getElementById('modal-has-return').addEventListener('change', function() {
+    document.getElementById('modal-return-section').style.display = this.checked ? 'block' : 'none';
+    if (this.checked) {
+        var gelisVal = $('#modal-hotel-address').val();
+        if (gelisVal && !$('#modal-return-hotel-address').val()) {
+            $('#modal-return-hotel-address').val(gelisVal).trigger('change');
+        }
+    }
+    if (!this.checked && !document.getElementById('modal-has-outbound').checked) {
+        document.getElementById('modal-has-outbound').checked = true;
+        document.getElementById('modal-has-outbound').dispatchEvent(new Event('change'));
+    }
+});
+
+// Arrival otel adresi → depar otel adresi (depar açıksa) edit modal için
+$('#modal-hotel-address').on('change', function() {
+    if (document.getElementById('modal-has-return').checked) {
+        $('#modal-return-hotel-address').val($(this).val()).trigger('change');
     }
 });
 
@@ -1996,38 +2144,73 @@ function openBookingModal(id) {
         document.getElementById('modal-pickup-date').value     = b.pickup_date     || '';
         document.getElementById('modal-pickup-time').value     = b.pickup_time     || '';
         document.getElementById('modal-return-time').value     = b.return_time     || '';
+
+        document.getElementById('modal-total-price').value = b.total_price || 0;
+        document.getElementById('modal-currency').value    = b.currency   || 'TRY';
     } else {
         document.getElementById('modal-tour-fields').style.display     = 'none';
         document.getElementById('modal-transfer-fields').style.display = 'block';
 
-        // Yöne göre başlık + alış saati gösterimi
-        var isReturn  = b.booking_direction === 'return';
-        var dirHeader = document.getElementById('modal-direction-header');
-        var dirText   = document.getElementById('modal-direction-text');
-        var priceWrap = document.getElementById('modal-price-wrap');
-        if (isReturn) {
-            dirHeader.classList.remove('text-primary');
-            dirHeader.classList.add('text-info');
-            dirHeader.querySelector('i').className = 'bi bi-box-arrow-up-right me-2';
-            dirText.textContent = 'Dönüş Uçuş Bilgileri';
-            document.getElementById('modal-pickup-wrap').style.display = '';
-            priceWrap.classList.remove('col-md-5');
-            priceWrap.classList.add('col-md-3');
+        let outboundBooking = null;
+        let returnBooking = null;
+
+        if (b.booking_direction === 'return') {
+            returnBooking = b;
+            if (b.related_booking_id) {
+                outboundBooking = bookingsData.find(x => x.id == b.related_booking_id);
+            }
         } else {
-            dirHeader.classList.remove('text-info');
-            dirHeader.classList.add('text-primary');
-            dirHeader.querySelector('i').className = 'bi bi-box-arrow-in-down-right me-2';
-            dirText.textContent = 'Geliş Uçuş Bilgileri';
-            document.getElementById('modal-pickup-wrap').style.display = 'none';
-            priceWrap.classList.remove('col-md-3');
-            priceWrap.classList.add('col-md-5');
+            outboundBooking = b;
+            if (b.related_booking_id) {
+                returnBooking = bookingsData.find(x => x.id == b.related_booking_id);
+            }
         }
 
-        document.getElementById('modal-flight-date').value          = b.flight_date   || '';
-        document.getElementById('modal-flight-time').value          = b.flight_time   || '';
-        document.getElementById('modal-flight-number').value        = b.flight_number || '';
-        $('#modal-hotel-address').val(b.hotel_address || '').trigger('change');
-        document.getElementById('modal-pickup-time-transfer').value = b.pickup_time   || '';
+        document.getElementById('modal-outbound-id').value = outboundBooking ? outboundBooking.id : '';
+        document.getElementById('modal-return-id').value   = returnBooking ? returnBooking.id : '';
+
+        const hasOutbound = !!outboundBooking;
+        const hasReturn   = !!returnBooking;
+
+        document.getElementById('modal-has-outbound').checked = hasOutbound;
+        document.getElementById('modal-has-return').checked   = hasReturn;
+
+        document.getElementById('modal-outbound-section').style.display = hasOutbound ? 'block' : 'none';
+        document.getElementById('modal-return-section').style.display   = hasReturn ? 'block' : 'none';
+
+        if (outboundBooking) {
+            document.getElementById('modal-flight-date').value   = outboundBooking.flight_date   || '';
+            document.getElementById('modal-flight-time').value   = outboundBooking.flight_time   ? outboundBooking.flight_time.substring(0, 5) : '';
+            document.getElementById('modal-flight-number').value = outboundBooking.flight_number || '';
+            $('#modal-hotel-address').val(outboundBooking.hotel_address || '').trigger('change');
+            document.getElementById('modal-total-price').value   = outboundBooking.total_price   || 0;
+            document.getElementById('modal-currency').value      = outboundBooking.currency      || 'TRY';
+        } else {
+            document.getElementById('modal-flight-date').value   = '';
+            document.getElementById('modal-flight-time').value   = '';
+            document.getElementById('modal-flight-number').value = '';
+            $('#modal-hotel-address').val('').trigger('change');
+            document.getElementById('modal-total-price').value   = '';
+            document.getElementById('modal-currency').value      = b.currency || 'EUR';
+        }
+
+        if (returnBooking) {
+            document.getElementById('modal-return-flight-date').value   = returnBooking.flight_date   || '';
+            document.getElementById('modal-return-flight-time').value   = returnBooking.flight_time   ? returnBooking.flight_time.substring(0, 5) : '';
+            document.getElementById('modal-return-flight-number').value = returnBooking.flight_number || '';
+            $('#modal-return-hotel-address').val(returnBooking.hotel_address || '').trigger('change');
+            document.getElementById('modal-return-pickup-time').value   = returnBooking.pickup_time   ? returnBooking.pickup_time.substring(0, 5) : '';
+            document.getElementById('modal-return-price').value         = returnBooking.total_price   || 0;
+            document.getElementById('modal-return-currency').value      = returnBooking.currency      || 'TRY';
+        } else {
+            document.getElementById('modal-return-flight-date').value   = '';
+            document.getElementById('modal-return-flight-time').value   = '';
+            document.getElementById('modal-return-flight-number').value = '';
+            $('#modal-return-hotel-address').val('').trigger('change');
+            document.getElementById('modal-return-pickup-time').value   = '';
+            document.getElementById('modal-return-price').value         = '';
+            document.getElementById('modal-return-currency').value      = b.currency || 'EUR';
+        }
     }
 
     // Kapasite limiti
@@ -2038,8 +2221,6 @@ function openBookingModal(id) {
     document.getElementById('modal-children').value   = b.children   || 0;
     document.getElementById('modal-child-seat').value = b.child_seat || 0;
 
-    document.getElementById('modal-total-price').value = b.total_price || 0;
-    document.getElementById('modal-currency').value    = b.currency   || 'TRY';
     document.getElementById('modal-notes').value       = b.notes       || '';
     document.getElementById('modal-admin-notes').value = b.admin_notes || '';
 
@@ -2091,17 +2272,147 @@ document.getElementById('addBookingForm').addEventListener('submit', function(e)
     });
 });
 
-function deleteBooking(id) {
-    if (!confirm('Bu rezervasyonu silmek istediğinizden emin misiniz?')) return;
+function performDelete(ids) {
+    if (!ids || ids.length === 0) return;
     const fd = new FormData();
     fd.append('action', 'delete');
-    fd.append('id', id);
+    ids.forEach(id => fd.append('ids[]', id));
     fd.append('csrf_token', csrfToken);
     fetch(apiUrl, {method:'POST', body:fd})
         .then(r => r.json())
-        .then(d => { showToast(d.message, d.success); if (d.success) setTimeout(() => location.reload(), 200); })
+        .then(d => {
+            showToast(d.message, d.success);
+            if (d.success) setTimeout(() => location.reload(), 200);
+        })
         .catch(() => showToast('Bir hata oluştu.', false));
 }
+
+// ─── Rezervasyon detay kartı HTML'i oluştur ─────────────────────────────────
+function buildBookingDetailCard(b, opts) {
+    opts = opts || {};
+    const dirLabel = b.booking_direction === 'return' ? 'Depar' : 'Arrival';
+    const dirBadge = b.booking_direction === 'return' ? 'info' : 'primary';
+    const dateStr = b.flight_date ? new Date(b.flight_date).toLocaleDateString('tr-TR') : '-';
+    const timeStr = b.flight_time || '';
+    const pickupTime = b.pickup_time || b.return_time || '';
+    const flightNo = b.flight_number || '-';
+    const hotel = b.hotel_address || '-';
+    const price = b.total_price ? parseFloat(b.total_price).toFixed(2) + ' ' + (b.currency || 'EUR') : '-';
+    const dest = b.destination_title || '-';
+
+    let html = '<div class="card mb-2 border-' + dirBadge + '">';
+    
+    // Checkbox header (ilişkili booking'ler için)
+    if (opts.checkbox) {
+        html += '<div class="card-header bg-' + dirBadge + ' bg-opacity-10 py-2 d-flex align-items-center">';
+        html += '<div class="form-check mb-0">';
+        html += '<input class="form-check-input del-booking-check" type="checkbox" id="del-check-' + b.id + '" value="' + b.id + '" checked>';
+        html += '<label class="form-check-label fw-bold" for="del-check-' + b.id + '">';
+        html += '<span class="badge bg-' + dirBadge + ' me-1">' + dirLabel + '</span> #' + b.booking_number;
+        html += '</label>';
+        html += '</div>';
+        html += '</div>';
+    } else {
+        html += '<div class="card-header bg-' + dirBadge + ' bg-opacity-10 py-2">';
+        html += '<span class="badge bg-' + dirBadge + ' me-1">' + dirLabel + '</span>';
+        html += '<strong>#' + b.booking_number + '</strong>';
+        html += '</div>';
+    }
+
+    html += '<div class="card-body py-2 px-3 small">';
+    html += '<div class="row g-1">';
+    html += '<div class="col-6"><i class="bi bi-person me-1 text-muted"></i>' + (b.customer_name || '-') + '</div>';
+    html += '<div class="col-6"><i class="bi bi-geo-alt me-1 text-muted"></i>' + dest + '</div>';
+    html += '<div class="col-6"><i class="bi bi-calendar me-1 text-muted"></i>' + dateStr + (timeStr ? ' ' + timeStr : '') + '</div>';
+    html += '<div class="col-6"><i class="bi bi-airplane me-1 text-muted"></i>' + flightNo + '</div>';
+    if (b.booking_direction === 'return' && pickupTime) {
+        html += '<div class="col-6"><i class="bi bi-clock me-1 text-muted"></i>Alış: ' + pickupTime + '</div>';
+    }
+    html += '<div class="col-6"><i class="bi bi-building me-1 text-muted"></i>' + hotel + '</div>';
+    html += '<div class="col-6"><i class="bi bi-currency-exchange me-1 text-muted"></i><strong>' + price + '</strong></div>';
+    html += '</div>';
+    html += '</div>';
+    html += '</div>';
+    
+    return html;
+}
+
+function deleteBooking(id) {
+    const b = bookingsData.find(x => x.id == id);
+    if (!b) return;
+
+    const modalBody = document.getElementById('delete-modal-body');
+    const confirmBtn = document.getElementById('confirm-delete-btn');
+    let html = '';
+
+    // İlişkili booking var mı?
+    const hasRelated = b.related_booking_id && b.related_booking_id > 0;
+    const related = hasRelated ? bookingsData.find(x => x.id == b.related_booking_id) : null;
+
+    if (hasRelated && related) {
+        // ── Birleşik (Arrival + Depar) ──
+        const outbound = b.booking_direction === 'return' ? related : b;
+        const returnLeg = b.booking_direction === 'return' ? b : related;
+
+        html += '<p class="mb-2"><i class="bi bi-link-45deg me-1"></i>Bu rezervasyon ilişkili bir <strong>arrival-depar</strong> kaydıdır. Silmek istediğiniz bacakları seçin:</p>';
+        html += buildBookingDetailCard(outbound, {checkbox: true});
+        html += buildBookingDetailCard(returnLeg, {checkbox: true});
+        html += '<div class="alert alert-warning py-2 mb-0 mt-2 small">';
+        html += '<i class="bi bi-info-circle me-1"></i>En az bir bacak seçilmelidir. Sadece tek yönü silerseniz, diğer bacak bağımsız bir rezervasyon olarak kalır.';
+        html += '</div>';
+    } else {
+        // ── Tek yönlü rezervasyon ──
+        html += '<p class="mb-2">Bu rezervasyonu silmek istediğinizden emin misiniz?</p>';
+        html += buildBookingDetailCard(b, {checkbox: false});
+        // Tek bir gizli checkbox ekle (confirm-delete-btn JS'inde kullanılacak)
+        html += '<input type="hidden" class="del-booking-check" value="' + b.id + '" data-always="1">';
+    }
+
+    modalBody.innerHTML = html;
+    
+    // Checkbox durumuna göre buton aktif/pasif
+    function updateDeleteBtn() {
+        var checks = modalBody.querySelectorAll('.del-booking-check');
+        var anyChecked = false;
+        checks.forEach(function(el) {
+            if (el.type === 'hidden' || el.checked) anyChecked = true;
+        });
+        confirmBtn.disabled = !anyChecked;
+    }
+    updateDeleteBtn();
+    
+    // Checkbox değişikliğini dinle (event delegation)
+    modalBody.addEventListener('change', function(e) {
+        if (e.target.classList.contains('del-booking-check')) {
+            updateDeleteBtn();
+        }
+    });
+
+    var delModal = document.getElementById('deleteBookingModal');
+    document.body.appendChild(delModal);
+    new bootstrap.Modal(delModal).show();
+}
+
+// Silme Onay Modal Event Listener
+document.getElementById('confirm-delete-btn').addEventListener('click', function() {
+    const checks = document.querySelectorAll('.del-booking-check');
+    const ids = [];
+
+    checks.forEach(function(el) {
+        // Hidden input (tek yönlü) veya checked checkbox (birleşik)
+        if (el.type === 'hidden' || el.checked) {
+            ids.push(el.value);
+        }
+    });
+
+    if (ids.length === 0) {
+        showToast('Lütfen silinecek en az bir rezervasyon seçin.', false);
+        return;
+    }
+
+    bootstrap.Modal.getInstance(document.getElementById('deleteBookingModal')).hide();
+    performDelete(ids);
+});
 
 function quickStatus(id, status) {
     const fd = new FormData();
@@ -2357,7 +2668,7 @@ document.addEventListener('change', function(e) {
                     : '—';
                 document.getElementById('ob-price').textContent = priceVal;
 
-                // Dönüş rezervasyonu: alış saati alanlarını göster
+                // Depar rezervasyonu: alış saati alanlarını göster
                 var isReturn = bData.booking_direction === 'return';
                 document.getElementById('ob-pickup-wrap').style.display      = isReturn ? '' : 'none';
                 document.getElementById('outsource-pickup-wrap').style.display = isReturn ? '' : 'none';

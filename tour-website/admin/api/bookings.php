@@ -93,6 +93,9 @@ switch ($action) {
             $childNames = $_POST['passenger_child_name'] ?? [];
             $messages   = [];
 
+            $outboundId = null;
+            $returnId   = null;
+
             // Geliş kaydı (isteğe bağlı)
             if ($hasOutbound) {
                 $numOutbound = 'TRF-' . date('Ymd') . '-' . str_pad(mt_rand(1, 9999), 4, '0', STR_PAD_LEFT);
@@ -139,6 +142,13 @@ switch ($action) {
                 $messages[] = 'Dönüş: #' . $numReturn;
             }
 
+            // Eğer hem geliş hem dönüş varsa, birbirlerine bağla
+            if ($outboundId && $returnId) {
+                $stmtLink = $db->prepare("UPDATE bookings SET related_booking_id = ? WHERE id = ?");
+                $stmtLink->execute([$returnId, $outboundId]);
+                $stmtLink->execute([$outboundId, $returnId]);
+            }
+
             jsonResponse(true, 'Rezervasyon oluşturuldu — ' . implode(' | ', $messages));
         } catch (Exception $e) {
             jsonResponse(false, 'Hata: ' . $e->getMessage());
@@ -148,7 +158,12 @@ switch ($action) {
     // === Rezervasyon Güncelle ===
     case 'update':
         $id = (int)($_POST['id'] ?? 0);
-        if (!$id) jsonResponse(false, 'Geçersiz ID');
+        $outboundId = (int)($_POST['outbound_id'] ?? 0) ?: $id;
+        $returnId   = (int)($_POST['return_id'] ?? 0);
+        $hasOutbound = !empty($_POST['has_outbound']);
+        $hasReturn   = !empty($_POST['has_return']);
+
+        if (!$outboundId && !$returnId) jsonResponse(false, 'Geçersiz ID');
 
         try {
             $cName = trim($_POST['customer_name'] ?? '');
@@ -171,52 +186,250 @@ switch ($action) {
                 }
             }
 
-            $stmt = $db->prepare("
-                UPDATE bookings SET
-                    destination_id = ?, vehicle_id = ?,
-                    customer_name = ?, customer_email = ?, customer_phone = ?,
-                    pickup_location = ?, pickup_date = ?, pickup_time = ?, return_time = ?,
-                    flight_date = ?, flight_time = ?, flight_number = ?, hotel_address = ?,
-                    adults = ?, children = ?, child_seat = ?,
-                    total_price = ?, currency = ?,
-                    notes = ?, admin_notes = ?,
-                    booking_status = ?,
-                    customer_id = ?,
-                    updated_at = NOW()
-                WHERE id = ?
-            ");
-            $stmt->execute([
-                ((int)($_POST['destination_id'] ?? 0)) ?: null,
-                ((int)($_POST['vehicle_id'] ?? 0)) ?: null,
-                $cName,
-                $cEmail,
-                $cPhone,
-                trim($_POST['pickup_location'] ?? '') ?: null,
-                ($_POST['pickup_date'] ?? '') ?: null,
-                ($_POST['pickup_time'] ?? '') ?: null,
-                ($_POST['return_time'] ?? '') ?: null,
-                ($_POST['flight_date'] ?? '') ?: null,
-                ($_POST['flight_time'] ?? '') ?: null,
-                trim($_POST['flight_number'] ?? '') ?: null,
-                trim($_POST['hotel_address'] ?? '') ?: null,
-                (int)($_POST['adults'] ?? 1),
-                (int)($_POST['children'] ?? 0),
-                (int)($_POST['child_seat'] ?? 0),
-                (float)($_POST['total_price'] ?? 0),
-                trim($_POST['currency'] ?? 'TRY'),
-                trim($_POST['notes'] ?? '') ?: null,
-                trim($_POST['admin_notes'] ?? '') ?: null,
-                $_POST['booking_status'] ?? 'pending',
-                $customerId ?: null,
-                $id
-            ]);
-            // Yolcuları güncelle
-            $numStmt = $db->prepare("SELECT booking_number FROM bookings WHERE id = ?");
-            $numStmt->execute([$id]);
-            $bookingNum = $numStmt->fetchColumn() ?: '';
+            // Check if it's a tour booking
+            $bookingType = 'transfer';
+            $checkId = $outboundId ?: $returnId;
+            if ($checkId) {
+                $sT = $db->prepare("SELECT booking_type FROM bookings WHERE id = ?");
+                $sT->execute([$checkId]);
+                $bookingType = $sT->fetchColumn() ?: 'transfer';
+            }
+
             $adultNames = $_POST['passenger_adult_name'] ?? [];
             $childNames = $_POST['passenger_child_name'] ?? [];
-            savePassengers($db, $id, $bookingNum, $adultNames, $childNames);
+
+            if ($bookingType === 'tour') {
+                // Tour update logic
+                $stmt = $db->prepare("
+                    UPDATE bookings SET
+                        destination_id = ?, vehicle_id = ?,
+                        customer_name = ?, customer_email = ?, customer_phone = ?,
+                        pickup_location = ?, pickup_date = ?, pickup_time = ?, return_time = ?,
+                        adults = ?, children = ?, child_seat = ?,
+                        total_price = ?, currency = ?,
+                        notes = ?, admin_notes = ?,
+                        booking_status = ?,
+                        customer_id = ?,
+                        updated_at = NOW()
+                    WHERE id = ?
+                ");
+                $stmt->execute([
+                    ((int)($_POST['destination_id'] ?? 0)) ?: null,
+                    ((int)($_POST['vehicle_id'] ?? 0)) ?: null,
+                    $cName, $cEmail, $cPhone,
+                    trim($_POST['pickup_location'] ?? '') ?: null,
+                    ($_POST['pickup_date'] ?? '') ?: null,
+                    ($_POST['pickup_time'] ?? '') ?: null,
+                    ($_POST['return_time'] ?? '') ?: null,
+                    (int)($_POST['adults'] ?? 1),
+                    (int)($_POST['children'] ?? 0),
+                    (int)($_POST['child_seat'] ?? 0),
+                    (float)($_POST['total_price'] ?? 0),
+                    trim($_POST['currency'] ?? 'TRY'),
+                    trim($_POST['notes'] ?? '') ?: null,
+                    trim($_POST['admin_notes'] ?? '') ?: null,
+                    $_POST['booking_status'] ?? 'pending',
+                    $customerId ?: null,
+                    $checkId
+                ]);
+
+                // Update passengers
+                $numStmt = $db->prepare("SELECT booking_number FROM bookings WHERE id = ?");
+                $numStmt->execute([$checkId]);
+                $bookingNum = $numStmt->fetchColumn() ?: '';
+                savePassengers($db, $checkId, $bookingNum, $adultNames, $childNames);
+            } else {
+                // Transfer update/create logic
+                $newOutboundCreated = false;
+                $newReturnCreated = false;
+
+                // 1) Outbound (Geliş)
+                if ($hasOutbound) {
+                    if ($outboundId > 0) {
+                        // Update existing
+                        $stmtOut = $db->prepare("
+                            UPDATE bookings SET
+                                destination_id = ?, vehicle_id = ?,
+                                customer_name = ?, customer_email = ?, customer_phone = ?,
+                                flight_date = ?, flight_time = ?, flight_number = ?, hotel_address = ?,
+                                pickup_time = NULL,
+                                adults = ?, children = ?, child_seat = ?,
+                                total_price = ?, currency = ?,
+                                notes = ?, admin_notes = ?,
+                                booking_status = ?,
+                                customer_id = ?,
+                                updated_at = NOW()
+                            WHERE id = ?
+                        ");
+                        $stmtOut->execute([
+                            ((int)($_POST['destination_id'] ?? 0)) ?: null,
+                            ((int)($_POST['vehicle_id'] ?? 0)) ?: null,
+                            $cName, $cEmail, $cPhone,
+                            ($_POST['flight_date'] ?? '') ?: null,
+                            ($_POST['flight_time'] ?? '') ?: null,
+                            trim($_POST['flight_number'] ?? '') ?: null,
+                            trim($_POST['hotel_address'] ?? '') ?: null,
+                            (int)($_POST['adults'] ?? 1),
+                            (int)($_POST['children'] ?? 0),
+                            (int)($_POST['child_seat'] ?? 0),
+                            (float)($_POST['total_price'] ?? 0),
+                            trim($_POST['currency'] ?? 'TRY'),
+                            trim($_POST['notes'] ?? '') ?: null,
+                            trim($_POST['admin_notes'] ?? '') ?: null,
+                            $_POST['booking_status'] ?? 'pending',
+                            $customerId ?: null,
+                            $outboundId
+                        ]);
+                    } else {
+                        // Insert new outbound
+                        $numOutbound = 'TRF-' . date('Ymd') . '-' . str_pad(mt_rand(1, 9999), 4, '0', STR_PAD_LEFT);
+                        $db->prepare("
+                            INSERT INTO bookings (
+                                booking_number, booking_type, booking_status, booking_direction,
+                                destination_id, vehicle_id,
+                                customer_name, customer_email, customer_phone,
+                                flight_date, flight_time, flight_number, hotel_address,
+                                adults, children, child_seat,
+                                total_price, currency,
+                                notes, admin_notes, created_at, customer_id
+                            ) VALUES (
+                                ?, 'transfer', ?, 'outbound',
+                                ?, ?,
+                                ?, ?, ?,
+                                ?, ?, ?, ?,
+                                ?, ?, ?,
+                                ?, ?,
+                                ?, ?, NOW(), ?
+                            )
+                        ")->execute([
+                            $numOutbound, $_POST['booking_status'] ?? 'confirmed',
+                            ((int)($_POST['destination_id'] ?? 0)) ?: null,
+                            ((int)($_POST['vehicle_id'] ?? 0)) ?: null,
+                            $cName, $cEmail, $cPhone,
+                            ($_POST['flight_date'] ?? '') ?: null,
+                            ($_POST['flight_time'] ?? '') ?: null,
+                            trim($_POST['flight_number'] ?? '') ?: null,
+                            trim($_POST['hotel_address'] ?? '') ?: null,
+                            (int)($_POST['adults'] ?? 1),
+                            (int)($_POST['children'] ?? 0),
+                            (int)($_POST['child_seat'] ?? 0),
+                            (float)($_POST['total_price'] ?? 0),
+                            trim($_POST['currency'] ?? 'TRY'),
+                            trim($_POST['notes'] ?? '') ?: null,
+                            trim($_POST['admin_notes'] ?? '') ?: null,
+                            $customerId ?: null
+                        ]);
+                        $outboundId = (int)$db->lastInsertId();
+                        $newOutboundCreated = true;
+                        savePassengers($db, $outboundId, $numOutbound, $adultNames, $childNames);
+                    }
+                }
+
+                // 2) Return (Dönüş)
+                if ($hasReturn) {
+                    if ($returnId > 0) {
+                        // Update existing
+                        $stmtRet = $db->prepare("
+                            UPDATE bookings SET
+                                destination_id = ?, vehicle_id = ?,
+                                customer_name = ?, customer_email = ?, customer_phone = ?,
+                                flight_date = ?, flight_time = ?, flight_number = ?, hotel_address = ?,
+                                pickup_time = ?,
+                                adults = ?, children = ?, child_seat = ?,
+                                total_price = ?, currency = ?,
+                                notes = ?, admin_notes = ?,
+                                booking_status = ?,
+                                customer_id = ?,
+                                updated_at = NOW()
+                            WHERE id = ?
+                        ");
+                        $stmtRet->execute([
+                            ((int)($_POST['destination_id'] ?? 0)) ?: null,
+                            ((int)($_POST['vehicle_id'] ?? 0)) ?: null,
+                            $cName, $cEmail, $cPhone,
+                            ($_POST['return_flight_date'] ?? '') ?: null,
+                            ($_POST['return_flight_time'] ?? '') ?: null,
+                            trim($_POST['return_flight_number'] ?? '') ?: null,
+                            trim($_POST['return_hotel_address'] ?? '') ?: null,
+                            ($_POST['return_pickup_time'] ?? '') ?: null,
+                            (int)($_POST['adults'] ?? 1),
+                            (int)($_POST['children'] ?? 0),
+                            (int)($_POST['child_seat'] ?? 0),
+                            (float)($_POST['return_total_price'] ?? 0),
+                            trim($_POST['return_currency'] ?? $_POST['currency'] ?? 'TRY'),
+                            trim($_POST['notes'] ?? '') ?: null,
+                            trim($_POST['admin_notes'] ?? '') ?: null,
+                            $_POST['booking_status'] ?? 'pending',
+                            $customerId ?: null,
+                            $returnId
+                        ]);
+                    } else {
+                        // Insert new return
+                        $numReturn = 'TRF-' . date('Ymd') . '-' . str_pad(mt_rand(1, 9999), 4, '0', STR_PAD_LEFT);
+                        $db->prepare("
+                            INSERT INTO bookings (
+                                booking_number, booking_type, booking_status, booking_direction,
+                                destination_id, vehicle_id,
+                                customer_name, customer_email, customer_phone,
+                                flight_date, flight_time, flight_number, hotel_address, pickup_time,
+                                adults, children, child_seat,
+                                total_price, currency,
+                                notes, admin_notes, created_at, customer_id
+                            ) VALUES (
+                                ?, 'transfer', ?, 'return',
+                                ?, ?,
+                                ?, ?, ?,
+                                ?, ?, ?, ?, ?,
+                                ?, ?, ?,
+                                ?, ?,
+                                ?, ?, NOW(), ?
+                            )
+                        ")->execute([
+                            $numReturn, $_POST['booking_status'] ?? 'confirmed',
+                            ((int)($_POST['destination_id'] ?? 0)) ?: null,
+                            ((int)($_POST['vehicle_id'] ?? 0)) ?: null,
+                            $cName, $cEmail, $cPhone,
+                            ($_POST['return_flight_date'] ?? '') ?: null,
+                            ($_POST['return_flight_time'] ?? '') ?: null,
+                            trim($_POST['return_flight_number'] ?? '') ?: null,
+                            trim($_POST['return_hotel_address'] ?? '') ?: null,
+                            ($_POST['return_pickup_time'] ?? '') ?: null,
+                            (int)($_POST['adults'] ?? 1),
+                            (int)($_POST['children'] ?? 0),
+                            (int)($_POST['child_seat'] ?? 0),
+                            (float)($_POST['return_total_price'] ?? 0),
+                            trim($_POST['return_currency'] ?? $_POST['currency'] ?? 'TRY'),
+                            trim($_POST['notes'] ?? '') ?: null,
+                            trim($_POST['admin_notes'] ?? '') ?: null,
+                            $customerId ?: null
+                        ]);
+                        $returnId = (int)$db->lastInsertId();
+                        $newReturnCreated = true;
+                        savePassengers($db, $returnId, $numReturn, $adultNames, $childNames);
+                    }
+                }
+
+                // 3) Link them if needed
+                if ($outboundId && $returnId) {
+                    $stmtLink = $db->prepare("UPDATE bookings SET related_booking_id = ? WHERE id = ?");
+                    $stmtLink->execute([$returnId, $outboundId]);
+                    $stmtLink->execute([$outboundId, $returnId]);
+                }
+
+                // 4) Update passenger lists for existing bookings
+                if ($outboundId && $hasOutbound && !$newOutboundCreated) {
+                    $numStmt = $db->prepare("SELECT booking_number FROM bookings WHERE id = ?");
+                    $numStmt->execute([$outboundId]);
+                    $bookingNum = $numStmt->fetchColumn() ?: '';
+                    savePassengers($db, $outboundId, $bookingNum, $adultNames, $childNames);
+                }
+                if ($returnId && $hasReturn && !$newReturnCreated) {
+                    $numStmt = $db->prepare("SELECT booking_number FROM bookings WHERE id = ?");
+                    $numStmt->execute([$returnId]);
+                    $bookingNum = $numStmt->fetchColumn() ?: '';
+                    savePassengers($db, $returnId, $bookingNum, $adultNames, $childNames);
+                }
+            }
 
             jsonResponse(true, 'Rezervasyon güncellendi.');
         } catch (Exception $e) {
@@ -226,19 +439,30 @@ switch ($action) {
 
     // === Rezervasyon Sil ===
     case 'delete':
-        $id = (int)($_POST['id'] ?? 0);
-        if (!$id) jsonResponse(false, 'Geçersiz ID');
+        $ids = $_POST['ids'] ?? [];
+        if (empty($ids)) {
+            $id = (int)($_POST['id'] ?? 0);
+            if ($id) $ids = [$id];
+        }
+        if (empty($ids)) jsonResponse(false, 'Geçersiz ID');
 
         try {
+            $db->beginTransaction();
             $stmt = $db->prepare("DELETE FROM bookings WHERE id = ?");
-            $stmt->execute([$id]);
+            $deletedCount = 0;
+            foreach ($ids as $id) {
+                $stmt->execute([(int)$id]);
+                $deletedCount += $stmt->rowCount();
+            }
+            $db->commit();
 
-            if ($stmt->rowCount() === 0) {
+            if ($deletedCount === 0) {
                 jsonResponse(false, 'Kayıt bulunamadı');
             }
 
-            jsonResponse(true, 'Rezervasyon silindi.');
+            jsonResponse(true, 'Rezervasyon(lar) silindi.');
         } catch (Exception $e) {
+            $db->rollBack();
             jsonResponse(false, 'Silme hatası: ' . $e->getMessage());
         }
         break;

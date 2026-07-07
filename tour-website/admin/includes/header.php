@@ -787,11 +787,11 @@ if ($siteLogo && defined('UPLOADS_URL')) {
                     </a>
                     <a href="<?= ADMIN_URL ?>/bookings.php?view=arrival" class="nav-link <?= ($currentPage === 'bookings' && ($_GET['view'] ?? 'arrival') === 'arrival') ? 'active' : '' ?>">
                         <i class="bi bi-airplane-engines nav-link-icon"></i>
-                        <span class="nav-link-text">Geliş</span>
+                        <span class="nav-link-text">Arrival</span>
                     </a>
                     <a href="<?= ADMIN_URL ?>/bookings.php?view=return" class="nav-link <?= ($currentPage === 'bookings' && ($_GET['view'] ?? '') === 'return') ? 'active' : '' ?>">
                         <i class="bi bi-airplane nav-link-icon"></i>
-                        <span class="nav-link-text">Dönüş</span>
+                        <span class="nav-link-text">Depar</span>
                     </a>
                 </div>
             </div>
@@ -805,10 +805,10 @@ if ($siteLogo && defined('UPLOADS_URL')) {
                     <i class="bi bi-list-ul"></i> Tüm Rezervasyonlar
                 </a>
                 <a href="<?= ADMIN_URL ?>/bookings.php?view=arrival" class="flyout-item <?= ($currentPage === 'bookings' && ($_GET['view'] ?? 'arrival') === 'arrival') ? 'active' : '' ?>">
-                    <i class="bi bi-airplane-engines"></i> Geliş
+                    <i class="bi bi-airplane-engines"></i> Arrival
                 </a>
                 <a href="<?= ADMIN_URL ?>/bookings.php?view=return" class="flyout-item <?= ($currentPage === 'bookings' && ($_GET['view'] ?? '') === 'return') ? 'active' : '' ?>">
-                    <i class="bi bi-airplane"></i> Dönüş
+                    <i class="bi bi-airplane"></i> Depar
                 </a>
             </div>
         </div>

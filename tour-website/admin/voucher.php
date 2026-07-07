@@ -15,6 +15,39 @@ if (!in_array($lang, ['tr', 'en', 'de', 'ru'])) $lang = 'en';
 
 if (!$outId && !$retId) die('Geçersiz rezervasyon');
 
+// If we only have booking_id (outId), let's check if there is a related_booking_id
+if ($outId && !$retId) {
+    $sCheck = $db->prepare("SELECT related_booking_id, booking_direction FROM bookings WHERE id = ?");
+    $sCheck->execute([$outId]);
+    $rowCheck = $sCheck->fetch();
+    if ($rowCheck && $rowCheck['related_booking_id']) {
+        $relatedId = (int)$rowCheck['related_booking_id'];
+        if ($rowCheck['booking_direction'] === 'return') {
+            // Swap them: the clicked booking is the return, and the related is outbound
+            $retId = $outId;
+            $outId = $relatedId;
+        } else {
+            // Clicked is outbound, related is return
+            $retId = $relatedId;
+        }
+    }
+}
+
+if ($retId && !$outId) {
+    $sCheck = $db->prepare("SELECT related_booking_id, booking_direction FROM bookings WHERE id = ?");
+    $sCheck->execute([$retId]);
+    $rowCheck = $sCheck->fetch();
+    if ($rowCheck && $rowCheck['related_booking_id']) {
+        $relatedId = (int)$rowCheck['related_booking_id'];
+        if ($rowCheck['booking_direction'] === 'outbound') {
+            $outId = $retId;
+            $retId = $relatedId;
+        } else {
+            $outId = $relatedId;
+        }
+    }
+}
+
 // Outbound booking
 $out = null;
 if ($outId) {
