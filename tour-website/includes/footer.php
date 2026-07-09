@@ -111,6 +111,23 @@ $socialYoutube = getSetting('social_youtube', '');
   <?= $extraJs ?>
   <?php endif; ?>
 
+  <?php
+  // Structured Data Schema Entegrasyonu
+  require_once ROOT_PATH . 'includes/schema.php';
+  echo renderSchema(getOrganizationSchema());
+  
+  // Sayfa özelinde tanımlanmış ek şemalar varsa bas
+  if (isset($pageSchema)) {
+      if (is_array($pageSchema) && isset($pageSchema['@context'])) {
+          echo renderSchema($pageSchema);
+      } elseif (is_array($pageSchema)) {
+          foreach ($pageSchema as $schemaItem) {
+              echo renderSchema($schemaItem);
+          }
+      }
+  }
+  ?>
+
 </body>
 
 </html>

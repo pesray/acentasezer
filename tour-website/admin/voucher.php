@@ -17,33 +17,47 @@ if (!$outId && !$retId) die('Geçersiz rezervasyon');
 
 // If we only have booking_id (outId), let's check if there is a related_booking_id
 if ($outId && !$retId) {
-    $sCheck = $db->prepare("SELECT related_booking_id, booking_direction FROM bookings WHERE id = ?");
+    $sCheck = $db->prepare("SELECT related_booking_id, booking_direction, is_deleted FROM bookings WHERE id = ?");
     $sCheck->execute([$outId]);
     $rowCheck = $sCheck->fetch();
-    if ($rowCheck && $rowCheck['related_booking_id']) {
+    if ($rowCheck && !$rowCheck['is_deleted'] && $rowCheck['related_booking_id']) {
         $relatedId = (int)$rowCheck['related_booking_id'];
-        if ($rowCheck['booking_direction'] === 'return') {
-            // Swap them: the clicked booking is the return, and the related is outbound
-            $retId = $outId;
-            $outId = $relatedId;
-        } else {
-            // Clicked is outbound, related is return
-            $retId = $relatedId;
+        
+        $sRel = $db->prepare("SELECT is_deleted FROM bookings WHERE id = ?");
+        $sRel->execute([$relatedId]);
+        $relDeleted = $sRel->fetchColumn();
+        
+        if ($relDeleted !== false && (int)$relDeleted === 0) {
+            if ($rowCheck['booking_direction'] === 'return') {
+                // Swap them: the clicked booking is the return, and the related is outbound
+                $retId = $outId;
+                $outId = $relatedId;
+            } else {
+                // Clicked is outbound, related is return
+                $retId = $relatedId;
+            }
         }
     }
 }
 
 if ($retId && !$outId) {
-    $sCheck = $db->prepare("SELECT related_booking_id, booking_direction FROM bookings WHERE id = ?");
+    $sCheck = $db->prepare("SELECT related_booking_id, booking_direction, is_deleted FROM bookings WHERE id = ?");
     $sCheck->execute([$retId]);
     $rowCheck = $sCheck->fetch();
-    if ($rowCheck && $rowCheck['related_booking_id']) {
+    if ($rowCheck && !$rowCheck['is_deleted'] && $rowCheck['related_booking_id']) {
         $relatedId = (int)$rowCheck['related_booking_id'];
-        if ($rowCheck['booking_direction'] === 'outbound') {
-            $outId = $retId;
-            $retId = $relatedId;
-        } else {
-            $outId = $relatedId;
+        
+        $sRel = $db->prepare("SELECT is_deleted FROM bookings WHERE id = ?");
+        $sRel->execute([$relatedId]);
+        $relDeleted = $sRel->fetchColumn();
+        
+        if ($relDeleted !== false && (int)$relDeleted === 0) {
+            if ($rowCheck['booking_direction'] === 'outbound') {
+                $outId = $retId;
+                $retId = $relatedId;
+            } else {
+                $outId = $relatedId;
+            }
         }
     }
 }
@@ -57,7 +71,7 @@ if ($outId) {
         FROM bookings b
         LEFT JOIN vehicles v ON b.vehicle_id = v.id
         LEFT JOIN destinations d ON b.destination_id = d.id
-        WHERE b.id = ?
+        WHERE b.id = ? AND b.is_deleted = 0
     ");
     $s->execute([$outId]);
     $out = $s->fetch();
@@ -72,7 +86,7 @@ if ($retId) {
         FROM bookings b
         LEFT JOIN vehicles v ON b.vehicle_id = v.id
         LEFT JOIN destinations d ON b.destination_id = d.id
-        WHERE b.id = ?
+        WHERE b.id = ? AND b.is_deleted = 0
     ");
     $s->execute([$retId]);
     $ret = $s->fetch();

@@ -41,6 +41,18 @@ if ($fullPath === 'admin' || strpos($fullPath, 'admin/') === 0) {
     }
 }
 
+// sitemap.xml - dil ön eki olmadan çalışsın
+if ($fullPath === 'sitemap.xml') {
+    require_once ROOT_PATH . 'sitemap.php';
+    exit;
+}
+
+// robots.txt - dil ön eki olmadan çalışsın
+if ($fullPath === 'robots.txt') {
+    require_once ROOT_PATH . 'robots.php';
+    exit;
+}
+
 // Dil ön eki yoksa ve admin değilse
 $urlLang = extractLangFromUrl();
 if ($urlLang === null && !empty($fullPath)) {

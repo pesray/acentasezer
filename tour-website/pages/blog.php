@@ -24,6 +24,13 @@ $stmt = $db->prepare("
 $stmt->execute([$lang]);
 $posts = $stmt->fetchAll();
 
+// Schema.org BreadcrumbList entegrasyonu
+require_once ROOT_PATH . 'includes/schema.php';
+$blogSlug = getPageSlugByKey('blog');
+$pageSchema = getBreadcrumbSchema([
+    ['name' => $pageTitle, 'url' => $blogSlug]
+]);
+
 require_once INCLUDES_PATH . 'header.php';
 ?>
 
@@ -36,7 +43,9 @@ require_once INCLUDES_PATH . 'header.php';
 <section class="blog-listing section">
     <div class="container">
         <div class="row gy-4">
-            <?php foreach ($posts as $post): ?>
+            <?php foreach ($posts as $post): 
+                $postUrl = langUrl($blogSlug . '/' . $post['slug']);
+            ?>
             <div class="col-lg-4 col-md-6">
                 <article class="blog-card">
                     <div class="blog-image">
@@ -47,9 +56,9 @@ require_once INCLUDES_PATH . 'header.php';
                             <span><i class="bi bi-calendar"></i> <?= date('d M Y', strtotime($post['published_at'])) ?></span>
                             <span><i class="bi bi-person"></i> <?= e($post['author_name']) ?></span>
                         </div>
-                        <h4><a href="<?= SITE_URL ?>/blog/<?= e($post['slug']) ?>"><?= e($post['title']) ?></a></h4>
+                        <h4><a href="<?= e($postUrl) ?>"><?= e($post['title']) ?></a></h4>
                         <p><?= e(mb_substr($post['excerpt'], 0, 120)) ?>...</p>
-                        <a href="<?= SITE_URL ?>/blog/<?= e($post['slug']) ?>" class="read-more"><?= __('read_more', 'general') ?> <i class="bi bi-arrow-right"></i></a>
+                        <a href="<?= e($postUrl) ?>" class="read-more"><?= __('read_more', 'general') ?> <i class="bi bi-arrow-right"></i></a>
                     </div>
                 </article>
             </div>

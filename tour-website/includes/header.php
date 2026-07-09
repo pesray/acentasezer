@@ -13,6 +13,19 @@ $languages = getActiveLanguages();
 $menuItems = getMenuItems('ana-menu');
 $siteName = getSetting('site_name', 'Tour');
 $siteLogo = getSetting('site_logo', '');
+$defaultOgImage = getSetting('default_og_image', '');
+if (empty($ogImage)) {
+    if (!empty($defaultOgImage)) {
+        $ogImage = UPLOADS_URL . $defaultOgImage;
+    } elseif (!empty($siteLogo)) {
+        $ogImage = UPLOADS_URL . $siteLogo;
+    } else {
+        $ogImage = ASSETS_URL . 'img/logo.png';
+    }
+}
+if (strpos($ogImage, 'http') !== 0) {
+    $ogImage = SITE_URL . '/' . ltrim($ogImage, '/');
+}
 ?>
 <!DOCTYPE html>
 <html lang="<?= e($currentLang) ?>">
@@ -24,17 +37,26 @@ $siteLogo = getSetting('site_logo', '');
   <meta name="description" content="<?= isset($metaDescription) ? e($metaDescription) : e(getSetting('site_description', '')) ?>">
   <meta name="keywords" content="<?= isset($metaKeywords) ? e($metaKeywords) : e(getSetting('site_keywords', '')) ?>">
 
-  <!-- Open Graph -->
-  <meta property="og:title" content="<?= isset($pageTitle) ? e($pageTitle) : e($siteName) ?>">
-  <meta property="og:description" content="<?= isset($metaDescription) ? e($metaDescription) : e(getSetting('site_description', '')) ?>">
-  <meta property="og:image" content="<?= isset($ogImage) ? e($ogImage) : SITE_URL . '/' . e(getSetting('site_logo', '')) ?>">
-  <meta property="og:url" content="<?= e(SITE_URL . $_SERVER['REQUEST_URI']) ?>">
-  <meta property="og:type" content="website">
+  <!-- Canonical URL -->
+  <link rel="canonical" href="<?= e(langUrl(getPathWithoutLang())) ?>">
 
   <!-- Hreflang tags for SEO -->
   <?php foreach ($languages as $hLang): ?>
   <link rel="alternate" hreflang="<?= e($hLang['code']) ?>" href="<?= e(getAlternateLanguageUrl($hLang['code'])) ?>">
   <?php endforeach; ?>
+
+  <!-- Open Graph -->
+  <meta property="og:title" content="<?= isset($pageTitle) ? e($pageTitle) : e($siteName) ?>">
+  <meta property="og:description" content="<?= isset($metaDescription) ? e($metaDescription) : e(getSetting('site_description', '')) ?>">
+  <meta property="og:image" content="<?= e($ogImage) ?>">
+  <meta property="og:url" content="<?= e(SITE_URL . $_SERVER['REQUEST_URI']) ?>">
+  <meta property="og:type" content="website">
+
+  <!-- Twitter Cards -->
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="<?= isset($pageTitle) ? e($pageTitle) : e($siteName) ?>">
+  <meta name="twitter:description" content="<?= isset($metaDescription) ? e($metaDescription) : e(getSetting('site_description', '')) ?>">
+  <meta name="twitter:image" content="<?= e($ogImage) ?>">
 
   <!-- Favicons -->
   <link href="<?= ASSETS_URL ?>img/favicon.png" rel="icon">

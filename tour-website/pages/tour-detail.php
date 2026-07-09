@@ -189,6 +189,17 @@ $defaultTexts = [
 
 $t = $defaultTexts[$lang] ?? $defaultTexts['en'];
 
+// Schema.org entegrasyonu (Tour & BreadcrumbList)
+require_once ROOT_PATH . 'includes/schema.php';
+$tourUrl = langUrl($toursPrefix . '/' . $tour['slug']);
+$pageSchema = [
+    getBreadcrumbSchema([
+        ['name' => __('menu_tours', 'header'), 'url' => getPageSlugByKey('tours')],
+        ['name' => $tour['title'], 'url' => $toursPrefix . '/' . $tour['slug']]
+    ]),
+    getTourSchema($tour, $tourUrl, $vehicles)
+];
+
 require_once INCLUDES_PATH . 'header.php';
 ?>
 

@@ -20,6 +20,12 @@ $metaDescription = $page['meta_description'] ?: $page['excerpt'];
 $metaKeywords = $page['meta_keywords'] ?? '';
 $bodyClass = 'page-' . $page['template'];
 
+// Schema.org BreadcrumbList entegrasyonu
+require_once ROOT_PATH . 'includes/schema.php';
+$pageSchema = getBreadcrumbSchema([
+    ['name' => $page['title'], 'url' => $page['slug']]
+]);
+
 require_once INCLUDES_PATH . 'header.php';
 
 // Sayfa section'larını al

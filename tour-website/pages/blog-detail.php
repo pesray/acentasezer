@@ -37,6 +37,40 @@ $pageTitle = $post['meta_title'] ?: $post['title'];
 $metaDescription = $post['meta_description'] ?: $post['excerpt'];
 $bodyClass = 'blog-details-page';
 
+// Schema.org entegrasyonu (BlogPosting & BreadcrumbList)
+require_once ROOT_PATH . 'includes/schema.php';
+$blogSlug = getPageSlugByKey('blog');
+$postImage = $post['featured_image'] ? UPLOADS_URL . $post['featured_image'] : ASSETS_URL . 'img/blog/blog-1.webp';
+if (strpos($postImage, 'http') !== 0) {
+    $postImage = SITE_URL . '/' . ltrim($postImage, '/');
+}
+$pageSchema = [
+    getBreadcrumbSchema([
+        ['name' => __('menu_blog', 'header'), 'url' => $blogSlug],
+        ['name' => $post['title'], 'url' => $blogSlug . '/' . $post['slug']]
+    ]),
+    [
+        '@context' => 'https://schema.org',
+        '@type' => 'BlogPosting',
+        'headline' => $post['title'],
+        'description' => strip_tags($post['excerpt'] ?? ''),
+        'image' => $postImage,
+        'datePublished' => $post['published_at'],
+        'author' => [
+            '@type' => 'Person',
+            'name' => $post['author_name']
+        ],
+        'publisher' => [
+            '@type' => 'TravelAgency',
+            'name' => getSetting('site_name', 'Tour'),
+            'logo' => [
+                '@type' => 'ImageObject',
+                'url' => getSetting('site_logo') ? SITE_URL . '/' . ltrim(getSetting('site_logo'), '/') : SITE_URL . '/assets/img/logo.png'
+            ]
+        ]
+    ]
+];
+
 require_once INCLUDES_PATH . 'header.php';
 ?>
 

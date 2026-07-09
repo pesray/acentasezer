@@ -35,6 +35,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
 }
 
+// Schema.org BreadcrumbList entegrasyonu
+require_once ROOT_PATH . 'includes/schema.php';
+$pageSchema = getBreadcrumbSchema([
+    ['name' => $pageTitle, 'url' => getPageSlugByKey('contact')]
+]);
+
 require_once INCLUDES_PATH . 'header.php';
 ?>
 

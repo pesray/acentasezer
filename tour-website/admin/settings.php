@@ -56,6 +56,29 @@ $groupNames = [
     'seo'     => 'SEO Ayarları',
 ];
 
+$friendlyLabels = [
+    'site_name' => 'Site Adı',
+    'site_description' => 'Site Açıklaması',
+    'site_keywords' => 'Site Anahtar Kelimeleri',
+    'site_logo' => 'Site Logosu',
+    'site_favicon' => 'Favicon',
+    'contact_email' => 'İletişim E-Posta Adresi',
+    'contact_phone' => 'İletişim Telefon Numarası',
+    'contact_address' => 'İletişim Adresi',
+    'social_facebook' => 'Facebook Sayfası',
+    'social_twitter' => 'Twitter/X Sayfası',
+    'social_instagram' => 'Instagram Sayfası',
+    'social_youtube' => 'YouTube Sayfası',
+    'social_linkedin' => 'LinkedIn Sayfası',
+    'google_analytics' => 'Google Analytics Ölçüm Kimliği (G-XXXXXXXXXX)',
+    'google_maps_api' => 'Google Maps API Anahtarı',
+    'footer_text' => 'Footer Alt Metni',
+    'default_og_image' => 'Varsayılan Paylaşım Görseli (Default OG Image)',
+    'twitter_username' => 'Twitter Kullanıcı Adı (@)',
+    'facebook_app_id' => 'Facebook App ID',
+    'google_tag_manager' => 'Google Tag Manager ID (GTM-XXXXXXX)',
+];
+
 $pageTitle = 'Site Ayarları';
 require_once __DIR__ . '/includes/header.php';
 ?>
@@ -75,7 +98,9 @@ require_once __DIR__ . '/includes/header.php';
                 <div class="card-body">
                     <?php foreach ($items as $setting): ?>
                     <div class="mb-3">
-                        <label class="form-label fw-semibold"><?= e(ucwords(str_replace('_', ' ', $setting['setting_key']))) ?></label>
+                        <label class="form-label fw-semibold">
+                            <?= e($friendlyLabels[$setting['setting_key']] ?? ucwords(str_replace('_', ' ', $setting['setting_key']))) ?>
+                        </label>
 
                         <?php if ($setting['setting_type'] === 'textarea'): ?>
                             <textarea name="settings[<?= e($setting['setting_key']) ?>]" class="form-control" rows="3"><?= e($setting['setting_value']) ?></textarea>

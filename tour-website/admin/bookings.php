@@ -251,7 +251,9 @@ require_once __DIR__ . '/includes/header.php';
         <i class="bi bi-calendar-check me-2"></i><?= $viewTitle ?>
     </h1>
     <div class="d-flex gap-2 align-items-center">
+        <?php if (count($pendingBookings) > 0): ?>
         <span class="badge bg-warning text-dark fs-6"><i class="bi bi-hourglass-split me-1"></i><?= count($pendingBookings) ?> Bekleyen</span>
+        <?php endif; ?>
         <span class="badge bg-secondary fs-6"><i class="bi bi-list me-1"></i><?= count($allBookings) ?> Toplam</span>
         <button type="button" class="btn btn-primary btn-sm" data-bs-toggle="modal" data-bs-target="#addBookingModal">
             <i class="bi bi-plus-lg me-1"></i>Yeni Rezervasyon
@@ -1759,11 +1761,11 @@ $jsBookings = $db->query("
     LEFT JOIN tours t ON b.tour_id = t.id
     LEFT JOIN destinations d ON b.destination_id = d.id
     LEFT JOIN vehicles v ON b.vehicle_id = v.id
-    WHERE (1=1 $dirWhere) OR b.id IN (
+    WHERE b.is_deleted = 0 AND ( (1=1 $dirWhere) OR b.id IN (
         SELECT COALESCE(b2.related_booking_id, 0)
         FROM bookings b2
-        WHERE 1=1 $dirWhereJs
-    )
+        WHERE b2.is_deleted = 0 $dirWhereJs
+    ) )
     ORDER BY b.created_at DESC
 ")->fetchAll();
 ?>

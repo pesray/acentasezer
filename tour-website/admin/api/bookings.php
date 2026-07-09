@@ -419,11 +419,15 @@ switch ($action) {
                     }
                 }
 
-                // 3) Link them if needed
-                if ($outboundId && $returnId) {
+                // 3) Link them if both are active, otherwise clear link
+                if ($hasOutbound && $hasReturn && $outboundId && $returnId && $outboundId !== $returnId) {
                     $stmtLink = $db->prepare("UPDATE bookings SET related_booking_id = ? WHERE id = ?");
                     $stmtLink->execute([$returnId, $outboundId]);
                     $stmtLink->execute([$outboundId, $returnId]);
+                } else {
+                    $stmtUnlink = $db->prepare("UPDATE bookings SET related_booking_id = NULL WHERE id = ?");
+                    if ($outboundId) $stmtUnlink->execute([$outboundId]);
+                    if ($returnId && $returnId !== $outboundId) $stmtUnlink->execute([$returnId]);
                 }
 
                 // 4) Update passenger lists for existing bookings

@@ -47,6 +47,12 @@ $stmt = $db->prepare("
 $stmt->execute([$lang]);
 $tours = $stmt->fetchAll();
 
+// Schema.org BreadcrumbList entegrasyonu
+require_once ROOT_PATH . 'includes/schema.php';
+$pageSchema = getBreadcrumbSchema([
+    ['name' => $pageTitle, 'url' => getPageSlugByKey('tours')]
+]);
+
 require_once INCLUDES_PATH . 'header.php';
 ?>
 

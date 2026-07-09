@@ -43,6 +43,15 @@ foreach ($faqs as $faq) {
     }
 }
 
+// Schema.org FAQPage ve BreadcrumbList entegrasyonu
+require_once ROOT_PATH . 'includes/schema.php';
+$pageSchema = [
+    getFaqSchema($faqs),
+    getBreadcrumbSchema([
+        ['name' => __('faq', 'general'), 'url' => getPageSlugByKey('faq')]
+    ])
+];
+
 require_once INCLUDES_PATH . 'header.php';
 ?>
 

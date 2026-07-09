@@ -1,0 +1,1315 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Sunline VIP Transfer — Antalya</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+<link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=DM+Sans:wght@300;400;500;600&family=Instrument+Serif:ital@0;1&display=swap" rel="stylesheet"/>
+<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet"/>
+<link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet"/>
+<style>
+/* ═══ ROOT & RESET ══════════════════════════════════════ */
+*, *::before, *::after { box-sizing:border-box; margin:0; padding:0; }
+html { scroll-behavior:smooth; font-size:16px; }
+body { background:#f7f4ef; color:#1a1714; font-family:'DM Sans', sans-serif; overflow-x:hidden; }
+::-webkit-scrollbar { width:3px; }
+::-webkit-scrollbar-track { background:#f7f4ef; }
+::-webkit-scrollbar-thumb { background:#1a1714; }
+
+/* ═══ VARIABLES ══════════════════════════════════════════ */
+:root {
+  --ink:#1a1714;
+  --ink2:#3d3830;
+  --ink3:rgba(26,23,20,0.45);
+  --ink4:rgba(26,23,20,0.18);
+  --paper:#f7f4ef;
+  --paper2:#efe9e0;
+  --paper3:#e8e0d3;
+  --gold:#b8892a;
+  --gold2:#d4a843;
+  --gold-bg:rgba(184,137,42,0.08);
+  --hero-bg:#0f0d0a;
+  --ff-display:'DM Serif Display', serif;
+  --ff-serif:'Instrument Serif', serif;
+  --ff-sans:'DM Sans', sans-serif;
+  --r:4px;
+  --r2:12px;
+  --shadow:0 2px 24px rgba(26,23,20,0.08);
+  --shadow-lg:0 8px 48px rgba(26,23,20,0.14);
+}
+
+/* ═══ SPA ════════════════════════════════════════════════ */
+.page { display:none; }
+.page.active { display:block; animation:fadeIn .35s ease; }
+@keyframes fadeIn { from{opacity:0;transform:translateY(8px)} to{opacity:1;transform:translateY(0)} }
+
+/* ═══ NAV ════════════════════════════════════════════════ */
+.site-nav {
+  position:fixed; top:0; left:0; right:0; z-index:1000;
+  transition:all .3s;
+}
+/* Transparent over hero */
+.site-nav .nav-inner {
+  display:flex; align-items:center; justify-content:space-between;
+  padding:.9rem 2rem; transition:all .3s;
+  border-bottom:1px solid transparent;
+}
+.site-nav.scrolled .nav-inner {
+  background:rgba(247,244,239,.96);
+  backdrop-filter:blur(16px);
+  border-color:var(--ink4);
+  box-shadow:var(--shadow);
+}
+/* When on light page (non-home) */
+.site-nav.light-page .nav-inner {
+  background:rgba(247,244,239,.96);
+  backdrop-filter:blur(16px);
+  border-color:var(--ink4);
+}
+
+.nav-brand {
+  display:flex; align-items:center; gap:.75rem; text-decoration:none;
+}
+.nav-brand-mark {
+  width:36px; height:36px; background:var(--ink); border-radius:var(--r);
+  display:flex; align-items:center; justify-content:center;
+  font-family:var(--ff-display); font-size:1rem; font-weight:400; color:var(--gold2);
+  flex-shrink:0;
+}
+.nav-brand-name {
+  font-family:var(--ff-display); font-size:1.05rem; color:var(--paper);
+  letter-spacing:.02em; line-height:1.1;
+}
+.nav-brand-name .sub { display:block; font-family:var(--ff-sans); font-size:.55rem; font-weight:500; letter-spacing:.18em; text-transform:uppercase; color:rgba(247,244,239,.5); margin-top:1px; }
+.site-nav.scrolled .nav-brand-name,
+.site-nav.light-page .nav-brand-name { color:var(--ink); }
+.site-nav.scrolled .nav-brand-name .sub,
+.site-nav.light-page .nav-brand-name .sub { color:var(--ink3); }
+
+/* Desktop links */
+.nav-links { display:flex; align-items:center; gap:.25rem; }
+.nav-lnk {
+  font-family:var(--ff-sans); font-size:.65rem; font-weight:500;
+  letter-spacing:.1em; text-transform:uppercase; text-decoration:none;
+  color:rgba(247,244,239,.65); padding:.45rem .7rem; border-radius:var(--r);
+  transition:all .2s; cursor:pointer;
+}
+.nav-lnk:hover { color:#fff; background:rgba(255,255,255,.08); }
+.nav-lnk.active { color:var(--gold2); }
+.site-nav.scrolled .nav-lnk,
+.site-nav.light-page .nav-lnk { color:var(--ink3); }
+.site-nav.scrolled .nav-lnk:hover,
+.site-nav.light-page .nav-lnk:hover { color:var(--ink); background:var(--ink4); }
+.site-nav.scrolled .nav-lnk.active,
+.site-nav.light-page .nav-lnk.active { color:var(--gold); }
+
+/* Lang */
+.lang-row { display:flex; gap:2px; }
+.lang-btn {
+  font-family:var(--ff-sans); font-size:.58rem; font-weight:600; letter-spacing:.08em;
+  background:none; border:1px solid rgba(255,255,255,.18); color:rgba(247,244,239,.55);
+  padding:3px 8px; border-radius:20px; cursor:pointer; transition:all .2s;
+}
+.lang-btn.active { background:var(--gold2); border-color:var(--gold2); color:#fff; }
+.lang-btn:hover:not(.active) { border-color:rgba(255,255,255,.4); color:#fff; }
+.site-nav.scrolled .lang-btn,
+.site-nav.light-page .lang-btn { border-color:var(--ink4); color:var(--ink3); }
+.site-nav.scrolled .lang-btn.active,
+.site-nav.light-page .lang-btn.active { background:var(--gold); border-color:var(--gold); color:#fff; }
+.site-nav.scrolled .lang-btn:hover:not(.active),
+.site-nav.light-page .lang-btn:hover:not(.active) { border-color:var(--ink3); color:var(--ink); }
+
+/* Mobile toggler */
+.nav-toggler {
+  background:none; border:1px solid rgba(255,255,255,.25); border-radius:var(--r);
+  color:rgba(247,244,239,.8); padding:.4rem .6rem; font-size:1.1rem; cursor:pointer; transition:all .2s;
+}
+.site-nav.scrolled .nav-toggler,
+.site-nav.light-page .nav-toggler { border-color:var(--ink4); color:var(--ink2); }
+
+/* Mobile overlay */
+.mobile-menu {
+  display:none; position:fixed; inset:0; z-index:999;
+  background:var(--paper); flex-direction:column;
+  padding:5.5rem 2rem 2rem;
+}
+.mobile-menu.open { display:flex; animation:slideIn .3s ease; }
+@keyframes slideIn { from{transform:translateX(100%)} to{transform:translateX(0)} }
+.mob-close {
+  position:absolute; top:1.1rem; right:1.5rem;
+  background:none; border:1px solid var(--ink4); border-radius:var(--r);
+  color:var(--ink2); padding:.4rem .65rem; font-size:1rem; cursor:pointer;
+}
+.mob-nav-link {
+  font-family:var(--ff-display); font-size:2.2rem; color:var(--ink);
+  text-decoration:none; padding:.5rem 0; border-bottom:1px solid var(--ink4);
+  transition:color .2s; display:block;
+}
+.mob-nav-link:hover, .mob-nav-link.active { color:var(--gold); }
+.mob-lang { margin-top:2rem; display:flex; gap:6px; }
+.mob-lang button {
+  font-family:var(--ff-sans); font-size:.7rem; font-weight:600; letter-spacing:.1em;
+  background:none; border:1px solid var(--ink4); color:var(--ink3);
+  padding:5px 14px; border-radius:20px; cursor:pointer; transition:all .2s;
+}
+.mob-lang button.active { background:var(--ink); color:var(--paper); border-color:var(--ink); }
+
+/* ═══ HERO ════════════════════════════════════════════════ */
+.hero {
+  min-height:100vh; background:var(--hero-bg);
+  position:relative; display:flex; flex-direction:column;
+  overflow:hidden; padding-bottom:160px;
+}
+.hero-texture {
+  position:absolute; inset:0; opacity:.4;
+  background-image:
+    radial-gradient(ellipse at 80% 20%, rgba(184,137,42,.15) 0%, transparent 50%),
+    radial-gradient(ellipse at 20% 80%, rgba(184,137,42,.08) 0%, transparent 45%);
+}
+.hero-grid {
+  position:absolute; inset:0; opacity:.07;
+  background-image:
+    linear-gradient(rgba(247,244,239,.3) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(247,244,239,.3) 1px, transparent 1px);
+  background-size:60px 60px;
+}
+.hero-main {
+  flex:1; display:flex; align-items:center;
+  padding:8rem 2rem 2rem; position:relative; z-index:1;
+}
+.hero-eyebrow {
+  font-family:var(--ff-sans); font-size:.6rem; font-weight:600;
+  letter-spacing:.28em; text-transform:uppercase; color:var(--gold2);
+  display:flex; align-items:center; gap:10px; margin-bottom:1.5rem;
+}
+.hero-eyebrow::before { content:''; width:28px; height:1px; background:var(--gold2); }
+.hero-h1 {
+  font-family:var(--ff-display); font-size:clamp(3rem,8vw,7rem);
+  font-weight:400; line-height:.95; letter-spacing:-.02em;
+  color:#f7f4ef; margin-bottom:1.5rem;
+}
+.hero-h1 .italic { font-style:italic; color:var(--gold2); }
+.hero-h1 .outline {
+  -webkit-text-stroke:1px rgba(247,244,239,.3);
+  color:transparent; display:block;
+}
+.hero-desc {
+  font-size:1rem; color:rgba(247,244,239,.55); font-weight:300; line-height:1.75;
+  max-width:480px; margin-bottom:2.5rem;
+}
+.hero-cta { display:flex; gap:.75rem; flex-wrap:wrap; }
+.hero-side {
+  display:flex; flex-direction:column; justify-content:flex-end;
+  padding:8rem 2rem 2rem; position:relative; z-index:1;
+}
+.hero-counter {
+  font-family:var(--ff-display); font-size:clamp(6rem,12vw,10rem);
+  font-weight:400; color:rgba(247,244,239,.04); line-height:1;
+  position:absolute; right:2rem; top:50%; transform:translateY(-50%);
+  pointer-events:none; user-select:none;
+}
+
+/* Slide tabs */
+.hero-tabs {
+  position:absolute; bottom:185px; left:50%; transform:translateX(-50%);
+  display:flex; gap:6px; z-index:2; white-space:nowrap;
+}
+.hero-tab {
+  font-family:var(--ff-sans); font-size:.6rem; font-weight:500; letter-spacing:.08em;
+  background:rgba(247,244,239,.07); border:1px solid rgba(247,244,239,.12);
+  color:rgba(247,244,239,.5); padding:5px 16px; border-radius:20px;
+  cursor:pointer; transition:all .3s;
+}
+.hero-tab.active {
+  background:var(--gold2); border-color:var(--gold2); color:#fff; font-weight:600;
+}
+
+/* ═══ BOOKING BAR ════════════════════════════════════════ */
+.booking-strip {
+  position:absolute; bottom:0; left:0; right:0; z-index:2;
+  padding:0 2rem 1.5rem;
+}
+.booking-wrap {
+  max-width:1140px; margin:0 auto;
+  background:var(--paper); border-radius:var(--r2);
+  box-shadow:var(--shadow-lg); overflow:hidden;
+}
+.booking-header {
+  background:var(--ink); padding:.75rem 1.5rem;
+  display:flex; align-items:center; gap:10px;
+}
+.booking-header-title {
+  font-family:var(--ff-sans); font-size:.6rem; font-weight:600;
+  letter-spacing:.2em; text-transform:uppercase; color:var(--gold2);
+}
+.booking-body { padding:1.1rem 1.5rem; }
+.flabel {
+  font-family:var(--ff-sans); font-size:.58rem; font-weight:600;
+  letter-spacing:.12em; text-transform:uppercase; color:var(--ink3); margin-bottom:.35rem; display:block;
+}
+.finput, .fselect {
+  background:#fff !important; border:1.5px solid var(--ink4) !important;
+  color:var(--ink) !important; font-family:var(--ff-sans); font-size:.85rem;
+  border-radius:var(--r); padding:.6rem .9rem; transition:border-color .2s; width:100%;
+  -webkit-appearance:none; appearance:none;
+}
+.finput::placeholder { color:var(--ink3); }
+.finput:focus, .fselect:focus {
+  border-color:var(--gold) !important; outline:none;
+  box-shadow:0 0 0 3px rgba(184,137,42,.12) !important;
+}
+.fselect {
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%231a1714' stroke-width='1.5' fill='none'/%3E%3C/svg%3E") !important;
+  background-repeat:no-repeat !important; background-position:right .9rem center !important; padding-right:2.2rem !important;
+  cursor:pointer;
+}
+.fselect option { background:#fff; color:var(--ink); }
+
+/* ═══ BUTTONS ════════════════════════════════════════════ */
+.btn-ink {
+  background:var(--ink); color:var(--paper);
+  font-family:var(--ff-sans); font-size:.68rem; font-weight:600; letter-spacing:.1em; text-transform:uppercase;
+  border:none; border-radius:var(--r); padding:.85rem 2rem;
+  cursor:pointer; display:inline-flex; align-items:center; gap:8px; transition:all .25s;
+}
+.btn-ink:hover { background:var(--ink2); transform:translateY(-1px); box-shadow:var(--shadow); }
+
+.btn-gold-outline {
+  background:transparent; color:var(--paper);
+  font-family:var(--ff-sans); font-size:.68rem; font-weight:600; letter-spacing:.1em; text-transform:uppercase;
+  border:1.5px solid rgba(247,244,239,.3); border-radius:var(--r); padding:.82rem 2rem;
+  cursor:pointer; display:inline-flex; align-items:center; gap:8px; transition:all .25s;
+}
+.btn-gold-outline:hover { border-color:var(--gold2); color:var(--gold2); }
+
+.btn-ink-outline {
+  background:transparent; color:var(--ink);
+  font-family:var(--ff-sans); font-size:.68rem; font-weight:600; letter-spacing:.1em; text-transform:uppercase;
+  border:1.5px solid var(--ink4); border-radius:var(--r); padding:.82rem 2rem;
+  cursor:pointer; display:inline-flex; align-items:center; gap:8px; transition:all .25s;
+}
+.btn-ink-outline:hover { border-color:var(--ink); background:var(--ink); color:var(--paper); }
+
+.btn-sm-ink {
+  background:var(--ink); color:var(--paper);
+  font-family:var(--ff-sans); font-size:.6rem; font-weight:600; letter-spacing:.08em; text-transform:uppercase;
+  border:none; border-radius:var(--r); padding:.5rem 1.1rem;
+  cursor:pointer; transition:all .2s; white-space:nowrap;
+}
+.btn-sm-ink:hover { background:var(--gold); transform:translateY(-1px); }
+
+/* ═══ SECTION BASE ════════════════════════════════════════ */
+.sec { padding:5rem 0; }
+.sec-dark { background:var(--ink); color:var(--paper); }
+.sec-paper { background:var(--paper); }
+.sec-paper2 { background:var(--paper2); }
+.sec-paper3 { background:var(--paper3); }
+
+.eyebrow {
+  font-family:var(--ff-sans); font-size:.6rem; font-weight:600;
+  letter-spacing:.22em; text-transform:uppercase; color:var(--gold); margin-bottom:.9rem;
+  display:flex; align-items:center; gap:10px;
+}
+.eyebrow::before { content:''; width:20px; height:1.5px; background:var(--gold); border-radius:1px; }
+.eyebrow.light { color:var(--gold2); }
+.eyebrow.light::before { background:var(--gold2); }
+.sec-title {
+  font-family:var(--ff-display); font-size:clamp(1.8rem,4.5vw,3.2rem);
+  font-weight:400; line-height:1.1; letter-spacing:-.02em; margin-bottom:.75rem;
+}
+.sec-sub { font-size:.95rem; font-weight:300; line-height:1.75; color:var(--ink3); }
+.sec-sub.light { color:rgba(247,244,239,.55); }
+
+/* ═══ STAT BAR ════════════════════════════════════════════ */
+.stat-bar { background:var(--ink); border-top:1px solid rgba(247,244,239,.06); }
+.stat-cell { padding:2.25rem 1rem; text-align:center; border-right:1px solid rgba(247,244,239,.06); }
+.stat-cell:last-child { border-right:none; }
+.stat-num { font-family:var(--ff-display); font-size:2.6rem; font-weight:400; color:var(--gold2); line-height:1; margin-bottom:.3rem; }
+.stat-lbl { font-size:.6rem; font-weight:500; letter-spacing:.12em; text-transform:uppercase; color:rgba(247,244,239,.35); }
+
+/* ═══ ITEM CARDS ══════════════════════════════════════════ */
+.item-card {
+  background:#fff; border:1.5px solid var(--ink4); border-radius:var(--r2);
+  overflow:hidden; cursor:pointer; height:100%; display:flex; flex-direction:column;
+  transition:all .3s; box-shadow:var(--shadow);
+}
+.item-card:hover { border-color:var(--gold); box-shadow:var(--shadow-lg); transform:translateY(-4px); }
+.card-img {
+  height:210px; background:var(--paper3); position:relative; overflow:hidden; flex-shrink:0;
+}
+.card-img-ph { position:absolute; inset:0; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:8px; }
+.card-img-ph-bg {
+  position:absolute; inset:0;
+  background:
+    repeating-linear-gradient(45deg,transparent,transparent 16px,rgba(26,23,20,.025) 16px,rgba(26,23,20,.025) 32px),
+    linear-gradient(135deg, var(--paper3) 0%, var(--paper2) 100%);
+}
+.card-badge {
+  position:absolute; top:12px; left:12px; background:var(--ink); color:var(--paper);
+  font-size:.55rem; font-weight:700; letter-spacing:.12em; text-transform:uppercase;
+  padding:4px 10px; border-radius:20px;
+}
+.card-cat { font-size:.58rem; font-weight:600; letter-spacing:.18em; text-transform:uppercase; color:var(--gold); margin-bottom:.35rem; }
+.card-title { font-family:var(--ff-display); font-size:1.15rem; color:var(--ink); margin-bottom:.35rem; line-height:1.2; }
+.card-desc { font-size:.8rem; color:var(--ink3); line-height:1.65; flex-grow:1; }
+.card-meta { font-size:.72rem; color:var(--ink3); display:flex; gap:1rem; flex-wrap:wrap; }
+.card-footer { border-top:1.5px solid var(--ink4); padding:.9rem 1.25rem; display:flex; align-items:center; justify-content:space-between; }
+.card-price { font-family:var(--ff-display); font-size:1.5rem; color:var(--ink); line-height:1; }
+.card-price-sub { font-size:.6rem; color:var(--ink3); margin-top:.1rem; }
+
+/* ═══ WHY SECTION ═════════════════════════════════════════ */
+.why-item { padding:1.75rem; border-radius:var(--r2); background:#fff; border:1.5px solid var(--ink4); height:100%; transition:all .3s; }
+.why-item:hover { border-color:var(--gold); box-shadow:var(--shadow); }
+.why-icon { width:44px; height:44px; background:var(--ink); border-radius:var(--r); display:flex; align-items:center; justify-content:center; color:var(--gold2); font-size:1.1rem; margin-bottom:1rem; }
+.why-ttl { font-family:var(--ff-display); font-size:1.1rem; color:var(--ink); margin-bottom:.4rem; }
+.why-desc { font-size:.8rem; color:var(--ink3); line-height:1.65; }
+
+/* ═══ PAGE HEADER ════════════════════════════════════════ */
+.page-hdr {
+  background:var(--ink); padding:8rem 2rem 4rem;
+  position:relative; overflow:hidden; border-bottom:1px solid rgba(247,244,239,.08);
+}
+.page-hdr-decor {
+  position:absolute; right:-2rem; top:50%; transform:translateY(-50%);
+  font-family:var(--ff-display); font-size:clamp(8rem,18vw,16rem); font-weight:400;
+  color:rgba(247,244,239,.03); line-height:1; pointer-events:none; user-select:none;
+  white-space:nowrap;
+}
+.page-hdr-inner { position:relative; z-index:1; }
+
+/* ═══ DETAIL ══════════════════════════════════════════════ */
+.detail-hero {
+  background:var(--ink); min-height:52vh; position:relative;
+  display:flex; align-items:flex-end; overflow:hidden;
+}
+.detail-hero-ph { position:absolute; inset:0; background:repeating-linear-gradient(45deg,transparent,transparent 24px,rgba(247,244,239,.02) 24px,rgba(247,244,239,.02) 48px); }
+.detail-hero-fade { position:absolute; inset:0; background:linear-gradient(to top,rgba(15,13,10,1) 0%,rgba(15,13,10,.3) 60%); }
+.detail-hero-content { position:relative; z-index:1; padding:2.5rem 1.5rem; width:100%; }
+.bcrumb { font-size:.72rem; color:rgba(247,244,239,.35); margin-bottom:.75rem; }
+.bcrumb span { color:var(--gold2); cursor:pointer; transition:color .2s; }
+.bcrumb span:hover { color:var(--gold); }
+
+/* ═══ FORM CARD ═══════════════════════════════════════════ */
+.form-card {
+  background:#fff; border:1.5px solid var(--ink4); border-radius:var(--r2);
+  padding:1.75rem; box-shadow:var(--shadow); position:sticky; top:88px;
+}
+.form-card-title { font-family:var(--ff-display); font-size:1.5rem; color:var(--ink); margin-bottom:.25rem; }
+.form-card-sub { font-size:.8rem; color:var(--ink3); margin-bottom:1.5rem; }
+
+.vehicle-opt {
+  background:var(--paper); border:1.5px solid var(--ink4); border-radius:var(--r);
+  padding:.8rem 1rem; display:flex; align-items:center; gap:.75rem;
+  cursor:pointer; transition:all .2s; width:100%; text-align:left; margin-bottom:.5rem;
+}
+.vehicle-opt.sel { border-color:var(--gold); background:var(--gold-bg); }
+.vehicle-opt:hover:not(.sel) { border-color:var(--ink2); }
+.vehicle-icon { width:34px; height:34px; background:var(--paper3); border-radius:var(--r); display:flex; align-items:center; justify-content:center; font-size:.95rem; color:var(--ink2); flex-shrink:0; }
+.vehicle-name { font-size:.82rem; font-weight:600; color:var(--ink); }
+.vehicle-cap { font-size:.7rem; color:var(--ink3); }
+.vehicle-tag { margin-left:auto; font-size:.78rem; font-weight:600; color:var(--gold); }
+
+.incl-item { display:flex; align-items:center; gap:.5rem; font-size:.8rem; color:var(--ink2); padding:.3rem 0; }
+.incl-item i { color:var(--gold); }
+.total-row { background:var(--paper2); border-radius:var(--r); padding:.85rem 1rem; display:flex; justify-content:space-between; align-items:center; margin:1rem 0; }
+.total-lbl { font-size:.75rem; color:var(--ink3); }
+.total-val { font-family:var(--ff-display); font-size:1.65rem; color:var(--ink); }
+
+/* ═══ GALLERY ════════════════════════════════════════════ */
+.gal-item {
+  aspect-ratio:4/3; background:var(--paper3); position:relative; overflow:hidden;
+  border-radius:var(--r2); cursor:pointer; border:1.5px solid var(--ink4);
+  transition:all .3s;
+}
+.gal-item:hover { border-color:var(--gold); transform:scale(1.015); box-shadow:var(--shadow); }
+.gal-item-bg { position:absolute; inset:0; background:repeating-linear-gradient(45deg,transparent,transparent 16px,rgba(26,23,20,.025) 16px,rgba(26,23,20,.025) 32px); }
+.gal-lbl { position:absolute; inset:0; display:flex; align-items:center; justify-content:center; font-size:.65rem; color:var(--ink3); font-family:monospace; text-align:center; padding:.75rem; }
+.gal-item:hover .gal-lbl { color:var(--gold); }
+
+/* ═══ ABOUT ══════════════════════════════════════════════ */
+.about-img-ph { aspect-ratio:4/3; background:var(--paper3); border-radius:var(--r2); border:1.5px solid var(--ink4); position:relative; overflow:hidden; }
+.about-img-ph-bg { position:absolute; inset:0; background:repeating-linear-gradient(45deg,transparent,transparent 18px,rgba(26,23,20,.025) 18px,rgba(26,23,20,.025) 36px); }
+.about-img-ph-inner { position:absolute; inset:0; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:10px; }
+.ab-stat { background:#fff; border:1.5px solid var(--ink4); border-radius:var(--r2); padding:1.25rem; text-align:center; }
+.ab-stat-num { font-family:var(--ff-display); font-size:2rem; color:var(--ink); }
+.ab-stat-lbl { font-size:.6rem; font-weight:600; letter-spacing:.12em; text-transform:uppercase; color:var(--ink3); margin-top:.25rem; }
+
+/* ═══ CONTACT ════════════════════════════════════════════ */
+.ct-item { display:flex; gap:1rem; margin-bottom:1.75rem; }
+.ct-icon { width:44px; height:44px; background:var(--paper3); border:1.5px solid var(--ink4); border-radius:var(--r); display:flex; align-items:center; justify-content:center; font-size:1rem; color:var(--ink2); flex-shrink:0; }
+.ct-lbl { font-size:.58rem; font-weight:700; letter-spacing:.15em; text-transform:uppercase; color:var(--gold); margin-bottom:.2rem; }
+.ct-val { font-size:.88rem; color:var(--ink2); }
+
+/* ═══ MARQUEE STRIP ══════════════════════════════════════ */
+.marquee-strip {
+  background:var(--gold); padding:.7rem 0; overflow:hidden; white-space:nowrap;
+  border-top:1px solid rgba(26,23,20,.08); border-bottom:1px solid rgba(26,23,20,.08);
+}
+.marquee-inner { display:inline-flex; animation:marquee 20s linear infinite; }
+.marquee-item {
+  font-family:var(--ff-display); font-size:.85rem; color:var(--ink);
+  padding:0 2rem; display:inline-flex; align-items:center; gap:1.5rem;
+}
+.marquee-item::after { content:'✦'; font-size:.6rem; color:var(--ink); opacity:.5; }
+@keyframes marquee { from{transform:translateX(0)} to{transform:translateX(-50%)} }
+
+/* ═══ FOOTER ══════════════════════════════════════════════ */
+.site-footer { background:var(--ink); padding:4rem 0 2rem; border-top:1px solid rgba(247,244,239,.06); }
+.footer-logo { font-family:var(--ff-display); font-size:2rem; color:var(--paper); line-height:1; margin-bottom:.5rem; }
+.footer-logo span { color:var(--gold2); font-style:italic; }
+.footer-tagline { font-size:.75rem; font-weight:300; color:rgba(247,244,239,.35); letter-spacing:.08em; margin-bottom:1.25rem; }
+.footer-col-ttl { font-size:.58rem; font-weight:700; letter-spacing:.2em; text-transform:uppercase; color:var(--gold2); margin-bottom:1rem; }
+.footer-lnk { font-size:.82rem; color:rgba(247,244,239,.45); display:block; margin-bottom:.5rem; cursor:pointer; transition:color .2s; text-decoration:none; }
+.footer-lnk:hover { color:var(--paper); }
+.footer-div { height:1px; background:rgba(247,244,239,.06); margin:2rem 0 1.5rem; }
+.footer-copy { font-size:.7rem; color:rgba(247,244,239,.25); }
+
+/* ═══ TOAST ══════════════════════════════════════════════ */
+.site-toast {
+  position:fixed; bottom:1.5rem; right:1.5rem; z-index:9999;
+  background:var(--ink); color:var(--paper);
+  font-weight:600; font-size:.82rem; padding:.9rem 1.4rem; border-radius:var(--r2);
+  transform:translateY(120px); opacity:0; transition:all .4s;
+  box-shadow:var(--shadow-lg); max-width:300px;
+  border-left:3px solid var(--gold2);
+}
+.site-toast.show { transform:translateY(0); opacity:1; }
+
+/* ═══ TWEAKS ══════════════════════════════════════════════ */
+.tweaks-panel {
+  position:fixed; bottom:1.5rem; right:1.5rem; z-index:9000;
+  width:280px; background:#fff; border:1.5px solid var(--ink4);
+  border-radius:var(--r2); font-family:var(--ff-sans); box-shadow:var(--shadow-lg);
+}
+.tw-hdr { display:flex; align-items:center; justify-content:space-between; padding:.85rem 1.1rem; border-bottom:1.5px solid var(--ink4); }
+.tw-hdr-title { font-size:.65rem; font-weight:700; letter-spacing:.15em; text-transform:uppercase; color:var(--ink); }
+.tw-close-btn { background:none; border:none; color:var(--ink3); cursor:pointer; font-size:1.1rem; line-height:1; }
+.tw-body { padding:1.1rem; display:flex; flex-direction:column; gap:1rem; }
+.tw-sec-ttl { font-size:.58rem; font-weight:700; letter-spacing:.15em; text-transform:uppercase; color:var(--ink3); margin-bottom:.5rem; }
+.tw-row { display:flex; justify-content:space-between; align-items:center; gap:.5rem; }
+.tw-lbl { font-size:.78rem; color:var(--ink2); }
+.tw-radio-g { display:flex; gap:3px; }
+.tw-radio-g button { padding:4px 9px; font-size:.6rem; font-weight:600; letter-spacing:.05em; background:var(--paper); border:1.5px solid var(--ink4); color:var(--ink3); cursor:pointer; font-family:var(--ff-sans); border-radius:var(--r); transition:all .2s; }
+.tw-radio-g button.active { background:var(--ink); color:var(--paper); border-color:var(--ink); }
+.tw-sw { width:34px; height:18px; background:var(--paper3); border:1.5px solid var(--ink4); border-radius:9px; position:relative; cursor:pointer; flex-shrink:0; transition:background .2s; }
+.tw-sw.on { background:var(--ink); border-color:var(--ink); }
+.tw-sw .knob { width:12px; height:12px; background:#fff; border-radius:50%; position:absolute; top:1px; left:1px; transition:left .2s; box-shadow:0 1px 3px rgba(0,0,0,.2); }
+.tw-sw.on .knob { left:17px; }
+
+/* ═══ RESPONSIVE ══════════════════════════════════════════ */
+@media(max-width:991px){
+  .hero { padding-bottom:270px; }
+  .hero-tabs { bottom:285px; flex-wrap:wrap; justify-content:center; }
+  .booking-strip { padding:0 1rem 1rem; }
+  .page-hdr { padding:7rem 1rem 3rem; }
+  .detail-hero { min-height:40vh; }
+  .form-card { position:static !important; }
+  .sec { padding:3.5rem 0; }
+}
+@media(max-width:575px){
+  .hero-h1 { font-size:clamp(2.5rem,10vw,4rem); }
+  .stat-cell:not(:last-child) { border-right:none; border-bottom:1px solid rgba(247,244,239,.06); }
+  .hero-tabs { gap:4px; }
+  .hero-tab { font-size:.55rem; padding:4px 12px; }
+}
+</style>
+</head>
+<body>
+<div class="bg-orbs" style="display:none"></div>
+
+<!-- ══ NAV ══════════════════════════════════════════════ -->
+<nav class="site-nav" id="siteNav">
+  <div class="nav-inner">
+    <a class="nav-brand text-decoration-none" href="#" onclick="go('home');return false;">
+      <div class="nav-brand-mark">S</div>
+      <div>
+        <div class="nav-brand-name">SUNLINE <span class="sub">VIP Transfer</span></div>
+      </div>
+    </a>
+
+    <!-- Desktop links -->
+    <div class="nav-links d-none d-lg-flex" id="deskLinks"></div>
+
+    <div class="d-flex align-items-center gap-3">
+      <div class="lang-row d-none d-lg-flex">
+        <button class="lang-btn active" id="ld-tr" onclick="setLang('tr')">TR</button>
+        <button class="lang-btn"        id="ld-en" onclick="setLang('en')">EN</button>
+        <button class="lang-btn"        id="ld-de" onclick="setLang('de')">DE</button>
+      </div>
+      <div class="d-flex align-items-center gap-2 d-lg-none">
+        <div class="lang-row">
+          <button class="lang-btn active" id="lm-tr" onclick="setLang('tr')">TR</button>
+          <button class="lang-btn"        id="lm-en" onclick="setLang('en')">EN</button>
+          <button class="lang-btn"        id="lm-de" onclick="setLang('de')">DE</button>
+        </div>
+        <button class="nav-toggler" onclick="openMobile()"><i class="bi bi-list"></i></button>
+      </div>
+    </div>
+  </div>
+</nav>
+
+<!-- Mobile overlay -->
+<div class="mobile-menu" id="mobileMenu">
+  <button class="mob-close" onclick="closeMobile()"><i class="bi bi-x-lg"></i></button>
+  <div style="margin-bottom:2rem">
+    <div style="font-family:'DM Serif Display',serif;font-size:1.2rem;color:var(--ink)">SUNLINE</div>
+    <div style="font-size:.58rem;font-weight:600;letter-spacing:.18em;text-transform:uppercase;color:var(--ink3)">VIP Transfer · Antalya</div>
+  </div>
+  <div id="mobLinks" style="flex:1"></div>
+  <div class="mob-lang" id="mobLang"></div>
+</div>
+
+<!-- ══ PAGES ════════════════════════════════════════════ -->
+
+<!-- HOME -->
+<div class="page active" id="page-home">
+  <section class="hero">
+    <div class="hero-texture"></div>
+    <div class="hero-grid"></div>
+    <div class="hero-main">
+      <div class="container-xl">
+        <div class="row">
+          <div class="col-lg-8 col-xl-7">
+            <div class="hero-eyebrow" id="hero-ey"></div>
+            <h1 class="hero-h1" id="hero-h1"></h1>
+            <p class="hero-desc" id="hero-desc"></p>
+            <div class="hero-cta">
+              <button class="btn-ink" onclick="go('transfers')" id="btn-tr"><i class="bi bi-arrow-right-circle-fill"></i><span id="btn-tr-txt"></span></button>
+              <button class="btn-gold-outline" onclick="go('tours')" id="btn-tu"><span id="btn-tu-txt"></span></button>
+            </div>
+          </div>
+          <div class="col-lg-4 col-xl-5 d-none d-lg-flex align-items-center justify-content-end">
+            <div class="hero-counter" id="hero-counter">01</div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="hero-tabs" id="heroTabs"></div>
+    <div class="booking-strip">
+      <div class="booking-wrap">
+        <div class="booking-header">
+          <i class="bi bi-calendar-check" style="color:var(--gold2);font-size:.9rem"></i>
+          <span class="booking-header-title" id="book-ttl"></span>
+        </div>
+        <div class="booking-body">
+          <div class="row g-2 align-items-end">
+            <div class="col-6 col-md-3">
+              <label class="flabel" id="book-from-lbl"></label>
+              <input class="finput" id="book-from" placeholder="Antalya Havalimanı"/>
+            </div>
+            <div class="col-6 col-md-3">
+              <label class="flabel" id="book-to-lbl"></label>
+              <input class="finput" id="book-to" placeholder="Konyaaltı, Antalya"/>
+            </div>
+            <div class="col-6 col-md-2">
+              <label class="flabel" id="book-date-lbl"></label>
+              <input type="datetime-local" class="finput" id="book-date"/>
+            </div>
+            <div class="col-6 col-md-2">
+              <label class="flabel" id="book-pax-lbl"></label>
+              <select class="fselect" id="book-pax">
+                <option>1</option><option>2</option><option>3</option><option>4</option>
+                <option>5</option><option>6</option><option>7</option><option>8</option>
+                <option>9</option><option>10</option><option>11</option><option>12</option>
+              </select>
+            </div>
+            <div class="col-12 col-md-2">
+              <button class="btn-ink w-100 justify-content-center" onclick="go('transfers')" id="book-btn" style="padding:.6rem"></button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Marquee -->
+  <div class="marquee-strip">
+    <div class="marquee-inner" id="marqueeInner"></div>
+  </div>
+
+  <!-- Stats -->
+  <div class="stat-bar">
+    <div class="container-xl">
+      <div class="row g-0">
+        <div class="col-6 col-md-3 stat-cell"><div class="stat-num">10.000+</div><div class="stat-lbl" id="st0"></div></div>
+        <div class="col-6 col-md-3 stat-cell"><div class="stat-num">25.000+</div><div class="stat-lbl" id="st1"></div></div>
+        <div class="col-6 col-md-3 stat-cell"><div class="stat-num">15+</div><div class="stat-lbl" id="st2"></div></div>
+        <div class="col-6 col-md-3 stat-cell"><div class="stat-num">14+</div><div class="stat-lbl" id="st3"></div></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Featured -->
+  <section class="sec sec-paper">
+    <div class="container-xl">
+      <div class="row align-items-end mb-5">
+        <div class="col-lg-7">
+          <div class="eyebrow" id="feat-ey"></div>
+          <h2 class="sec-title" id="feat-title"></h2>
+          <p class="sec-sub" id="feat-sub"></p>
+        </div>
+        <div class="col-lg-5 d-flex gap-2 justify-content-lg-end mt-3 mt-lg-0 flex-wrap">
+          <button class="btn-ink-outline" onclick="go('transfers')" id="btn-all-tr"></button>
+          <button class="btn-ink-outline" onclick="go('tours')" id="btn-all-tu"></button>
+        </div>
+      </div>
+      <div class="row g-4" id="featured-grid"></div>
+    </div>
+  </section>
+
+  <!-- Why -->
+  <section class="sec sec-paper2">
+    <div class="container-xl">
+      <div class="text-center mb-5">
+        <div class="eyebrow justify-content-center" id="why-ey" style="justify-content:center"></div>
+        <h2 class="sec-title" id="why-title"></h2>
+      </div>
+      <div class="row g-4" id="why-grid"></div>
+    </div>
+  </section>
+</div>
+
+<!-- TRANSFERS -->
+<div class="page" id="page-transfers">
+  <div class="page-hdr">
+    <div class="page-hdr-decor" id="ph-num-tr"></div>
+    <div class="page-hdr-inner">
+      <div class="eyebrow light" id="tr-ey"></div>
+      <h1 class="sec-title" style="color:var(--paper)" id="tr-title"></h1>
+      <p class="sec-sub light" id="tr-sub"></p>
+    </div>
+  </div>
+  <section class="sec sec-paper"><div class="container-xl"><div class="row g-4" id="tr-grid"></div></div></section>
+</div>
+
+<!-- TOURS -->
+<div class="page" id="page-tours">
+  <div class="page-hdr">
+    <div class="page-hdr-decor" id="ph-num-tu"></div>
+    <div class="page-hdr-inner">
+      <div class="eyebrow light" id="tu-ey"></div>
+      <h1 class="sec-title" style="color:var(--paper)" id="tu-title"></h1>
+      <p class="sec-sub light" id="tu-sub"></p>
+    </div>
+  </div>
+  <section class="sec sec-paper"><div class="container-xl"><div class="row g-4" id="tu-grid"></div></div></section>
+</div>
+
+<!-- DETAIL -->
+<div class="page" id="page-detail">
+  <div class="detail-hero">
+    <div class="detail-hero-ph"></div>
+    <div class="detail-hero-fade"></div>
+    <div class="detail-hero-content">
+      <div class="container-xl">
+        <div class="bcrumb" id="dt-bc"></div>
+        <div id="dt-badge"></div>
+        <h1 id="dt-title" style="font-family:'DM Serif Display',serif;font-size:clamp(1.8rem,5vw,3.5rem);color:var(--paper);margin-bottom:.75rem;line-height:1.05"></h1>
+        <div class="d-flex gap-3 flex-wrap" id="dt-meta"></div>
+      </div>
+    </div>
+  </div>
+  <section class="sec sec-paper"><div class="container-xl"><div class="row g-5" id="dt-body"></div></div></section>
+</div>
+
+<!-- GALLERY -->
+<div class="page" id="page-gallery">
+  <div class="page-hdr">
+    <div class="page-hdr-decor" id="ph-num-gal"></div>
+    <div class="page-hdr-inner">
+      <div class="eyebrow light" id="gal-ey"></div>
+      <h1 class="sec-title" style="color:var(--paper)" id="gal-title"></h1>
+      <p class="sec-sub light" id="gal-sub"></p>
+    </div>
+  </div>
+  <section class="sec sec-paper"><div class="container-xl"><div class="row g-3" id="gal-grid"></div></div></section>
+</div>
+
+<!-- ABOUT -->
+<div class="page" id="page-about">
+  <div class="page-hdr">
+    <div class="page-hdr-decor" id="ph-num-ab"></div>
+    <div class="page-hdr-inner">
+      <div class="eyebrow light" id="ab-ey"></div>
+      <h1 class="sec-title" style="color:var(--paper)" id="ab-title"></h1>
+    </div>
+  </div>
+  <section class="sec sec-paper">
+    <div class="container-xl">
+      <div class="row g-5 align-items-center">
+        <div class="col-lg-5">
+          <div class="about-img-ph">
+            <div class="about-img-ph-bg"></div>
+            <div class="about-img-ph-inner">
+              <svg width="36" height="36" viewBox="0 0 32 32" fill="none"><rect x="2" y="6" width="28" height="20" rx="2" stroke="var(--gold)" stroke-width="1" stroke-dasharray="3 3"/><circle cx="11" cy="13" r="3" stroke="var(--gold)" stroke-width="1"/><path d="M4 24l7-6 5 4 5-5 7 7" stroke="var(--gold)" stroke-width="1" stroke-linejoin="round"/></svg>
+              <span style="font-family:monospace;font-size:.65rem;color:var(--ink3)">team photo — Sunline fleet</span>
+            </div>
+          </div>
+        </div>
+        <div class="col-lg-7">
+          <p style="font-family:'Instrument Serif',serif;font-size:1.1rem;color:var(--ink2);line-height:1.85;margin-bottom:1.25rem" id="ab-p1"></p>
+          <p style="font-size:.9rem;color:var(--ink3);line-height:1.8;margin-bottom:2rem" id="ab-p2"></p>
+          <div class="row g-2" id="ab-stats"></div>
+        </div>
+      </div>
+    </div>
+  </section>
+</div>
+
+<!-- CONTACT -->
+<div class="page" id="page-contact">
+  <div class="page-hdr">
+    <div class="page-hdr-decor" id="ph-num-ct"></div>
+    <div class="page-hdr-inner">
+      <div class="eyebrow light" id="ct-ey"></div>
+      <h1 class="sec-title" style="color:var(--paper)" id="ct-title"></h1>
+    </div>
+  </div>
+  <section class="sec sec-paper">
+    <div class="container-xl">
+      <div class="row g-5">
+        <div class="col-lg-5" id="ct-info"></div>
+        <div class="col-lg-7">
+          <div class="form-card" style="position:static">
+            <div class="form-card-title" id="ct-form-ttl"></div>
+            <div class="row g-3 mt-1">
+              <div class="col-12"><label class="flabel" id="ct-name-lbl"></label><input class="finput" id="ct-name"/></div>
+              <div class="col-12"><label class="flabel">Email</label><input class="finput" id="ct-email"/></div>
+              <div class="col-12">
+                <label class="flabel" id="ct-msg-lbl"></label>
+                <textarea id="ct-msg" rows="4" style="background:#fff;border:1.5px solid var(--ink4);color:var(--ink);font-family:'DM Sans',sans-serif;font-size:.85rem;border-radius:var(--r);padding:.6rem .9rem;resize:vertical;width:100%;transition:border-color .2s;outline:none"></textarea>
+              </div>
+              <div class="col-12"><button class="btn-ink w-100 justify-content-center" id="ct-submit" onclick="submitCt()"></button></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+</div>
+
+<!-- FOOTER -->
+<footer class="site-footer">
+  <div class="container-xl">
+    <div class="row g-4 mb-2">
+      <div class="col-12 col-md-5">
+        <div class="footer-logo">Sun<span>line</span></div>
+        <div class="footer-tagline" id="footer-tagline">VIP Transfer · Antalya</div>
+        <p class="footer-lnk" id="footer-desc" style="max-width:340px;line-height:1.7;margin-bottom:1.25rem"></p>
+        <div class="lang-row">
+          <button class="lang-btn active" style="border-color:rgba(247,244,239,.2);color:rgba(247,244,239,.5)">TR</button>
+          <button class="lang-btn" style="border-color:rgba(247,244,239,.2);color:rgba(247,244,239,.5)">EN</button>
+          <button class="lang-btn" style="border-color:rgba(247,244,239,.2);color:rgba(247,244,239,.5)">DE</button>
+        </div>
+      </div>
+      <div class="col-6 col-md-2"><div class="footer-col-ttl" id="footer-s-ttl"></div><div id="footer-s-links"></div></div>
+      <div class="col-6 col-md-2"><div class="footer-col-ttl" id="footer-t-ttl"></div><div id="footer-t-links"></div></div>
+      <div class="col-12 col-md-3"><div class="footer-col-ttl" id="footer-c-ttl"></div><div id="footer-c-links"></div></div>
+    </div>
+    <div class="footer-div"></div>
+    <div class="d-flex justify-content-between flex-wrap gap-2">
+      <span class="footer-copy" id="footer-copy"></span>
+      <span class="footer-copy">Antalya, Türkiye</span>
+    </div>
+  </div>
+</footer>
+
+<div class="site-toast" id="siteToast"></div>
+
+<!-- TWEAKS -->
+<div class="tweaks-panel" id="tweaksPanel" style="display:none">
+  <div class="tw-hdr"><span class="tw-hdr-title">Tweaks</span><button class="tw-close-btn" onclick="closeTweaks()">×</button></div>
+  <div class="tw-body">
+    <div>
+      <div class="tw-sec-ttl">Tema</div>
+      <div class="tw-row mb-2"><span class="tw-lbl">Renk Teması</span></div>
+      <div class="tw-radio-g">
+        <button class="active" id="tw-editorial" onclick="applyTheme('editorial')">Editorial</button>
+        <button id="tw-mint"      onclick="applyTheme('mint')">Mint</button>
+        <button id="tw-rose"      onclick="applyTheme('rose')">Gül</button>
+      </div>
+      <div class="tw-row mt-3">
+        <span class="tw-lbl">Vurgu Rengi</span>
+        <input type="color" value="#b8892a" id="tw-accent" onchange="setAccent(this.value)" style="width:30px;height:22px;border:1.5px solid var(--ink4);background:none;cursor:pointer;padding:2px;border-radius:var(--r)"/>
+      </div>
+    </div>
+    <div>
+      <div class="tw-sec-ttl">İçerik</div>
+      <div class="tw-row"><span class="tw-lbl">Rozetler</span><div class="tw-sw on" id="tw-sw-b" onclick="toggleBadges()"><div class="knob"></div></div></div>
+      <div class="tw-row mt-2"><span class="tw-lbl">Marquee Şeridi</span><div class="tw-sw on" id="tw-sw-m" onclick="toggleMarquee()"><div class="knob"></div></div></div>
+    </div>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+<script>
+// ══ DATA ══════════════════════════════════════════════
+const T = {
+  tr:{
+    nav:{home:"Anasayfa",transfers:"Transferler",tours:"Turlar",gallery:"Galeri",about:"Hakkımızda",contact:"İletişim"},
+    heroEy:"Antalya'nın Premium Transfer Hizmeti",
+    heroSlides:[
+      {h1:"Lüks\nSeyahat\nDeneyimi",sub:"Antalya Havalimanı'ndan her destinasyona premium araçlarla güvenli transfer."},
+      {h1:"Antalya'yı\nKeşfedin",sub:"Günlük turlar ve kültür gezileriyle Antalya'nın eşsiz güzelliklerini yaşayın."},
+      {h1:"7/24\nVIP Hizmet",sub:"Gece gündüz, her gün — profesyonel sürücülerimiz her zaman hazır."},
+    ],
+    marquee:["Havalimanı Transferi","Özel VIP Transfer","Günlük Turlar","Grup Transferi","Kültür Gezileri","Pamukkale Turu"],
+    booking:{title:"Hızlı Rezervasyon",from:"Nereden",to:"Nereye",date:"Tarih & Saat",pax:"Yolcu",search:"Ara"},
+    featured:{ey:"Öne Çıkanlar",title:"Popüler Hizmetler",sub:"En çok tercih edilen transfer ve turlarımız"},
+    stats:["Müşteri Memnuniyeti","Tamamlanan Transfer","Aktif Araç","Yıllık Deneyim"],
+    transfers:{ey:"Transferler",title:"Transfer Hizmetlerimiz",sub:"Havalimanından otele güvenli lüks transfer"},
+    tours:{ey:"Turlar",title:"Tur Paketlerimiz",sub:"Antalya ve çevresini keşfedin"},
+    reserve:"Rezervasyon",from2:"itibaren",perPerson:"/ kişi",cap:"Kap.",person:"kişi",
+    form:{title:"Rezervasyon",sub:"Bilgileri doldurun, sizi arayalım.",name:"Ad Soyad",phone:"Telefon",flight:"Uçuş No.",pax:"Yolcu Sayısı",addr:"Alınacak Adres / Otel",dt:"Tarih & Saat",vehicle:"Araç",submit:"Gönder",ok:"Rezervasyonunuz alındı! En kısa sürede arayacağız."},
+    vehicles:[{id:"suv",name:"Mercedes Vito / SUV",cap:"1–6 kişi",tag:"Standart"},{id:"minibus",name:"Minibüs",cap:"7–12 kişi",tag:"+20%"}],
+    inclTr:["Karşılama servisi","Uçuş takibi","Ücretsiz bekleme","Klimalı araç","Bagaj yardımı","7/24 destek"],
+    inclTu:["Profesyonel rehber","Araç & sürücü","Sigorta","Müze girişleri","Öğle yemeği","Klimalı araç"],
+    inclTitle:"Dahil Olanlar",totalLabel:"Toplam",
+    why:{ey:"Neden Biz?",title:"Farkımız"},
+    whyItems:[{ic:"bi-car-front-fill",title:"Lüks Araç Filosu",desc:"Mercedes Vito, S-Serisi ve Minibüs seçenekleriyle her ihtiyaca uygun."},
+              {ic:"bi-people-fill",title:"Uzman Sürücüler",desc:"Çok dilli, deneyimli ve profesyonel ekip."},
+              {ic:"bi-clock-fill",title:"7/24 Aktif",desc:"Her gün, her saat hizmetinizdeyiz."},
+              {ic:"bi-shield-fill-check",title:"Güvenli & Garantili",desc:"Uçuş takibi, zamanında teslim, tam memnuniyet."}],
+    gallery:{ey:"Galeri",title:"Araçlarımız & Hizmetlerimiz",sub:"Filomuzdan kareler"},
+    about:{ey:"Hakkımızda",title:"Sunline VIP Transfer",p1:"2010 yılından bu yana Antalya merkezli hizmet veren Sunline VIP Transfer, havalimanı transferinden özel tur organizasyonuna kadar geniş bir hizmet yelpazesi sunar.",p2:"Deneyimli sürücü kadromuz, lüks araç filomuz ve 7/24 müşteri desteğimizle her seyahatinizi konforlu hale getiriyoruz.",stats:["Araç","Sürücü","Dil","Yıl"]},
+    contact:{ey:"İletişim",title:"Bize Ulaşın",addrL:"Adres",phoneL:"Telefon",hoursL:"Çalışma Saatleri",address:"Lara Cad. No:42, Antalya",phone:"+90 532 000 00 00",email:"info@sunlinevip.com",hours:"7/24 Hizmet",msgTitle:"Mesaj Gönder",msgBtn:"Gönder",msgLabel:"Mesaj"},
+    allTr:"Tüm Transferler",allTu:"Tüm Turlar",
+    footerDesc:"Antalya'nın en güvenilir VIP transfer ve tur hizmeti.",
+    footerS:"Hizmetler",footerT:"Turlar",footerC:"İletişim",footerR:"Tüm hakları saklıdır.",
+  },
+  en:{
+    nav:{home:"Home",transfers:"Transfers",tours:"Tours",gallery:"Gallery",about:"About",contact:"Contact"},
+    heroEy:"Antalya's Premium Transfer Service",
+    heroSlides:[
+      {h1:"Luxury\nTravel\nExperience",sub:"Safe premium transfers from Antalya Airport to every destination."},
+      {h1:"Discover\nAntalya",sub:"Experience Antalya's unique beauty with daily tours and cultural excursions."},
+      {h1:"24/7\nVIP Service",sub:"Day and night, every day — our professional drivers are always ready."},
+    ],
+    marquee:["Airport Transfer","Private VIP Transfer","Daily Tours","Group Transfer","Cultural Excursions","Pamukkale Tour"],
+    booking:{title:"Quick Booking",from:"From",to:"To",date:"Date & Time",pax:"Passengers",search:"Search"},
+    featured:{ey:"Featured",title:"Popular Services",sub:"Our most preferred transfers and tours"},
+    stats:["Customer Satisfaction","Completed Transfers","Active Vehicles","Years Experience"],
+    transfers:{ey:"Transfers",title:"Our Transfer Services",sub:"Safe luxury transfers from airport to hotel"},
+    tours:{ey:"Tours",title:"Our Tour Packages",sub:"Discover Antalya and surroundings"},
+    reserve:"Reserve",from2:"from",perPerson:"/ person",cap:"Cap.",person:"pax",
+    form:{title:"Reservation",sub:"Fill in your details, we'll call you.",name:"Full Name",phone:"Phone",flight:"Flight No.",pax:"Passengers",addr:"Pick-up Address / Hotel",dt:"Date & Time",vehicle:"Vehicle",submit:"Send",ok:"Reservation received! We'll call you shortly."},
+    vehicles:[{id:"suv",name:"Mercedes Vito / SUV",cap:"1–6 pax",tag:"Standard"},{id:"minibus",name:"Minibus",cap:"7–12 pax",tag:"+20%"}],
+    inclTr:["Meet & greet","Flight tracking","Free waiting","Air-conditioned vehicle","Luggage help","24/7 support"],
+    inclTu:["Professional guide","Vehicle & driver","Insurance","Museum entries","Lunch","Air-conditioned vehicle"],
+    inclTitle:"What's Included",totalLabel:"Total",
+    why:{ey:"Why Choose Us?",title:"Our Difference"},
+    whyItems:[{ic:"bi-car-front-fill",title:"Luxury Fleet",desc:"Mercedes Vito, S-Class and Minibus for every need."},
+              {ic:"bi-people-fill",title:"Expert Drivers",desc:"Multilingual, experienced, professional team."},
+              {ic:"bi-clock-fill",title:"24/7 Active",desc:"Every day, every hour at your service."},
+              {ic:"bi-shield-fill-check",title:"Safe & Guaranteed",desc:"Flight tracking, on-time delivery, full satisfaction."}],
+    gallery:{ey:"Gallery",title:"Our Vehicles & Services",sub:"Shots from our fleet"},
+    about:{ey:"About Us",title:"Sunline VIP Transfer",p1:"Operating from Antalya since 2010, Sunline VIP Transfer offers a wide range of services from airport transfers to private tour organization.",p2:"With our experienced driver team, luxury fleet and 24/7 customer support, we make every journey comfortable.",stats:["Vehicles","Drivers","Languages","Years"]},
+    contact:{ey:"Contact",title:"Get In Touch",addrL:"Address",phoneL:"Phone",hoursL:"Opening Hours",address:"Lara Cad. No:42, Antalya",phone:"+90 532 000 00 00",email:"info@sunlinevip.com",hours:"24/7 Service",msgTitle:"Send Message",msgBtn:"Send",msgLabel:"Message"},
+    allTr:"All Transfers",allTu:"All Tours",
+    footerDesc:"Antalya's most reliable VIP transfer and tour service.",
+    footerS:"Services",footerT:"Tours",footerC:"Contact",footerR:"All rights reserved.",
+  },
+  de:{
+    nav:{home:"Startseite",transfers:"Transfers",tours:"Touren",gallery:"Galerie",about:"Über uns",contact:"Kontakt"},
+    heroEy:"Antalyas Premium Transfer-Service",
+    heroSlides:[
+      {h1:"Luxuriöses\nReise\nErlebnis",sub:"Sichere Premium-Transfers vom Flughafen Antalya zu jedem Ziel."},
+      {h1:"Antalya\nEntdecken",sub:"Erleben Sie Antalyas Schönheit mit Tagestouren und Kulturausflügen."},
+      {h1:"24/7\nVIP Service",sub:"Tag und Nacht, jeden Tag — unsere professionellen Fahrer sind bereit."},
+    ],
+    marquee:["Flughafentransfer","Privater VIP-Transfer","Tagestouren","Gruppentransfer","Kulturausflüge","Pamukkale Tour"],
+    booking:{title:"Schnellbuchung",from:"Von",to:"Nach",date:"Datum & Uhrzeit",pax:"Passagiere",search:"Suchen"},
+    featured:{ey:"Empfohlen",title:"Beliebte Dienste",sub:"Unsere meistgebuchten Transfers und Touren"},
+    stats:["Kundenzufriedenheit","Abgeschlossene Transfers","Aktive Fahrzeuge","Jahre Erfahrung"],
+    transfers:{ey:"Transfers",title:"Unsere Transferleistungen",sub:"Sichere Luxus-Transfers vom Flughafen"},
+    tours:{ey:"Touren",title:"Unsere Tourpakete",sub:"Antalya und Umgebung entdecken"},
+    reserve:"Reservieren",from2:"ab",perPerson:"/ Person",cap:"Kap.",person:"Pers.",
+    form:{title:"Reservierung",sub:"Daten ausfüllen, wir rufen an.",name:"Vor- und Nachname",phone:"Telefon",flight:"Flugnummer",pax:"Passagiere",addr:"Abholadresse / Hotel",dt:"Datum & Uhrzeit",vehicle:"Fahrzeug",submit:"Senden",ok:"Reservierung eingegangen! Wir rufen in Kürze an."},
+    vehicles:[{id:"suv",name:"Mercedes Vito / SUV",cap:"1–6 Pers.",tag:"Standard"},{id:"minibus",name:"Minibus",cap:"7–12 Pers.",tag:"+20%"}],
+    inclTr:["Abholservice","Flugverfolgung","Kostenfreies Warten","Klimatisiertes Fahrzeug","Gepäckservice","24/7 Support"],
+    inclTu:["Professioneller Guide","Fahrzeug & Fahrer","Versicherung","Museumseintritte","Mittagessen","Klimatisiertes Fahrzeug"],
+    inclTitle:"Inklusive",totalLabel:"Gesamt",
+    why:{ey:"Warum Wir?",title:"Unser Unterschied"},
+    whyItems:[{ic:"bi-car-front-fill",title:"Luxusflotte",desc:"Mercedes Vito, S-Klasse und Minibus für jeden Bedarf."},
+              {ic:"bi-people-fill",title:"Experten-Fahrer",desc:"Mehrsprachiges, erfahrenes Profi-Team."},
+              {ic:"bi-clock-fill",title:"24/7 Aktiv",desc:"Jeden Tag, jede Stunde zu Ihren Diensten."},
+              {ic:"bi-shield-fill-check",title:"Sicher & Garantiert",desc:"Flugverfolgung, pünktliche Lieferung, volle Zufriedenheit."}],
+    gallery:{ey:"Galerie",title:"Unsere Fahrzeuge & Dienste",sub:"Aufnahmen unserer Flotte"},
+    about:{ey:"Über uns",title:"Sunline VIP Transfer",p1:"Sunline VIP Transfer ist seit 2010 in Antalya tätig und bietet ein breites Dienstleistungsspektrum.",p2:"Mit unserem Fahrteam, unserer Luxusflotte und 24/7-Support machen wir jede Reise komfortabel.",stats:["Fahrzeuge","Fahrer","Sprachen","Jahre"]},
+    contact:{ey:"Kontakt",title:"Kontaktieren Sie uns",addrL:"Adresse",phoneL:"Telefon",hoursL:"Öffnungszeiten",address:"Lara Cad. No:42, Antalya",phone:"+90 532 000 00 00",email:"info@sunlinevip.com",hours:"24/7 Dienst",msgTitle:"Nachricht senden",msgBtn:"Senden",msgLabel:"Nachricht"},
+    allTr:"Alle Transfers",allTu:"Alle Touren",
+    footerDesc:"Antalyas zuverlässigster VIP-Transfer und Tourservice.",
+    footerS:"Dienste",footerT:"Touren",footerC:"Kontakt",footerR:"Alle Rechte vorbehalten.",
+  }
+};
+
+const TRANSFERS_D=[
+  {id:"airport",cat:"transfer",badge:"Popüler",title:{tr:"Havalimanı → Otel",en:"Airport → Hotel",de:"Flughafen → Hotel"},desc:{tr:"Antalya Havalimanı'ndan tüm otellere konforlu ve zamanında transfer.",en:"Comfortable and punctual transfer from Antalya Airport to all hotels.",de:"Komfortabler Transfer vom Flughafen Antalya zu allen Hotels."},price:25,cap:6,img:"airport transfer — luxury vehicle"},
+  {id:"vip",cat:"transfer",badge:"VIP",title:{tr:"Özel VIP Transfer",en:"Private VIP Transfer",de:"Privater VIP-Transfer"},desc:{tr:"Özel şoför, karşılama servisi ve lüks araçla kişiselleştirilmiş deneyim.",en:"Personalized transfer with private chauffeur and luxury vehicle.",de:"Persönlicher Transfer mit privatem Chauffeur."},price:65,cap:3,img:"VIP sedan — hotel entrance"},
+  {id:"city",cat:"transfer",badge:null,title:{tr:"Otel → Şehir Merkezi",en:"Hotel → City Center",de:"Hotel → Stadtzentrum"},desc:{tr:"Otelinizden Antalya şehir merkezine pratik transfer.",en:"Practical transfer from your hotel to Antalya city center.",de:"Praktischer Transfer ins Antalya Stadtzentrum."},price:18,cap:6,img:"city transfer — Antalya"},
+  {id:"group",cat:"transfer",badge:"Grup",title:{tr:"Grup Transferi",en:"Group Transfer",de:"Gruppentransfer"},desc:{tr:"Büyük gruplar için minibüs ile ekonomik transfer.",en:"Economical minibus transfer for large groups.",de:"Wirtschaftlicher Minibus-Transfer für Gruppen."},price:12,cap:12,img:"group transfer — minibus"},
+];
+const TOURS_D=[
+  {id:"kaleici",cat:"tour",badge:"Önerilen",title:{tr:"Kaleiçi Tarihi Tur",en:"Kaleiçi Historical Tour",de:"Kaleiçi Historische Tour"},desc:{tr:"UNESCO korumasındaki Kaleiçi'nin tarihi yapıları ve Roma kapısı.",en:"Historical buildings and Roman gate in UNESCO-protected Kaleiçi.",de:"Historische Gebäude im UNESCO-geschützten Kaleiçi."},price:45,dur:{tr:"8 Saat",en:"8 Hours",de:"8 Stunden"},cap:8,img:"Kaleiçi — Roman harbor"},
+  {id:"pamukkale",cat:"tour",badge:null,title:{tr:"Pamukkale Günübirlik",en:"Pamukkale Day Trip",de:"Pamukkale Tagesausflug"},desc:{tr:"Beyaz travertenler ve antik Hierapolis şehri.",en:"White travertines and ancient Hierapolis city.",de:"Weiße Travertinen und antike Stadt Hierapolis."},price:55,dur:{tr:"12 Saat",en:"12 Hours",de:"12 Stunden"},cap:8,img:"Pamukkale travertines"},
+  {id:"perge",cat:"tour",badge:"Kültür",title:{tr:"Perge & Aspendos",en:"Perge & Aspendos",de:"Perge & Aspendos"},desc:{tr:"Antik Perge şehri ve Aspendos Tiyatrosu kültür turu.",en:"Culture tour covering ancient Perge and Aspendos Theatre.",de:"Kulturtour durch Perge und Aspendos Theater."},price:50,dur:{tr:"10 Saat",en:"10 Hours",de:"10 Stunden"},cap:8,img:"Aspendos Roman theatre"},
+  {id:"citytour",cat:"tour",badge:null,title:{tr:"Antalya City Tour",en:"Antalya City Tour",de:"Antalya Stadtrundfahrt"},desc:{tr:"Konyaaltı, Antalya Müzesi ve Düden Şelalesi.",en:"Konyaaltı, Antalya Museum and Düden Waterfall.",de:"Konyaaltı, Antalya Museum und Düden Wasserfall."},price:40,dur:{tr:"6 Saat",en:"6 Hours",de:"6 Stunden"},cap:10,img:"Antalya city panorama"},
+];
+const GAL_ITEMS=["Mercedes Vito — airport pickup","S-Class sedan — night drive","Minibus fleet","Driver in uniform — lobby","VIP interior — leather seats","Aspendos theatre tour","Kaleiçi harbor","Pamukkale travertines","Airport meet & greet"];
+
+// ══ STATE ══════════════════════════════════════════════
+let lang="tr",curPage="home",detailItem=null,selVeh="suv",showBadges=true,showMarquee=true,heroSlide=0,mobileOpen=false;
+const t=()=>T[lang];
+
+// ══ MOBILE ═════════════════════════════════════════════
+function openMobile(){mobileOpen=true;document.getElementById("mobileMenu").classList.add("open");document.body.style.overflow="hidden";renderMobLinks();}
+function closeMobile(){mobileOpen=false;document.getElementById("mobileMenu").classList.remove("open");document.body.style.overflow="";}
+function renderMobLinks(){
+  const pages=["home","transfers","tours","gallery","about","contact"];
+  document.getElementById("mobLinks").innerHTML=pages.map(p=>`<a class="mob-nav-link${curPage===p?" active":""}" href="#" onclick="go('${p}');closeMobile();return false">${t().nav[p]}</a>`).join("");
+  document.getElementById("mobLang").innerHTML=["tr","en","de"].map(l=>`<button class="${lang===l?"active":""}" onclick="setLang('${l}')">${l.toUpperCase()}</button>`).join("");
+}
+
+// ══ NAV ════════════════════════════════════════════════
+const PAGES=["home","transfers","tours","gallery","about","contact"];
+function go(page,item){
+  if(item)detailItem=item;
+  curPage=page;
+  document.querySelectorAll(".page").forEach(p=>p.classList.remove("active"));
+  const el=document.getElementById("page-"+page);
+  if(el)el.classList.add("active");
+  window.scrollTo({top:0});
+  const nav=document.getElementById("siteNav");
+  if(page==="home"){nav.classList.remove("light-page");}
+  else{nav.classList.add("light-page");}
+  renderPage(page);
+  updateNavActive();
+  if(mobileOpen)closeMobile();
+}
+function navClick(p){go(p);}
+function updateNavActive(){
+  document.querySelectorAll(".nav-lnk[data-page]").forEach(a=>a.classList.toggle("active",a.dataset.page===curPage));
+}
+function renderDeskLinks(){
+  document.getElementById("deskLinks").innerHTML=PAGES.map(p=>`<a class="nav-lnk${curPage===p?" active":""}" href="#" data-page="${p}" onclick="navClick('${p}');return false">${t().nav[p]}</a>`).join("");
+}
+function setLang(l){
+  lang=l;
+  ["tr","en","de"].forEach(x=>{
+    ["ld-","lm-"].forEach(pfx=>{const el=document.getElementById(pfx+x);if(el)el.classList.toggle("active",x===l);});
+  });
+  renderAll();
+}
+
+// ══ SCROLL ═════════════════════════════════════════════
+window.addEventListener("scroll",()=>{
+  const s=document.getElementById("siteNav");
+  s.classList.toggle("scrolled",window.scrollY>50);
+});
+
+// ══ THEME ══════════════════════════════════════════════
+function applyTheme(th){
+  const r=document.documentElement;
+  if(th==="mint"){
+    r.style.setProperty("--paper","#f2f7f4");
+    r.style.setProperty("--paper2","#e6f0eb");
+    r.style.setProperty("--paper3","#d8e8de");
+    r.style.setProperty("--hero-bg","#081a10");
+    document.body.style.background="#f2f7f4";
+  }else if(th==="rose"){
+    r.style.setProperty("--paper","#fdf4f2");
+    r.style.setProperty("--paper2","#f5e8e4");
+    r.style.setProperty("--paper3","#ecddd8");
+    r.style.setProperty("--hero-bg","#1a0a08");
+    document.body.style.background="#fdf4f2";
+  }else{
+    r.style.setProperty("--paper","#f7f4ef");
+    r.style.setProperty("--paper2","#efe9e0");
+    r.style.setProperty("--paper3","#e8e0d3");
+    r.style.setProperty("--hero-bg","#0f0d0a");
+    document.body.style.background="#f7f4ef";
+  }
+  ["editorial","mint","rose"].forEach(x=>document.getElementById("tw-"+x).classList.toggle("active",x===th));
+}
+function setAccent(v){
+  document.documentElement.style.setProperty("--gold",v);
+  document.documentElement.style.setProperty("--gold2",v);
+}
+function toggleBadges(){showBadges=!showBadges;document.getElementById("tw-sw-b").classList.toggle("on",showBadges);renderAll();}
+function toggleMarquee(){
+  showMarquee=!showMarquee;
+  document.getElementById("tw-sw-m").classList.toggle("on",showMarquee);
+  document.querySelector(".marquee-strip").style.display=showMarquee?"block":"none";
+}
+
+// ══ TOAST ══════════════════════════════════════════════
+function showToast(msg){const el=document.getElementById("siteToast");el.textContent=msg;el.classList.add("show");setTimeout(()=>el.classList.remove("show"),3500);}
+
+// ══ TWEAKS ═════════════════════════════════════════════
+window.addEventListener("message",e=>{
+  if(e.data?.type==="__activate_edit_mode")document.getElementById("tweaksPanel").style.display="block";
+  if(e.data?.type==="__deactivate_edit_mode")document.getElementById("tweaksPanel").style.display="none";
+});
+window.parent.postMessage({type:"__edit_mode_available"},"*");
+function closeTweaks(){document.getElementById("tweaksPanel").style.display="none";window.parent.postMessage({type:"__edit_mode_dismissed"},"*");}
+
+// ══ HERO ═══════════════════════════════════════════════
+function renderHeroContent(i){
+  const sl=t().heroSlides[i];
+  const lines=sl.h1.split("\n");
+  const last=lines.pop();
+  lines.push(`<span class="italic">${last}</span>`);
+  document.getElementById("hero-h1").innerHTML=lines.join("<br>");
+  document.getElementById("hero-desc").textContent=sl.sub;
+  document.getElementById("hero-counter").textContent=String(i+1).padStart(2,"0");
+}
+function renderHeroTabs(){
+  document.getElementById("heroTabs").innerHTML=t().heroSlides.map((s,i)=>`
+    <button class="hero-tab${heroSlide===i?" active":""}" onclick="setHeroSlide(${i})">${s.h1.split("\n")[0]}</button>`).join("");
+}
+function setHeroSlide(i){heroSlide=i;renderHeroContent(i);renderHeroTabs();}
+
+// ══ MARQUEE ════════════════════════════════════════════
+function renderMarquee(){
+  const items=t().marquee;
+  const repeated=[...items,...items,...items,...items];
+  document.getElementById("marqueeInner").innerHTML=repeated.map(s=>`<span class="marquee-item">${s}</span>`).join("");
+}
+
+// ══ HELPERS ════════════════════════════════════════════
+function phSVG(size=28){return `<svg width="${size}" height="${size}" viewBox="0 0 32 32" fill="none"><rect x="2" y="6" width="28" height="20" rx="2" stroke="var(--gold)" stroke-width="1" stroke-dasharray="3 3"/><circle cx="11" cy="13" r="3" stroke="var(--gold)" stroke-width="1"/><path d="M4 24l7-6 5 4 5-5 7 7" stroke="var(--gold)" stroke-width="1" stroke-linejoin="round"/></svg>`;}
+
+function cardHTML(item){
+  const title=item.title[lang]||item.title.tr;
+  const desc=item.desc[lang]||item.desc.tr;
+  const dur=item.dur?(item.dur[lang]||item.dur.tr):null;
+  const tr=t();
+  const cat=item.cat==="transfer"?tr.nav.transfers:tr.nav.tours;
+  const badge=showBadges&&item.badge?`<div class="card-badge">${item.badge}</div>`:"";
+  const dj=JSON.stringify(item).replace(/"/g,"&quot;");
+  return `
+  <div class="col-12 col-md-6 col-xl-3">
+    <div class="item-card" onclick="go('detail',${dj})">
+      <div class="card-img">
+        <div class="card-img-ph-bg"></div>
+        <div class="card-img-ph">
+          ${phSVG()}
+          <span style="font-family:monospace;font-size:.58rem;color:var(--ink3);text-align:center;padding:0 10px">${item.img}</span>
+        </div>
+        ${badge}
+      </div>
+      <div class="p-3 d-flex flex-column" style="flex:1">
+        <div class="card-cat">${cat}</div>
+        <div class="card-title">${title}</div>
+        <div class="card-desc">${desc}</div>
+        <div class="card-meta mt-auto pt-2">
+          ${dur?`<span><i class="bi bi-clock me-1"></i>${dur}</span>`:""}
+          <span><i class="bi bi-people me-1"></i>${item.cap} ${tr.person}</span>
+        </div>
+      </div>
+      <div class="card-footer">
+        <div>
+          <div class="card-price">€${item.price}</div>
+          <div class="card-price-sub">${tr.from2}${item.cat==="tour"?" "+tr.perPerson:""}</div>
+        </div>
+        <button class="btn-sm-ink">${tr.reserve}</button>
+      </div>
+    </div>
+  </div>`;
+}
+
+// ══ RENDER ═════════════════════════════════════════════
+function renderHome(){
+  const tr=t();
+  document.getElementById("hero-ey").textContent=tr.heroEy;
+  renderHeroContent(heroSlide);
+  renderHeroTabs();
+  renderMarquee();
+  document.getElementById("book-ttl").textContent=tr.booking.title;
+  document.getElementById("book-from-lbl").textContent=tr.booking.from;
+  document.getElementById("book-to-lbl").textContent=tr.booking.to;
+  document.getElementById("book-date-lbl").textContent=tr.booking.date;
+  document.getElementById("book-pax-lbl").textContent=tr.booking.pax;
+  document.getElementById("book-btn").textContent=tr.booking.search;
+  document.getElementById("btn-tr-txt").textContent=tr.nav.transfers;
+  document.getElementById("btn-tu-txt").textContent=tr.nav.tours;
+  [0,1,2,3].forEach(i=>document.getElementById("st"+i).textContent=tr.stats[i]);
+  document.getElementById("feat-ey").textContent=tr.featured.ey;
+  document.getElementById("feat-title").textContent=tr.featured.title;
+  document.getElementById("feat-sub").textContent=tr.featured.sub;
+  document.getElementById("btn-all-tr").textContent=tr.allTr;
+  document.getElementById("btn-all-tu").textContent=tr.allTu;
+  document.getElementById("featured-grid").innerHTML=[...TRANSFERS_D.slice(0,2),...TOURS_D.slice(0,2)].map(cardHTML).join("");
+  document.getElementById("why-ey").textContent=tr.why.ey;
+  document.getElementById("why-title").textContent=tr.why.title;
+  document.getElementById("why-grid").innerHTML=tr.whyItems.map(w=>`
+    <div class="col-12 col-sm-6 col-lg-3">
+      <div class="why-item">
+        <div class="why-icon"><i class="${w.ic}"></i></div>
+        <div class="why-ttl">${w.title}</div>
+        <div class="why-desc">${w.desc}</div>
+      </div>
+    </div>`).join("");
+  renderDeskLinks();
+}
+
+function renderDetail(){
+  if(!detailItem)return;
+  const tr=t(),item=detailItem;
+  const title=item.title[lang]||item.title.tr;
+  const desc=item.desc[lang]||item.desc.tr;
+  const dur=item.dur?(item.dur[lang]||item.dur.tr):null;
+  const isTr=item.cat==="transfer";
+  document.getElementById("dt-bc").innerHTML=`<span onclick="go('home')">Home</span> / <span onclick="go('${isTr?"transfers":"tours"}')">${isTr?tr.nav.transfers:tr.nav.tours}</span> / ${title}`;
+  document.getElementById("dt-badge").innerHTML=showBadges&&item.badge?`<div class="card-badge" style="position:static;display:inline-block;margin-bottom:.6rem">${item.badge}</div>`:"";
+  document.getElementById("dt-title").textContent=title;
+  document.getElementById("dt-meta").innerHTML=`
+    ${dur?`<span style="font-size:.82rem;color:rgba(247,244,239,.55);display:flex;align-items:center;gap:5px"><i class="bi bi-clock"></i>${dur}</span>`:""}
+    <span style="font-size:.82rem;color:rgba(247,244,239,.55);display:flex;align-items:center;gap:5px"><i class="bi bi-people"></i>${item.cap} ${tr.person}</span>
+    <span style="font-family:'DM Serif Display',serif;font-size:1.1rem;color:var(--gold2);font-weight:400">€${item.price} ${tr.from2}</span>`;
+  const inclList=(isTr?tr.inclTr:tr.inclTu).map(f=>`<div class="incl-item col-6"><i class="bi bi-check2-circle"></i>${f}</div>`).join("");
+  const vOpts=tr.vehicles.map(v=>`
+    <button class="vehicle-opt${selVeh===v.id?" sel":""}" onclick="pickVeh('${v.id}')">
+      <div class="vehicle-icon"><i class="bi bi-car-front-fill"></i></div>
+      <div><div class="vehicle-name">${v.name}</div><div class="vehicle-cap">${v.cap}</div></div>
+      <div class="vehicle-tag">${v.tag}</div>
+    </button>`).join("");
+  document.getElementById("dt-body").innerHTML=`
+    <div class="col-lg-7">
+      <p style="font-family:'Instrument Serif',serif;font-size:1.05rem;color:var(--ink2);line-height:1.85;margin-bottom:2rem">${desc}</p>
+      <div style="border-top:1.5px solid var(--ink4);padding-top:1.5rem;margin-bottom:1.5rem">
+        <div class="eyebrow mb-3">${tr.inclTitle}</div>
+        <div class="row g-1">${inclList}</div>
+      </div>
+      <div style="border-top:1.5px solid var(--ink4);padding-top:1.5rem">
+        <div class="eyebrow mb-3">${tr.form.vehicle}</div>
+        ${vOpts}
+      </div>
+    </div>
+    <div class="col-lg-5">
+      <div class="form-card">
+        <div class="form-card-title">${tr.form.title}</div>
+        <p class="form-card-sub">${tr.form.sub}</p>
+        <div class="row g-2">
+          <div class="col-12"><label class="flabel">${tr.form.name}</label><input class="finput" id="rf-name"/></div>
+          <div class="col-6"><label class="flabel">${tr.form.phone}</label><input class="finput" id="rf-phone"/></div>
+          <div class="col-6"><label class="flabel">${tr.form.flight}</label><input class="finput" id="rf-flight"/></div>
+          <div class="col-6"><label class="flabel">${tr.form.pax}</label>
+            <select class="fselect" id="rf-pax">${[1,2,3,4,5,6,7,8,9,10,11,12].map(n=>`<option>${n}</option>`).join("")}</select>
+          </div>
+          <div class="col-6"><label class="flabel">${tr.form.dt}</label><input type="datetime-local" class="finput" id="rf-dt"/></div>
+          <div class="col-12"><label class="flabel">${tr.form.addr}</label><input class="finput" id="rf-addr"/></div>
+        </div>
+        <div class="total-row">
+          <span class="total-lbl">${tr.totalLabel}</span>
+          <span class="total-val">€${item.price}${selVeh==="minibus"?" +20%":""}</span>
+        </div>
+        <button class="btn-ink w-100 justify-content-center" onclick="submitRes()">${tr.form.submit}</button>
+      </div>
+    </div>`;
+}
+
+function pickVeh(v){selVeh=v;renderDetail();}
+function submitRes(){
+  const n=document.getElementById("rf-name")?.value;
+  const p=document.getElementById("rf-phone")?.value;
+  const d=document.getElementById("rf-dt")?.value;
+  const a=document.getElementById("rf-addr")?.value;
+  if(!n||!p||!d||!a){
+    if(!n)document.getElementById("rf-name").style.borderColor="var(--gold)";
+    if(!p)document.getElementById("rf-phone").style.borderColor="var(--gold)";
+    if(!d)document.getElementById("rf-dt").style.borderColor="var(--gold)";
+    if(!a)document.getElementById("rf-addr").style.borderColor="var(--gold)";
+    return;
+  }
+  showToast(t().form.ok);
+}
+function submitCt(){
+  const n=document.getElementById("ct-name").value,e=document.getElementById("ct-email").value;
+  if(!n||!e)return;
+  showToast(t().form.ok);
+  document.getElementById("ct-name").value="";
+  document.getElementById("ct-email").value="";
+  document.getElementById("ct-msg").value="";
+}
+
+function renderPage(page){
+  const tr=t();
+  if(page==="home")renderHome();
+  if(page==="transfers"){
+    document.getElementById("tr-ey").textContent=tr.transfers.ey;
+    document.getElementById("tr-title").textContent=tr.transfers.title;
+    document.getElementById("tr-sub").textContent=tr.transfers.sub;
+    document.getElementById("ph-num-tr").textContent="Transfers";
+    document.getElementById("tr-grid").innerHTML=TRANSFERS_D.map(cardHTML).join("");
+  }
+  if(page==="tours"){
+    document.getElementById("tu-ey").textContent=tr.tours.ey;
+    document.getElementById("tu-title").textContent=tr.tours.title;
+    document.getElementById("tu-sub").textContent=tr.tours.sub;
+    document.getElementById("ph-num-tu").textContent="Tours";
+    document.getElementById("tu-grid").innerHTML=TOURS_D.map(cardHTML).join("");
+  }
+  if(page==="detail")renderDetail();
+  if(page==="gallery"){
+    document.getElementById("gal-ey").textContent=tr.gallery.ey;
+    document.getElementById("gal-title").textContent=tr.gallery.title;
+    document.getElementById("gal-sub").textContent=tr.gallery.sub;
+    document.getElementById("ph-num-gal").textContent="Gallery";
+    document.getElementById("gal-grid").innerHTML=GAL_ITEMS.map(l=>`
+      <div class="col-6 col-md-4">
+        <div class="gal-item"><div class="gal-item-bg"></div><div class="gal-lbl">${l}</div></div>
+      </div>`).join("");
+  }
+  if(page==="about"){
+    document.getElementById("ab-ey").textContent=tr.about.ey;
+    document.getElementById("ab-title").textContent=tr.about.title;
+    document.getElementById("ph-num-ab").textContent="About";
+    document.getElementById("ab-p1").textContent=tr.about.p1;
+    document.getElementById("ab-p2").textContent=tr.about.p2;
+    document.getElementById("ab-stats").innerHTML=[["25+",0],["30+",1],["3",2],["14",3]].map(([v,i])=>`
+      <div class="col-6 col-md-3">
+        <div class="ab-stat"><div class="ab-stat-num">${v}</div><div class="ab-stat-lbl">${tr.about.stats[i]}</div></div>
+      </div>`).join("");
+  }
+  if(page==="contact"){
+    const ct=tr.contact;
+    document.getElementById("ct-ey").textContent=ct.ey;
+    document.getElementById("ct-title").textContent=ct.title;
+    document.getElementById("ph-num-ct").textContent="Contact";
+    document.getElementById("ct-form-ttl").textContent=ct.msgTitle;
+    document.getElementById("ct-name-lbl").textContent=tr.form.name;
+    document.getElementById("ct-msg-lbl").textContent=ct.msgLabel;
+    document.getElementById("ct-submit").textContent=ct.msgBtn;
+    document.getElementById("ct-info").innerHTML=[
+      ["bi-geo-alt-fill",ct.addrL,ct.address],
+      ["bi-telephone-fill",ct.phoneL,ct.phone],
+      ["bi-envelope-fill","Email",ct.email],
+      ["bi-clock-fill",ct.hoursL,ct.hours],
+    ].map(([ic,l,v])=>`<div class="ct-item"><div class="ct-icon"><i class="${ic}"></i></div><div><div class="ct-lbl">${l}</div><div class="ct-val">${v}</div></div></div>`).join("");
+  }
+  renderFooter();
+  renderDeskLinks();
+}
+
+function renderFooter(){
+  const tr=t();
+  document.getElementById("footer-desc").textContent=tr.footerDesc;
+  document.getElementById("footer-s-ttl").textContent=tr.footerS;
+  document.getElementById("footer-t-ttl").textContent=tr.footerT;
+  document.getElementById("footer-c-ttl").textContent=tr.footerC;
+  document.getElementById("footer-copy").textContent=`© 2025 Sunline VIP Transfer. ${tr.footerR}`;
+  document.getElementById("footer-s-links").innerHTML=TRANSFERS_D.map(d=>`<span class="footer-lnk" onclick="go('transfers')">${d.title[lang]||d.title.tr}</span>`).join("");
+  document.getElementById("footer-t-links").innerHTML=TOURS_D.map(d=>`<span class="footer-lnk" onclick="go('tours')">${d.title[lang]||d.title.tr}</span>`).join("");
+  document.getElementById("footer-c-links").innerHTML=[tr.contact.address,tr.contact.phone,tr.contact.email].map(v=>`<span class="footer-lnk">${v}</span>`).join("");
+}
+
+function renderAll(){renderPage(curPage);renderFooter();renderDeskLinks();}
+renderAll();
+// Set nav to light-page initially if not home
+document.getElementById("siteNav").classList.remove("light-page");
+</script>
+</body>
+</html>

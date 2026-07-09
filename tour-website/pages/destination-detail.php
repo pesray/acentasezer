@@ -203,6 +203,17 @@ try {
     }
 } catch (Exception $e) {}
 
+// Schema.org entegrasyonu (TouristDestination & BreadcrumbList)
+require_once ROOT_PATH . 'includes/schema.php';
+$destUrl = langUrl($transfersSlug . '/' . $destination['slug']);
+$pageSchema = [
+    getBreadcrumbSchema([
+        ['name' => !empty($transfersTitle) ? $transfersTitle : __('menu_destinations', 'header'), 'url' => getPageSlugByKey('destinations')],
+        ['name' => $destination['title'], 'url' => $transfersSlug . '/' . $destination['slug']]
+    ]),
+    getDestinationSchema($destination, $destUrl)
+];
+
 require_once INCLUDES_PATH . 'header.php';
 ?>
 

@@ -61,6 +61,25 @@ function getLanguageCodes() {
     return $codes;
 }
 
+// Arama motoru botu kontrolü
+function isSearchBot() {
+    $ua = $_SERVER['HTTP_USER_AGENT'] ?? '';
+    if (empty($ua)) {
+        return false;
+    }
+    $bots = [
+        'googlebot', 'bingbot', 'yandexbot', 'baiduspider', 'duckduckbot', 'slurp', 
+        'semrushbot', 'ahrefsbot', 'ia_archiver', 'facebot', 'twitterbot', 'applebot',
+        'mj12bot', 'screaming frog', 'adsbot-google'
+    ];
+    foreach ($bots as $bot) {
+        if (stripos($ua, $bot) !== false) {
+            return true;
+        }
+    }
+    return false;
+}
+
 // Tarayıcı dilini algıla (Accept-Language header)
 function detectBrowserLanguage() {
     // Önce cookie'den kullanıcı tercihini kontrol et
@@ -70,6 +89,11 @@ function detectBrowserLanguage() {
         if (in_array($cookieLang, $activeLangs)) {
             return $cookieLang;
         }
+    }
+    
+    // Arama motoru botları için varsayılan dili dön
+    if (isSearchBot()) {
+        return DEFAULT_LANG;
     }
     
     // Accept-Language header'ını al
@@ -310,9 +334,40 @@ function getAlternateLanguageUrl($targetLang) {
         $blogSlugTarget = $pageSlugs['blog']['target'] ?? 'blog';
         if ($blogSlugCurrent && preg_match('#^' . preg_quote($blogSlugCurrent, '#') . '/([a-z0-9-]+)$#i', $path, $matches)) {
             $detailSlug = $matches[1];
-            // Blog için çeviri varsa kullan, yoksa aynı slug
+            
+            // Blog yazısı çevirisini bul
+            $stmt = $db->prepare("
+                SELECT bp.id, 
+                       COALESCE(bpt_target.slug, bp.slug) as target_slug
+                FROM blog_posts bp
+                LEFT JOIN blog_post_translations bpt_current ON bp.id = bpt_current.post_id AND bpt_current.language_code = ?
+                LEFT JOIN blog_post_translations bpt_target ON bp.id = bpt_target.post_id AND bpt_target.language_code = ?
+                WHERE COALESCE(bpt_current.slug, bp.slug) = ? OR bp.slug = ?
+            ");
+            $stmt->execute([$currentLang, $targetLang, $detailSlug, $detailSlug]);
+            $post = $stmt->fetch();
+            
             $prefix = $blogSlugTarget ?: $blogSlugCurrent;
+            if ($post) {
+                return langUrl($prefix . '/' . $post['target_slug'], $targetLang);
+            }
             return langUrl($prefix . '/' . $detailSlug, $targetLang);
+        }
+
+        // 3. Genel sayfa kontrolü
+        $stmt = $db->prepare("
+            SELECT p.id, 
+                   COALESCE(pt_target.slug, p.slug) as target_slug
+            FROM pages p
+            LEFT JOIN page_translations pt_current ON p.id = pt_current.page_id AND pt_current.language_code = ?
+            LEFT JOIN page_translations pt_target ON p.id = pt_target.page_id AND pt_target.language_code = ?
+            WHERE COALESCE(pt_current.slug, p.slug) = ? OR p.slug = ?
+            LIMIT 1
+        ");
+        $stmt->execute([$currentLang, $targetLang, $path, $path]);
+        $pageData = $stmt->fetch();
+        if ($pageData) {
+            return langUrl($pageData['target_slug'], $targetLang);
         }
         
     } catch (Exception $e) {}
@@ -456,5 +511,33 @@ function getMenuItems($menuSlug, $parentId = null) {
         return $items;
     } catch (Exception $e) {
         return [];
+    }
+}
+
+// Sayfa slug'ını page_key değerine göre getir
+function getPageSlugByKey($key, $lang = null) {
+    if ($lang === null) {
+        $lang = getCurrentLang();
+    }
+    static $cache = [];
+    $cacheKey = $key . '_' . $lang;
+    if (isset($cache[$cacheKey])) {
+        return $cache[$cacheKey];
+    }
+    try {
+        $db = getDB();
+        $stmt = $db->prepare("
+            SELECT pst.slug 
+            FROM page_settings ps
+            LEFT JOIN page_setting_translations pst ON ps.id = pst.page_setting_id AND pst.language_code = ?
+            WHERE ps.page_key = ?
+            LIMIT 1
+        ");
+        $stmt->execute([$lang, $key]);
+        $slug = $stmt->fetchColumn();
+        $cache[$cacheKey] = $slug ?: $key;
+        return $cache[$cacheKey];
+    } catch (Exception $e) {
+        return $key;
     }
 }
