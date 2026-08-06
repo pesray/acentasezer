@@ -26,6 +26,7 @@ switch ($action) {
     // === Rezervasyon Oluştur (Manuel) ===
     case 'create':
         try {
+            $airportId     = (int)($_POST['airport_id'] ?? 0);
             $destinationId = (int)($_POST['destination_id'] ?? 0);
             $vehicleId     = (int)($_POST['vehicle_id'] ?? 0);
             $hasOutbound   = !empty($_POST['has_outbound']);
@@ -61,7 +62,7 @@ switch ($action) {
             $insertBooking = $db->prepare("
                 INSERT INTO bookings (
                     booking_number, booking_type, booking_status, booking_direction,
-                    destination_id, vehicle_id,
+                    airport_id, destination_id, vehicle_id,
                     customer_name, customer_email, customer_phone,
                     flight_date, flight_time, flight_number, hotel_address, pickup_time,
                     adults, children, child_seat,
@@ -69,7 +70,7 @@ switch ($action) {
                     notes, admin_notes, created_at, customer_id
                 ) VALUES (
                     ?, 'transfer', 'confirmed', ?,
-                    ?, ?,
+                    ?, ?, ?,
                     ?, ?, ?,
                     ?, ?, ?, ?, ?,
                     ?, ?, ?,
@@ -79,7 +80,7 @@ switch ($action) {
             ");
 
             $commonFields = [
-                $destinationId ?: null, $vehicleId ?: null,
+                $airportId ?: null, $destinationId ?: null, $vehicleId ?: null,
                 $cName,
                 $cEmail,
                 $cPhone,
@@ -208,11 +209,13 @@ switch ($action) {
             $adultNames = $_POST['passenger_adult_name'] ?? [];
             $childNames = $_POST['passenger_child_name'] ?? [];
 
+            $airportId = ((int)($_POST['airport_id'] ?? 0)) ?: null;
+
             if ($bookingType === 'tour') {
                 // Tour update logic
                 $stmt = $db->prepare("
                     UPDATE bookings SET
-                        destination_id = ?, vehicle_id = ?,
+                        airport_id = ?, destination_id = ?, vehicle_id = ?,
                         customer_name = ?, customer_email = ?, customer_phone = ?,
                         pickup_location = ?, pickup_date = ?, pickup_time = ?, return_time = ?,
                         adults = ?, children = ?, child_seat = ?,
@@ -224,6 +227,7 @@ switch ($action) {
                     WHERE id = ?
                 ");
                 $stmt->execute([
+                    $airportId,
                     ((int)($_POST['destination_id'] ?? 0)) ?: null,
                     ((int)($_POST['vehicle_id'] ?? 0)) ?: null,
                     $cName, $cEmail, $cPhone,
@@ -259,7 +263,7 @@ switch ($action) {
                         // Update existing
                         $stmtOut = $db->prepare("
                             UPDATE bookings SET
-                                destination_id = ?, vehicle_id = ?,
+                                airport_id = ?, destination_id = ?, vehicle_id = ?,
                                 customer_name = ?, customer_email = ?, customer_phone = ?,
                                 flight_date = ?, flight_time = ?, flight_number = ?, hotel_address = ?,
                                 pickup_time = NULL,
@@ -272,6 +276,7 @@ switch ($action) {
                             WHERE id = ?
                         ");
                         $stmtOut->execute([
+                            $airportId,
                             ((int)($_POST['destination_id'] ?? 0)) ?: null,
                             ((int)($_POST['vehicle_id'] ?? 0)) ?: null,
                             $cName, $cEmail, $cPhone,
@@ -296,7 +301,7 @@ switch ($action) {
                         $db->prepare("
                             INSERT INTO bookings (
                                 booking_number, booking_type, booking_status, booking_direction,
-                                destination_id, vehicle_id,
+                                airport_id, destination_id, vehicle_id,
                                 customer_name, customer_email, customer_phone,
                                 flight_date, flight_time, flight_number, hotel_address,
                                 adults, children, child_seat,
@@ -304,7 +309,7 @@ switch ($action) {
                                 notes, admin_notes, created_at, customer_id
                             ) VALUES (
                                 ?, 'transfer', ?, 'outbound',
-                                ?, ?,
+                                ?, ?, ?,
                                 ?, ?, ?,
                                 ?, ?, ?, ?,
                                 ?, ?, ?,
@@ -313,6 +318,7 @@ switch ($action) {
                             )
                         ")->execute([
                             $numOutbound, $_POST['booking_status'] ?? 'confirmed',
+                            $airportId,
                             ((int)($_POST['destination_id'] ?? 0)) ?: null,
                             ((int)($_POST['vehicle_id'] ?? 0)) ?: null,
                             $cName, $cEmail, $cPhone,
@@ -341,7 +347,7 @@ switch ($action) {
                         // Update existing
                         $stmtRet = $db->prepare("
                             UPDATE bookings SET
-                                destination_id = ?, vehicle_id = ?,
+                                airport_id = ?, destination_id = ?, vehicle_id = ?,
                                 customer_name = ?, customer_email = ?, customer_phone = ?,
                                 flight_date = ?, flight_time = ?, flight_number = ?, hotel_address = ?,
                                 pickup_time = ?,
@@ -354,6 +360,7 @@ switch ($action) {
                             WHERE id = ?
                         ");
                         $stmtRet->execute([
+                            $airportId,
                             ((int)($_POST['destination_id'] ?? 0)) ?: null,
                             ((int)($_POST['vehicle_id'] ?? 0)) ?: null,
                             $cName, $cEmail, $cPhone,
@@ -373,13 +380,14 @@ switch ($action) {
                             $customerId ?: null,
                             $returnId
                         ]);
+                    }
                     } else {
                         // Insert new return
                         $numReturn = 'TRF-' . date('Ymd') . '-' . str_pad(mt_rand(1, 9999), 4, '0', STR_PAD_LEFT);
                         $db->prepare("
                             INSERT INTO bookings (
                                 booking_number, booking_type, booking_status, booking_direction,
-                                destination_id, vehicle_id,
+                                airport_id, destination_id, vehicle_id,
                                 customer_name, customer_email, customer_phone,
                                 flight_date, flight_time, flight_number, hotel_address, pickup_time,
                                 adults, children, child_seat,
@@ -387,7 +395,7 @@ switch ($action) {
                                 notes, admin_notes, created_at, customer_id
                             ) VALUES (
                                 ?, 'transfer', ?, 'return',
-                                ?, ?,
+                                ?, ?, ?,
                                 ?, ?, ?,
                                 ?, ?, ?, ?, ?,
                                 ?, ?, ?,
@@ -396,6 +404,7 @@ switch ($action) {
                             )
                         ")->execute([
                             $numReturn, $_POST['booking_status'] ?? 'confirmed',
+                            $airportId,
                             ((int)($_POST['destination_id'] ?? 0)) ?: null,
                             ((int)($_POST['vehicle_id'] ?? 0)) ?: null,
                             $cName, $cEmail, $cPhone,

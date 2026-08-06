@@ -92,6 +92,9 @@ try {
         case 'whatsapp_templates':
             require_once __DIR__ . '/whatsapp_templates.php';
             break;
+        case 'airports':
+            require_once __DIR__ . '/airports.php';
+            break;
         default:
             jsonResponse(false, 'Geçersiz entity: ' . $entity);
     }

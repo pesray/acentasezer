@@ -105,6 +105,23 @@ if ($view === 'inter_transfer' || $view === 'all' || $view === 'daily') {
     } catch (Exception $e) {}
 }
 
+// Havalimanları (yeni rezervasyon & düzenleme modalı için)
+$airports = [];
+try {
+    $airports = $db->query("SELECT * FROM airports WHERE is_deleted = 0 ORDER BY is_default DESC, name ASC")->fetchAll();
+} catch (Exception $e) {}
+
+$defaultAirportId = 0;
+foreach ($airports as $ap) {
+    if (!empty($ap['is_default'])) {
+        $defaultAirportId = (int)$ap['id'];
+        break;
+    }
+}
+if (!$defaultAirportId && !empty($airports)) {
+    $defaultAirportId = (int)$airports[0]['id'];
+}
+
 // Transferler (yeni rezervasyon modalı için)
 $destinations = $db->query("
     SELECT d.id, COALESCE(dt.title, d.title) AS title
@@ -1110,18 +1127,27 @@ table.dataTable > tbody > tr.child ul.custom-dtr-details > li.dtr-info-full {
                     </div>
 
                     <!-- Transfer & Araç -->
-                    <h6 class="mb-3"><i class="bi bi-geo-alt me-2"></i>Transfer & Araç Seçimi</h6>
-                    <div class="row mb-4">
-                        <div class="col-md-6">
+                    <h6 class="mb-3"><i class="bi bi-geo-alt me-2"></i>Havalimanı, Transfer & Araç Seçimi</h6>
+                    <div class="row mb-4 g-2">
+                        <div class="col-md-4">
+                            <label class="form-label">Havalimanı</label>
+                            <select name="airport_id" id="modal-airport" class="form-select airport-select">
+                                <option value="">-- Havalimanı Seçin --</option>
+                                <?php foreach ($airports as $ap): ?>
+                                <option value="<?= $ap['id'] ?>" <?= $ap['is_default'] ? 'selected' : '' ?>><?= e($ap['name']) ?><?= $ap['code'] ? ' (' . e($ap['code']) . ')' : '' ?></option>
+                                <?php endforeach; ?>
+                            </select>
+                        </div>
+                        <div class="col-md-4">
                             <label class="form-label">Transfer</label>
-                            <select name="destination_id" id="modal-destination" class="form-select">
+                            <select name="destination_id" id="modal-destination" class="form-select destination-select">
                                 <option value="">-- Transfer Seçin --</option>
                                 <?php foreach ($destinations as $dest): ?>
                                 <option value="<?= $dest['id'] ?>"><?= e($dest['title']) ?></option>
                                 <?php endforeach; ?>
                             </select>
                         </div>
-                        <div class="col-md-6">
+                        <div class="col-md-4">
                             <label class="form-label">Araç</label>
                             <select name="vehicle_id" id="modal-vehicle" class="form-select">
                                 <option value="">-- Araç Seçin --</option>
@@ -1360,7 +1386,7 @@ table.dataTable > tbody > tr.child ul.custom-dtr-details > li.dtr-info-full {
                             <div class="row g-2">
                                 <div class="col-md-6">
                                     <label class="form-label small mb-1">Transfer Güzergahı</label>
-                                    <select name="destination_id" class="form-select form-select-sm">
+                                    <select name="destination_id" class="form-select form-select-sm inter-destination-select">
                                         <option value="">-- Transfer Seçin --</option>
                                         <?php foreach ($destinations as $d): ?>
                                             <option value="<?= $d['id'] ?>"><?= e($d['title']) ?></option>
@@ -1555,18 +1581,27 @@ table.dataTable > tbody > tr.child ul.custom-dtr-details > li.dtr-info-full {
                 <div class="modal-body" style="max-height:75vh;overflow-y:auto;">
 
                     <!-- Transfer & Araç -->
-                    <h6 class="mb-3"><i class="bi bi-geo-alt me-2"></i>Transfer & Araç Seçimi</h6>
-                    <div class="row mb-4">
-                        <div class="col-md-6">
+                    <h6 class="mb-3"><i class="bi bi-geo-alt me-2"></i>Havalimanı, Transfer & Araç Seçimi</h6>
+                    <div class="row mb-4 g-2">
+                        <div class="col-md-4">
+                            <label class="form-label">Havalimanı</label>
+                            <select name="airport_id" id="add-airport" class="form-select airport-select">
+                                <option value="">-- Havalimanı Seçin --</option>
+                                <?php foreach ($airports as $ap): ?>
+                                <option value="<?= $ap['id'] ?>" <?= $ap['is_default'] ? 'selected' : '' ?>><?= e($ap['name']) ?><?= $ap['code'] ? ' (' . e($ap['code']) . ')' : '' ?></option>
+                                <?php endforeach; ?>
+                            </select>
+                        </div>
+                        <div class="col-md-4">
                             <label class="form-label">Transfer</label>
-                            <select name="destination_id" id="add-destination" class="form-select">
+                            <select name="destination_id" id="add-destination" class="form-select destination-select">
                                 <option value="">-- Transfer Seçin --</option>
                                 <?php foreach ($destinations as $dest): ?>
                                 <option value="<?= $dest['id'] ?>"><?= e($dest['title']) ?></option>
                                 <?php endforeach; ?>
                             </select>
                         </div>
-                        <div class="col-md-6">
+                        <div class="col-md-4">
                             <label class="form-label">Araç</label>
                             <select name="vehicle_id" id="add-vehicle" class="form-select">
                                 <option value="">-- Araç Seçin --</option>
@@ -2143,6 +2178,7 @@ const bookingsData = <?= json_encode(array_map(function($b) {
         'customer_phone'    => $b['customer_phone'],
         'tour_title'        => $b['tour_title'] ?? null,
         'destination_title' => $b['destination_title'] ?? null,
+        'airport_id'        => (int)($b['airport_id'] ?? 0),
         'destination_id'    => (int)($b['destination_id'] ?? 0),
         'vehicle_id'        => (int)($b['vehicle_id'] ?? 0),
         'vehicle_name'      => trim($b['vehicle_name'] ?? ''),
@@ -2169,6 +2205,8 @@ const bookingsData = <?= json_encode(array_map(function($b) {
         'is_inter_transfer'    => (int)($b['is_inter_transfer'] ?? 0),
     ];
 }, $jsBookings), JSON_UNESCAPED_UNICODE) ?>;
+
+const defaultAirportId = <?= (int)$defaultAirportId ?>;
 
 const currentView = '<?= $view ?>';
 </script>
@@ -2341,7 +2379,22 @@ $(document).ready(function() {
             return { id: params.term, text: params.term, newTag: true };
         }
     });
-    $('#modal-destination, #modal-vehicle').select2({
+
+    $('.inter-destination-select').select2({
+        theme: 'bootstrap-5',
+        width: '100%',
+        placeholder: '-- Transfer Seçin --',
+        allowClear: true,
+        dropdownParent: $('#addInterTransferModal')
+    });
+
+    $('#add-airport, #add-destination').select2({
+        theme: 'bootstrap-5',
+        width: '100%',
+        dropdownParent: $('#addBookingModal')
+    });
+
+    $('#modal-airport, #modal-destination, #modal-vehicle').select2({
         theme: 'bootstrap-5',
         width: '100%',
         dropdownParent: $('#bookingModal')
@@ -2591,7 +2644,8 @@ function openBookingModal(id) {
     document.getElementById('modal-customer-email').value = b.customer_email || '';
     document.getElementById('modal-customer-phone').value = b.customer_phone || '';
 
-    // Destination & Vehicle select'leri
+    // Airport, Destination & Vehicle select'leri
+    $('#modal-airport').val(b.airport_id || defaultAirportId).trigger('change');
     $('#modal-destination').val(b.destination_id || '').trigger('change');
     $('#modal-vehicle').val(b.vehicle_id || '').trigger('change');
 

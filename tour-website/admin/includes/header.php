@@ -859,6 +859,10 @@ if ($siteLogo && defined('UPLOADS_URL')) {
             <i class="bi bi-whatsapp nav-link-icon"></i>
             <span class="nav-link-text">WP Şablonları</span>
         </a>
+        <a href="<?= ADMIN_URL ?>/airports.php" class="nav-link <?= $currentPage === 'airports' ? 'active' : '' ?>" title="Havalimanları">
+            <i class="bi bi-airplane nav-link-icon"></i>
+            <span class="nav-link-text">Havalimanları</span>
+        </a>
 
         <div class="nav-section">İçerik</div>
         <a href="<?= ADMIN_URL ?>/homepage.php" class="nav-link <?= $currentPage === 'homepage' ? 'active' : '' ?>" title="Anasayfa">
