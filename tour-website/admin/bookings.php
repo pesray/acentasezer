@@ -29,7 +29,7 @@ $statusLabels = [
 $directionLabels = [
     'outbound'       => ['Arrival', 'primary'],
     'return'         => ['Depar', 'info'],
-    'inter_transfer' => ['Ara Transfer', 'info']
+    'inter_transfer' => ['Ara Transfer', 'danger']
 ];
 
 // WHERE koşulu view'a göre
@@ -459,16 +459,28 @@ require_once __DIR__ . '/includes/header.php';
 
 /* Sütun ve metin sığma ayarları (mobilde yatay kaymayı önler) */
 #bookingsTable th, #bookingsTable td {
-    white-space: normal !important;
+    white-space: normal;
     word-break: break-word;
     overflow-wrap: break-word;
+}
+
+/* Tarih kolonu asla alt satıra kaymasın */
+#bookingsTable th:nth-child(2), #bookingsTable td:nth-child(2),
+#bookingsTable td.text-nowrap {
+    white-space: nowrap !important;
+    word-break: normal !important;
+}
+
+/* Otel Adı kolonu daraltılsın ve alt satıra kaysın */
+#bookingsTable th:nth-child(8), #bookingsTable td:nth-child(8) {
+    max-width: 170px !important;
+    white-space: normal !important;
+    word-break: break-word !important;
 }
 
 @media (max-width: 991.98px) {
     #bookingsTable th, #bookingsTable td {
         padding: .5rem .3rem;
-        white-space: normal !important;
-        word-break: break-word;
     }
 }
 
@@ -700,7 +712,7 @@ table.dataTable > tbody > tr.child ul.custom-dtr-details > li.dtr-info-full {
             <?php foreach ($allBookings as $b):
                 $isInter  = !empty($b['is_inter_transfer']) || ($b['booking_direction'] ?? '') === 'inter_transfer';
                 $dir      = $b['booking_direction'] ?? 'outbound';
-                $dirLabel = $isInter ? ['Ara Transfer', 'info'] : ($directionLabels[$dir] ?? ['Arrival','primary']);
+                $dirLabel = $isInter ? ['Ara Transfer', 'danger'] : ($directionLabels[$dir] ?? ['Arrival','primary']);
                 $dirIcon  = $isInter ? 'arrows-expand' : ($dir === 'return' ? 'box-arrow-up-right' : 'box-arrow-in-down-right');
                 $dateField = ($b['flight_date'] ?? null) ?: (($b['pickup_date'] ?? null) ?: null);
                 $bVParam   = $isInter ? 'out_id=' . $b['id'] : (($dir === 'return') ? 'ret_id=' . $b['id'] : 'out_id=' . $b['id']);
@@ -711,7 +723,7 @@ table.dataTable > tbody > tr.child ul.custom-dtr-details > li.dtr-info-full {
                         <i class="bi bi-<?= $dirIcon ?> me-1"></i><?= $dirLabel[0] ?>
                     </span>
                 </td>
-                <td data-order="<?= $dateField ? date('Y-m-d', strtotime($dateField)) : '' ?>"><?= $dateField ? date('d.m.Y', strtotime($dateField)) : '-' ?></td>
+                <td data-order="<?= $dateField ? date('Y-m-d', strtotime($dateField)) : '' ?>" class="text-nowrap"><?= $dateField ? date('d.m.Y', strtotime($dateField)) : '-' ?></td>
                 <td>
                     <?php if (($dir === 'return' || $isInter) && !empty($b['pickup_time'])): ?>
                         <strong><?= date('H:i', strtotime($b['pickup_time'])) ?></strong>
@@ -876,7 +888,7 @@ table.dataTable > tbody > tr.child ul.custom-dtr-details > li.dtr-info-full {
             <?php foreach ($allBookings as $b):
                 $isInter  = !empty($b['is_inter_transfer']) || ($b['booking_direction'] ?? '') === 'inter_transfer';
                 $dir      = $b['booking_direction'] ?? 'outbound';
-                $dirLabel = $isInter ? ['Ara Transfer', 'info'] : ($directionLabels[$dir] ?? ['Arrival','primary']);
+                $dirLabel = $isInter ? ['Ara Transfer', 'danger'] : ($directionLabels[$dir] ?? ['Arrival','primary']);
                 $dirIcon  = $isInter ? 'arrows-expand' : ($dir === 'return' ? 'box-arrow-up-right' : 'box-arrow-in-down-right');
                 $dateField = ($b['flight_date'] ?? null) ?: (($b['pickup_date'] ?? null) ?: null);
                 $bVParam   = ($dir === 'return') ? 'ret_id=' . $b['id'] : 'out_id=' . $b['id'];
@@ -887,7 +899,7 @@ table.dataTable > tbody > tr.child ul.custom-dtr-details > li.dtr-info-full {
                         <i class="bi bi-<?= $dirIcon ?> me-1"></i><?= $dirLabel[0] ?>
                     </span>
                 </td>
-                <td data-order="<?= $dateField ? date('Y-m-d', strtotime($dateField)) : '' ?>"><?= $dateField ? date('d.m.Y', strtotime($dateField)) : '-' ?></td>
+                <td data-order="<?= $dateField ? date('Y-m-d', strtotime($dateField)) : '' ?>" class="text-nowrap"><?= $dateField ? date('d.m.Y', strtotime($dateField)) : '-' ?></td>
                 <?php if ($view !== 'arrival'): ?>
                 <td>
                     <?php if (!empty($b['pickup_time'])): ?>
