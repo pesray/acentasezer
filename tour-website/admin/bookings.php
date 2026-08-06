@@ -3034,6 +3034,12 @@ function openOpsStatus(id) {
             ? (parseFloat(bData.total_price).toLocaleString('tr-TR', {minimumFractionDigits:2}) + ' ' + (bData.currency || 'EUR'))
             : '—';
         var isReturn = bData.booking_direction === 'return';
+        var dirLabel = isReturn ? 'Depar' : 'Arrival';
+        var dirBadge = isReturn ? 'info' : 'primary';
+        var dirIcon  = isReturn ? 'box-arrow-up-right' : 'box-arrow-in-down-right';
+        var dirBadgeHtml = '<span class="badge bg-' + dirBadge + ' text-white px-2 py-1" style="font-size:.85rem !important;font-weight:600;display:inline-flex;align-items:center;">'
+            + '<i class="bi bi-' + dirIcon + ' me-1"></i>' + dirLabel
+            + '</span>';
 
         function infoCell(label, value, bold) {
             return '<div class="col-6 col-md-3">'
@@ -3055,17 +3061,25 @@ function openOpsStatus(id) {
             + infoCell('Araç', bData.vehicle_name)
             + infoCell('Kişi', paxStr);
 
-        // Yolcu Listesi + Müşteri Notu + Rezervasyon Tutarı yan yana
+        // Yolcu Listesi + Müşteri Notu + Rezervasyon Tutarı & Yön yan yana
         infoHtml += '<div class="col-12 mt-2 pt-2" style="border-top:1px dashed #b8d4f0;">'
-            + '<div class="row g-2">'
+            + '<div class="row g-2 align-items-center">'
             + '<div class="col-md-4" id="ops-modal-passengers-container" style="display:none;"></div>'
             + '<div class="col-md-4" id="ops-modal-notes-container"' + (bData.notes && bData.notes.trim() ? '' : ' style="display:none;"') + '>'
             +   '<div class="text-muted" style="font-size:.72rem;text-transform:uppercase;letter-spacing:.4px;"><i class="bi bi-chat-left-text me-1"></i>Müşteri Notu</div>'
             +   '<div class="fw-semibold" style="white-space:pre-wrap;">' + (bData.notes || '') + '</div>'
             + '</div>'
-            + '<div class="col-md-4">'
-            +   '<div class="text-muted" style="font-size:.72rem;text-transform:uppercase;letter-spacing:.4px;">Rezervasyon Tutarı</div>'
-            +   '<div class="fw-bold" style="font-size:1.4rem;color:#1c4b56;">' + priceVal + '</div>'
+            + '<div class="col-md-4 ms-auto">'
+            +   '<div class="d-flex align-items-center justify-content-between gap-2 flex-wrap">'
+            +     '<div>'
+            +       '<div class="text-muted" style="font-size:.72rem;text-transform:uppercase;letter-spacing:.4px;">Rezervasyon Tutarı</div>'
+            +       '<div class="fw-bold" style="font-size:1.4rem;color:#1c4b56;line-height:1.2;">' + priceVal + '</div>'
+            +     '</div>'
+            +     '<div class="text-end">'
+            +       '<div class="text-muted mb-1" style="font-size:.72rem;text-transform:uppercase;letter-spacing:.4px;">Yön</div>'
+            +       '<div>' + dirBadgeHtml + '</div>'
+            +     '</div>'
+            +   '</div>'
             + '</div>'
             + '</div>'
             + '</div>';
