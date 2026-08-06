@@ -145,6 +145,14 @@ require_once __DIR__ . '/includes/header.php';
                                                     <td><code>{HOTEL}</code></td>
                                                     <td>Otel veya alınış adresi</td>
                                                 </tr>
+                                                <tr class="table-primary">
+                                                    <td><code>{PICKUP_HOTEL}</code></td>
+                                                    <td>Alınış Oteli (Ara transfer şablonlarında)</td>
+                                                </tr>
+                                                <tr class="table-primary">
+                                                    <td><code>{DESTINATION_HOTEL}</code></td>
+                                                    <td>Varış Oteli (Ara transfer şablonlarında)</td>
+                                                </tr>
                                                 <tr>
                                                     <td><code>{PAX}</code></td>
                                                     <td>Kişi sayısı açıklaması (Yetişkin + Çocuk)</td>

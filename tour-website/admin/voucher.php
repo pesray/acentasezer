@@ -75,6 +75,22 @@ if ($outId) {
     ");
     $s->execute([$outId]);
     $out = $s->fetch();
+
+    if (!$out) {
+        $sInter = $db->prepare("
+            SELECT b.*, CONCAT(v.brand,' ',v.model) AS vehicle_name, v.capacity,
+                   d.title AS destination_title,
+                   b.pickup_hotel_name AS pickup_location,
+                   b.destination_hotel_name AS hotel_address,
+                   1 AS is_inter_transfer
+            FROM inter_hotel_transfers b
+            LEFT JOIN vehicles v ON b.vehicle_id = v.id
+            LEFT JOIN destinations d ON b.destination_id = d.id
+            WHERE b.id = ? AND b.is_deleted = 0
+        ");
+        $sInter->execute([$outId]);
+        $out = $sInter->fetch();
+    }
 }
 
 // Return booking
@@ -96,10 +112,15 @@ if ($retId) {
 $base = $out ?: $ret;
 if (!$base) die('Rezervasyon bulunamadı');
 
-// Yolcular (önce outbound, yoksa return'dan)
-$paxBookingId = $out ? $out['id'] : $ret['id'];
-$paxStmt = $db->prepare("SELECT passenger_type, full_name FROM booking_passengers WHERE booking_id = ? ORDER BY passenger_type DESC, sort_order ASC");
-$paxStmt->execute([$paxBookingId]);
+// Yolcular
+if (!empty($base['is_inter_transfer'])) {
+    $paxStmt = $db->prepare("SELECT passenger_type, full_name FROM booking_passengers WHERE inter_transfer_id = ? ORDER BY passenger_type DESC, sort_order ASC");
+    $paxStmt->execute([$base['id']]);
+} else {
+    $paxBookingId = $out ? $out['id'] : $ret['id'];
+    $paxStmt = $db->prepare("SELECT passenger_type, full_name FROM booking_passengers WHERE booking_id = ? ORDER BY passenger_type DESC, sort_order ASC");
+    $paxStmt->execute([$paxBookingId]);
+}
 $passengers = $paxStmt->fetchAll();
 
 // Şirket bilgileri
@@ -173,6 +194,9 @@ $labels = [
         'children'       => 'Çocuk',
         'arrival'        => 'GELİŞ TRANSFERİ',
         'departure'      => 'DÖNÜŞ TRANSFERİ',
+        'inter_transfer' => 'TRANSFER REZERVASYON DETAYI',
+        'pickup_hotel'   => 'Alınış Oteli / Noktası',
+        'destination_hotel' => 'Varış Oteli / Noktası',
         'flight_date'    => 'Uçuş Tarihi',
         'flight_time'    => 'İniş Saati',
         'flight_no'      => 'Uçuş No',
@@ -201,6 +225,9 @@ $labels = [
         'children'       => 'Children',
         'arrival'        => 'ARRIVAL TRANSFER',
         'departure'      => 'DEPARTURE TRANSFER',
+        'inter_transfer' => 'TRANSFER BOOKING DETAILS',
+        'pickup_hotel'   => 'Pickup Hotel / Location',
+        'destination_hotel' => 'Destination Hotel / Location',
         'flight_date'    => 'Flight Date',
         'flight_time'    => 'Arrival Time',
         'flight_no'      => 'Flight No',
@@ -229,6 +256,9 @@ $labels = [
         'children'       => 'Kinder',
         'arrival'        => 'ANKUNFTSTRANSFER',
         'departure'      => 'ABREISTRANSFER',
+        'inter_transfer' => 'TRANSFER BUCHUNGSDETAILS',
+        'pickup_hotel'   => 'Abholhotel / Abholort',
+        'destination_hotel' => 'Zielhotel / Zielort',
         'flight_date'    => 'Flugdatum',
         'flight_time'    => 'Ankunftszeit',
         'flight_no'      => 'Flugnummer',
@@ -257,6 +287,9 @@ $labels = [
         'children'       => 'Дети',
         'arrival'        => 'ТРАНСФЕР ПО ПРИБЫТИИ',
         'departure'      => 'ТРАНСФЕР ПРИ ОТЪЕЗДЕ',
+        'inter_transfer' => 'ДЕТАЛИ БРОНИРОВАНИЯ ТРАНСФЕРА',
+        'pickup_hotel'   => 'Отель отправления',
+        'destination_hotel' => 'Отель назначения',
         'flight_date'    => 'Дата рейса',
         'flight_time'    => 'Время прилёта',
         'flight_no'      => 'Номер рейса',
@@ -590,8 +623,55 @@ function voucherLangUrl($l, $outId, $retId) {
         <?php endif; ?>
     </div>
 
-    <!-- GELİŞ TRANSFERİ -->
-    <?php if ($out): ?>
+    <!-- TRANSFER BİLGİSİ (GELİŞ VEYA ARA TRANSFER) -->
+    <?php if ($out && !empty($out['is_inter_transfer'])): ?>
+    <div class="transfer-section">
+        <div class="transfer-header" style="background:#0dcaf0;color:#fff;">
+            <svg width="16" height="16" fill="currentColor" viewBox="0 0 16 16"><path d="M1 8a.5.5 0 0 1 .5-.5h13a.5.5 0 0 1 0 1h-13A.5.5 0 0 1 1 8zM7.646 1.146a.5.5 0 0 1 .708 0l3 3a.5.5 0 0 1-.708.708L8.5 2.707V13.293l2.146-2.147a.5.5 0 0 1 .708.708l-3 3a.5.5 0 0 1-.708 0l-3-3a.5.5 0 1 1 .708-.708L7.5 13.293V2.707L5.354 4.854a.5.5 0 1 1-.708-.708l3-3z"/></svg>
+            <?= $L['inter_transfer'] ?> — <?= e($out['booking_number']) ?>
+        </div>
+        <div class="transfer-body">
+            <div class="transfer-grid two-col" style="grid-template-columns: 1fr 1fr; margin-bottom: 10px;">
+                <div class="t-line">
+                    <span class="t-label"><?= $L['date'] ?></span>
+                    <span class="t-value big"><?= $out['pickup_date'] ? date('d.m.Y', strtotime($out['pickup_date'])) : '-' ?></span>
+                </div>
+                <div class="t-line">
+                    <span class="t-label"><?= $L['pickup_time'] ?></span>
+                    <span class="t-value big"><?= $out['pickup_time'] ? date('H:i', strtotime($out['pickup_time'])) : '-' ?></span>
+                </div>
+            </div>
+            <div class="transfer-grid">
+                <div class="t-line">
+                    <span class="t-label"><?= $L['pickup_hotel'] ?></span>
+                    <span class="t-value"><?= e($out['pickup_location'] ?: '-') ?></span>
+                </div>
+                <div class="t-line">
+                    <span class="t-label"><?= $L['destination_hotel'] ?></span>
+                    <span class="t-value"><?= e($out['hotel_address'] ?: '-') ?></span>
+                </div>
+                <div class="t-line">
+                    <span class="t-label"><?= $L['vehicle'] ?></span>
+                    <span class="t-value"><?= e(trim($out['vehicle_name'] ?? '') ?: '-') ?></span>
+                </div>
+                <?php if ($out['destination_title']): ?>
+                <div class="t-line">
+                    <span class="t-label"><?= $L['route'] ?></span>
+                    <span class="t-value"><?= e($out['destination_title']) ?></span>
+                </div>
+                <?php endif; ?>
+                <?php if ((float)($out['total_price'] ?? 0) > 0): ?>
+                <div class="t-line">
+                    <span class="t-label"><?= $L['price'] ?></span>
+                    <span class="t-value" style="font-size:15px;font-weight:800;color:#1c4b56;">
+                        <?= number_format((float)$out['total_price'], 2, ',', '.') ?> <?= e($out['currency'] ?? 'EUR') ?>
+                    </span>
+                </div>
+                <?php endif; ?>
+            </div>
+        </div>
+    </div>
+    <?php elseif ($out): ?>
     <div class="transfer-section">
         <div class="transfer-header arrival">
             <svg width="16" height="16" fill="currentColor" viewBox="0 0 16 16"><path d="M9.152 5.457 5.5 4.25l-.721 1.248 1.5.866-2.5 1.443-1.249-.72L1.28 8.335l3.652 1.208L6.09 7.818l1.5.866-1.5 2.598-1.5-.867-.75 1.3L6.09 12.8l5-2.887L9.152 5.457z"/></svg>

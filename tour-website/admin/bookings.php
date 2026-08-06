@@ -10,9 +10,14 @@ $db = getDB();
 
 $defaultView = defined('BOOKINGS_AS_DASHBOARD') ? 'daily' : 'arrival';
 $view = $_GET['view'] ?? $defaultView;
-if (!in_array($view, ['arrival', 'return', 'all', 'daily'])) $view = $defaultView;
+if (!in_array($view, ['arrival', 'return', 'all', 'daily', 'inter_transfer'])) $view = $defaultView;
 
-$viewTitleMap = ['return' => 'Depar Rezervasyonları', 'all' => 'Tüm Rezervasyonlar', 'daily' => 'Günlük Görünüm'];
+$viewTitleMap = [
+    'return'         => 'Depar Rezervasyonları',
+    'all'            => 'Tüm Rezervasyonlar',
+    'daily'          => 'Günlük Görünüm',
+    'inter_transfer' => 'Ara Transferler'
+];
 $viewTitle = $viewTitleMap[$view] ?? 'Arrival Rezervasyonları';
 
 $statusLabels = [
@@ -22,8 +27,9 @@ $statusLabels = [
 ];
 
 $directionLabels = [
-    'outbound' => ['Arrival', 'primary'],
-    'return'   => ['Depar', 'info'],
+    'outbound'       => ['Arrival', 'primary'],
+    'return'         => ['Depar', 'info'],
+    'inter_transfer' => ['Ara Transfer', 'info']
 ];
 
 // WHERE koşulu view'a göre
@@ -31,6 +37,8 @@ if ($view === 'return') {
     $dirWhere = "AND COALESCE(b.booking_direction,'outbound') = 'return'";
 } elseif ($view === 'all' || $view === 'daily') {
     $dirWhere = '';
+} elseif ($view === 'inter_transfer') {
+    $dirWhere = "AND 1=0"; // Standart bookings tablosundan çekme
 } else {
     $dirWhere = "AND COALESCE(b.booking_direction,'outbound') = 'outbound'";
 }
@@ -64,6 +72,38 @@ $allBookings = $db->query("
     WHERE b.is_deleted = 0 $dirWhere
     ORDER BY b.created_at DESC
 ")->fetchAll();
+
+// Ara Transferler (inter_hotel_transfers) verilerini ekle
+if ($view === 'inter_transfer' || $view === 'all' || $view === 'daily') {
+    try {
+        $interList = $db->query("
+            SELECT b.id, b.booking_number, 'transfer' AS booking_type, b.booking_status, 'inter_transfer' AS booking_direction,
+                   b.destination_id, b.vehicle_id, b.customer_name, b.customer_email, b.customer_phone,
+                   b.pickup_hotel_name AS pickup_location, b.pickup_date, b.pickup_time,
+                   b.destination_hotel_name AS hotel_address,
+                   NULL AS flight_date, NULL AS flight_time, NULL AS flight_number,
+                   b.adults, b.children, b.child_seat, b.total_price, b.currency, b.notes, b.admin_notes,
+                   b.is_completed, b.is_outsourced, b.outsource_price, b.outsource_currency, b.created_at, b.updated_at,
+                   b.outsource_name, b.outsource_pickup_time, b.outsource_partner_id, b.customer_id,
+                   1 AS is_inter_transfer,
+                   d.title AS destination_title,
+                   CONCAT(v.brand,' ',v.model) AS vehicle_name,
+                   COALESCE(v.capacity, 20) AS vehicle_capacity
+            FROM inter_hotel_transfers b
+            LEFT JOIN destinations d ON b.destination_id = d.id
+            LEFT JOIN vehicles v ON b.vehicle_id = v.id
+            WHERE b.is_deleted = 0
+            ORDER BY b.created_at DESC
+        ")->fetchAll();
+
+        if (!empty($interList)) {
+            $allBookings = array_merge($allBookings, $interList);
+            usort($allBookings, function($a, $b) {
+                return strtotime($b['created_at']) - strtotime($a['created_at']);
+            });
+        }
+    } catch (Exception $e) {}
+}
 
 // Transferler (yeni rezervasyon modalı için)
 $destinations = $db->query("
@@ -255,6 +295,9 @@ require_once __DIR__ . '/includes/header.php';
         <span class="badge bg-warning text-dark fs-6"><i class="bi bi-hourglass-split me-1"></i><?= count($pendingBookings) ?> Bekleyen</span>
         <?php endif; ?>
         <span class="badge bg-secondary fs-6"><i class="bi bi-list me-1"></i><?= count($allBookings) ?> Toplam</span>
+        <button type="button" class="btn btn-info text-white btn-sm" data-bs-toggle="modal" data-bs-target="#addInterTransferModal">
+            <i class="bi bi-arrows-expand me-1"></i>+ Ara Transfer
+        </button>
         <button type="button" class="btn btn-primary btn-sm" data-bs-toggle="modal" data-bs-target="#addBookingModal">
             <i class="bi bi-plus-lg me-1"></i>Yeni Rezervasyon
         </button>
@@ -281,6 +324,11 @@ require_once __DIR__ . '/includes/header.php';
     <li class="nav-item">
         <a class="nav-link view-tab <?= $view === 'return' ? 'active' : '' ?>" href="?view=return">
             <i class="bi bi-box-arrow-up-right me-1"></i>Depar Rezervasyonları
+        </a>
+    </li>
+    <li class="nav-item">
+        <a class="nav-link view-tab <?= $view === 'inter_transfer' ? 'active' : '' ?>" href="?view=inter_transfer">
+            <i class="bi bi-arrows-expand me-1"></i>Ara Transferler
         </a>
     </li>
 </ul>
@@ -392,20 +440,37 @@ require_once __DIR__ . '/includes/header.php';
 
     <style>
 
-/* Mobile: sütun paddinglerini daralt */
-@media (max-width: 991.98px) {
-    #bookingsTable th, #bookingsTable td { padding: .5rem .4rem; }
+/* Sütun ve metin sığma ayarları (mobilde yatay kaymayı önler) */
+#bookingsTable th, #bookingsTable td {
+    white-space: normal !important;
+    word-break: break-word;
+    overflow-wrap: break-word;
 }
 
-/* Otel Adı: masaüstünde tam ad, mobilde sadece bölge */
+@media (max-width: 991.98px) {
+    #bookingsTable th, #bookingsTable td {
+        padding: .5rem .3rem;
+        white-space: normal !important;
+        word-break: break-word;
+    }
+}
+
+/* Otel Adı: masaüstünde tam ad, mobilde bölge veya tam ad sığdırma */
 .hotel-short { display: none; }
 .hotel-full { display: inline; }
 @media (max-width: 991.98px) {
     .hotel-short { display: inline; }
     .hotel-full { display: none; }
-    /* Detay satırında tam otel adı görünsün */
+    /* Detay satırında tam otel adı görünsün ve alt satıra geçsin */
     .dtr-details .hotel-short { display: none; }
-    .dtr-details .hotel-full { display: inline; }
+    .dtr-details .hotel-full { display: inline; white-space: normal !important; word-break: break-word; }
+}
+
+table.dataTable > tbody > tr.child ul.custom-dtr-details > li.dtr-info-full {
+    width: 100% !important;
+    flex: 1 1 100% !important;
+    white-space: normal !important;
+    word-break: break-word;
 }
 @media (min-width: 768px) {
     /* Özel masaüstü gizleme kuralları iptal edildi, tüm sütunlar görünür */
@@ -616,11 +681,12 @@ require_once __DIR__ . '/includes/header.php';
         </thead>
         <tbody>
             <?php foreach ($allBookings as $b):
+                $isInter  = !empty($b['is_inter_transfer']) || ($b['booking_direction'] ?? '') === 'inter_transfer';
                 $dir      = $b['booking_direction'] ?? 'outbound';
-                $dirLabel = $directionLabels[$dir] ?? ['Arrival','primary'];
-                $dirIcon  = $dir === 'return' ? 'box-arrow-up-right' : 'box-arrow-in-down-right';
-                $dateField = $b['flight_date'] ?: ($b['pickup_date'] ?: null);
-                $bVParam   = ($dir === 'return') ? 'ret_id=' . $b['id'] : 'out_id=' . $b['id'];
+                $dirLabel = $isInter ? ['Ara Transfer', 'info'] : ($directionLabels[$dir] ?? ['Arrival','primary']);
+                $dirIcon  = $isInter ? 'arrows-expand' : ($dir === 'return' ? 'box-arrow-up-right' : 'box-arrow-in-down-right');
+                $dateField = ($b['flight_date'] ?? null) ?: (($b['pickup_date'] ?? null) ?: null);
+                $bVParam   = $isInter ? 'out_id=' . $b['id'] : (($dir === 'return') ? 'ret_id=' . $b['id'] : 'out_id=' . $b['id']);
             ?>
             <tr class="<?= (!empty($b['is_completed']) ? 'row-completed' : '') ?>">
                 <td>
@@ -630,20 +696,42 @@ require_once __DIR__ . '/includes/header.php';
                 </td>
                 <td data-order="<?= $dateField ? date('Y-m-d', strtotime($dateField)) : '' ?>"><?= $dateField ? date('d.m.Y', strtotime($dateField)) : '-' ?></td>
                 <td>
-                    <?php if ($dir === 'return' && $b['pickup_time']): ?>
+                    <?php if (($dir === 'return' || $isInter) && !empty($b['pickup_time'])): ?>
                         <strong><?= date('H:i', strtotime($b['pickup_time'])) ?></strong>
                     <?php else: ?>-<?php endif; ?>
                 </td>
-                <td>
-                    <?php if ($b['flight_time']): ?>
-                        <strong><?= date('H:i', strtotime($b['flight_time'])) ?></strong>
-                    <?php else: ?>-<?php endif; ?>
-                </td>
-                <td>
-                    <?php if ($b['flight_number']): ?>
-                        <strong><?= e($b['flight_number']) ?></strong>
-                    <?php else: ?>-<?php endif; ?>
-                </td>
+                <?php if ($isInter): ?>
+                    <?php
+                        $pickupFull = trim($b['pickup_location'] ?? '');
+                        $pickupShort = $pickupFull;
+                        if ($pickupFull && strpos($pickupFull, '—') !== false) {
+                            $parts = explode('—', $pickupFull);
+                            $pickupShort = trim(end($parts));
+                        } elseif ($pickupFull && strpos($pickupFull, '-') !== false) {
+                            $parts = explode('-', $pickupFull);
+                            $pickupShort = trim(end($parts));
+                        }
+                    ?>
+                    <td class="align-middle">
+                        <div style="font-size:0.68rem;color:#6c757d;text-transform:uppercase;letter-spacing:.3px;line-height:1;margin-bottom:3px;"><i class="bi bi-building-up me-1"></i>Alınış Oteli</div>
+                        <div>
+                            <span class="hotel-full fw-semibold" style="font-size:0.85rem;color:#0c5460;"><?= e($pickupFull ?: '-') ?></span>
+                            <span class="hotel-short fw-semibold" style="font-size:0.85rem;color:#0c5460;"><?= e($pickupShort ?: '-') ?></span>
+                        </div>
+                    </td>
+                    <td class="align-middle text-muted">-</td>
+                <?php else: ?>
+                    <td>
+                        <?php if (!empty($b['flight_time'])): ?>
+                            <strong><?= date('H:i', strtotime($b['flight_time'])) ?></strong>
+                        <?php else: ?>-<?php endif; ?>
+                    </td>
+                    <td>
+                        <?php if (!empty($b['flight_number'])): ?>
+                            <strong><?= e($b['flight_number']) ?></strong>
+                        <?php else: ?>-<?php endif; ?>
+                    </td>
+                <?php endif; ?>
                 <td>
                     <?= e($b['customer_name']) ?>
                 </td>
@@ -751,11 +839,15 @@ require_once __DIR__ . '/includes/header.php';
                 <?php if ($view !== 'arrival'): ?>
                 <th class="all">Alış Saati</th>
                 <?php endif; ?>
+                <?php if ($view === 'inter_transfer'): ?>
+                <th class="all">Alınış Oteli</th>
+                <?php else: ?>
                 <th class="all">Saat</th>
                 <th class="min-tablet">Uçuş Kodu</th>
+                <?php endif; ?>
                 <th class="min-tablet">Müşteri</th>
                 <th class="min-tablet">Kişi</th>
-                <th class="all">Otel Adı</th>
+                <th class="all"><?= $view === 'inter_transfer' ? 'Varış Oteli' : 'Otel Adı' ?></th>
                 <th class="min-tablet">Araç</th>
                 <th class="min-tablet">Tutar</th>
                 <th class="min-tablet">İş Durumu</th>
@@ -765,10 +857,11 @@ require_once __DIR__ . '/includes/header.php';
         </thead>
         <tbody>
             <?php foreach ($allBookings as $b):
+                $isInter  = !empty($b['is_inter_transfer']) || ($b['booking_direction'] ?? '') === 'inter_transfer';
                 $dir      = $b['booking_direction'] ?? 'outbound';
-                $dirLabel = $directionLabels[$dir] ?? ['Arrival','primary'];
-                $dirIcon  = $dir === 'return' ? 'box-arrow-up-right' : 'box-arrow-in-down-right';
-                $dateField = $b['flight_date'] ?: ($b['pickup_date'] ?: null);
+                $dirLabel = $isInter ? ['Ara Transfer', 'info'] : ($directionLabels[$dir] ?? ['Arrival','primary']);
+                $dirIcon  = $isInter ? 'arrows-expand' : ($dir === 'return' ? 'box-arrow-up-right' : 'box-arrow-in-down-right');
+                $dateField = ($b['flight_date'] ?? null) ?: (($b['pickup_date'] ?? null) ?: null);
                 $bVParam   = ($dir === 'return') ? 'ret_id=' . $b['id'] : 'out_id=' . $b['id'];
             ?>
             <tr class="<?= (!empty($b['is_completed']) ? 'row-completed' : '') ?>">
@@ -780,21 +873,61 @@ require_once __DIR__ . '/includes/header.php';
                 <td data-order="<?= $dateField ? date('Y-m-d', strtotime($dateField)) : '' ?>"><?= $dateField ? date('d.m.Y', strtotime($dateField)) : '-' ?></td>
                 <?php if ($view !== 'arrival'): ?>
                 <td>
-                    <?php if ($dir === 'return' && $b['pickup_time']): ?>
+                    <?php if (!empty($b['pickup_time'])): ?>
                         <strong><?= date('H:i', strtotime($b['pickup_time'])) ?></strong>
                     <?php else: ?>-<?php endif; ?>
                 </td>
                 <?php endif; ?>
-                <td>
-                    <?php if ($b['flight_time']): ?>
-                        <strong><?= date('H:i', strtotime($b['flight_time'])) ?></strong>
-                    <?php else: ?>-<?php endif; ?>
-                </td>
-                <td>
-                    <?php if ($b['flight_number']): ?>
-                        <strong><?= e($b['flight_number']) ?></strong>
-                    <?php else: ?>-<?php endif; ?>
-                </td>
+                <?php if ($view === 'inter_transfer'): ?>
+                    <?php
+                        $pickupFull = trim($b['pickup_location'] ?? '');
+                        $pickupShort = $pickupFull;
+                        if ($pickupFull && strpos($pickupFull, '—') !== false) {
+                            $parts = explode('—', $pickupFull);
+                            $pickupShort = trim(end($parts));
+                        } elseif ($pickupFull && strpos($pickupFull, '-') !== false) {
+                            $parts = explode('-', $pickupFull);
+                            $pickupShort = trim(end($parts));
+                        }
+                    ?>
+                    <td>
+                        <span class="hotel-full"><?= e($pickupFull ?: '-') ?></span>
+                        <span class="hotel-short"><?= e($pickupShort ?: '-') ?></span>
+                    </td>
+                <?php else: ?>
+                    <?php if ($isInter): ?>
+                        <?php
+                            $pickupFull = trim($b['pickup_location'] ?? '');
+                            $pickupShort = $pickupFull;
+                            if ($pickupFull && strpos($pickupFull, '—') !== false) {
+                                $parts = explode('—', $pickupFull);
+                                $pickupShort = trim(end($parts));
+                            } elseif ($pickupFull && strpos($pickupFull, '-') !== false) {
+                                $parts = explode('-', $pickupFull);
+                                $pickupShort = trim(end($parts));
+                            }
+                        ?>
+                        <td class="align-middle">
+                            <div style="font-size:0.68rem;color:#6c757d;text-transform:uppercase;letter-spacing:.3px;line-height:1;margin-bottom:3px;"><i class="bi bi-building-up me-1"></i>Alınış Oteli</div>
+                            <div>
+                                <span class="hotel-full fw-semibold" style="font-size:0.85rem;color:#0c5460;"><?= e($pickupFull ?: '-') ?></span>
+                                <span class="hotel-short fw-semibold" style="font-size:0.85rem;color:#0c5460;"><?= e($pickupShort ?: '-') ?></span>
+                            </div>
+                        </td>
+                        <td class="align-middle text-muted">-</td>
+                    <?php else: ?>
+                        <td>
+                            <?php if (!empty($b['flight_time'])): ?>
+                                <strong><?= date('H:i', strtotime($b['flight_time'])) ?></strong>
+                            <?php else: ?>-<?php endif; ?>
+                        </td>
+                        <td>
+                            <?php if (!empty($b['flight_number'])): ?>
+                                <strong><?= e($b['flight_number']) ?></strong>
+                            <?php else: ?>-<?php endif; ?>
+                        </td>
+                    <?php endif; ?>
+                <?php endif; ?>
                 <td>
                     <?= e($b['customer_name']) ?>
                 </td>
@@ -1200,6 +1333,207 @@ require_once __DIR__ . '/includes/header.php';
                 <div class="modal-footer">
                     <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Kapat</button>
                     <button type="submit" class="btn btn-primary"><i class="bi bi-check-lg me-1"></i>Kaydet</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- ===================== YENİ ARA TRANSFER MODALı ===================== -->
+<div class="modal fade" id="addInterTransferModal" tabindex="-1">
+    <div class="modal-dialog modal-lg modal-dialog-scrollable">
+        <div class="modal-content">
+            <div class="modal-header bg-info text-white">
+                <h5 class="modal-title"><i class="bi bi-arrows-expand me-2"></i>Yeni Ara Transfer Ekle (Otelden Otele)</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <form id="addInterTransferForm">
+                <input type="hidden" name="action" value="create">
+                <input type="hidden" name="csrf_token" value="<?= generateCSRFToken() ?>">
+
+                <div class="modal-body" style="max-height:75vh;overflow-y:auto;">
+                    
+                    <!-- Transfer & Araç Seçimi -->
+                    <div class="card mb-3 border-0 bg-light">
+                        <div class="card-body py-2 px-3">
+                            <h6 class="card-title fw-semibold text-muted mb-2 small"><i class="bi bi-geo-alt me-1"></i>Transfer & Araç Seçimi</h6>
+                            <div class="row g-2">
+                                <div class="col-md-6">
+                                    <label class="form-label small mb-1">Transfer Güzergahı</label>
+                                    <select name="destination_id" class="form-select form-select-sm">
+                                        <option value="">-- Transfer Seçin --</option>
+                                        <?php foreach ($destinations as $d): ?>
+                                            <option value="<?= $d['id'] ?>"><?= e($d['title']) ?></option>
+                                        <?php endforeach; ?>
+                                    </select>
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label small mb-1">Araç</label>
+                                    <select name="vehicle_id" class="form-select form-select-sm">
+                                        <option value="">-- Araç Seçin --</option>
+                                        <?php foreach ($allVehicles as $v): ?>
+                                            <option value="<?= $v['id'] ?>" data-capacity="<?= $v['capacity'] ?>"><?= e($v['vehicle_name']) ?> (Max <?= $v['capacity'] ?> Kişi)</option>
+                                        <?php endforeach; ?>
+                                    </select>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Müşteri Bilgileri -->
+                    <div class="card mb-3 border-0 bg-light">
+                        <div class="card-body py-2 px-3">
+                            <h6 class="card-title fw-semibold text-muted mb-2 small"><i class="bi bi-person me-1"></i>Müşteri Bilgileri</h6>
+                            <input type="hidden" name="customer_id" id="inter-customer-id">
+                            <div class="row g-2">
+                                <div class="col-md-4 customer-autocomplete-wrap">
+                                    <label class="form-label small mb-1">Ad Soyad *</label>
+                                    <input type="text" name="customer_name" id="inter-customer-name" class="form-control form-control-sm" required placeholder="Müşteri ad soyad" autocomplete="new-password" readonly onfocus="this.removeAttribute('readonly');" onblur="this.setAttribute('readonly', 'readonly');">
+                                    <div class="customer-autocomplete-list list-group shadow" style="display: none;"></div>
+                                </div>
+                                <div class="col-md-4">
+                                    <label class="form-label small mb-1">E-posta</label>
+                                    <input type="email" name="customer_email" id="inter-customer-email" class="form-control form-control-sm" placeholder="E-posta adresi" autocomplete="new-password" readonly onfocus="this.removeAttribute('readonly');" onblur="this.setAttribute('readonly', 'readonly');">
+                                </div>
+                                <div class="col-md-4 customer-autocomplete-wrap">
+                                    <label class="form-label small mb-1">Telefon</label>
+                                    <input type="text" name="customer_phone" id="inter-customer-phone" class="form-control form-control-sm" placeholder="+90 5XX XXX XX XX" autocomplete="new-password" readonly onfocus="this.removeAttribute('readonly');" onblur="this.setAttribute('readonly', 'readonly');">
+                                    <div class="customer-autocomplete-list list-group shadow" style="display: none;"></div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Alınış Bilgileri (Otel / Adres) -->
+                    <div class="card mb-3 border-info border-opacity-25">
+                        <div class="card-body py-2 px-3">
+                            <h6 class="card-title fw-semibold text-info mb-2 small"><i class="bi bi-building-up me-1"></i>Alınış Oteli / Noktası Bilgileri</h6>
+                            <div class="row g-2">
+                                <div class="col-md-6">
+                                    <label class="form-label small mb-1">Alınış Oteli / Adres</label>
+                                    <div class="d-flex gap-2">
+                                        <div class="flex-grow-1">
+                                            <select name="pickup_hotel_name" id="inter-pickup-hotel-select" class="form-select hotel-select-inter">
+                                                <option value=""></option>
+                                                <?php foreach ($hotelOptions as $ho): ?>
+                                                <option value="<?= e($ho['name'] . ($ho['address'] ? ' — ' . $ho['address'] : '')) ?>">
+                                                    <?= e($ho['name']) ?><?= $ho['distance_km'] !== null ? ' (' . number_format((float)$ho['distance_km'], 0) . ' km)' : '' ?>
+                                                </option>
+                                                <?php endforeach; ?>
+                                            </select>
+                                        </div>
+                                        <button type="button" class="btn btn-outline-success btn-quick-hotel flex-shrink-0"
+                                                data-target="inter-pickup-hotel-select" title="Hızlı Otel Ekle" style="height:38px;">
+                                            <i class="bi bi-plus-lg"></i>
+                                        </button>
+                                    </div>
+                                </div>
+                                <div class="col-md-3">
+                                    <label class="form-label small mb-1">Alınış Tarihi</label>
+                                    <input type="date" name="pickup_date" class="form-control form-control-sm">
+                                </div>
+                                <div class="col-md-3">
+                                    <label class="form-label small mb-1">Alınış Saati</label>
+                                    <input type="time" name="pickup_time" class="form-control form-control-sm">
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Varış Bilgileri (Otel / Adres) -->
+                    <div class="card mb-3 border-primary border-opacity-25">
+                        <div class="card-body py-2 px-3">
+                            <h6 class="card-title fw-semibold text-primary mb-2 small"><i class="bi bi-building-down me-1"></i>Varış Oteli / Noktası Bilgileri</h6>
+                            <div class="row g-2">
+                                <div class="col-md-6">
+                                    <label class="form-label small mb-1">Varış Oteli / Adres</label>
+                                    <div class="d-flex gap-2">
+                                        <div class="flex-grow-1">
+                                            <select name="destination_hotel_name" id="inter-dest-hotel-select" class="form-select hotel-select-inter">
+                                                <option value=""></option>
+                                                <?php foreach ($hotelOptions as $ho): ?>
+                                                <option value="<?= e($ho['name'] . ($ho['address'] ? ' — ' . $ho['address'] : '')) ?>">
+                                                    <?= e($ho['name']) ?><?= $ho['distance_km'] !== null ? ' (' . number_format((float)$ho['distance_km'], 0) . ' km)' : '' ?>
+                                                </option>
+                                                <?php endforeach; ?>
+                                            </select>
+                                        </div>
+                                        <button type="button" class="btn btn-outline-success btn-quick-hotel flex-shrink-0"
+                                                data-target="inter-dest-hotel-select" title="Hızlı Otel Ekle" style="height:38px;">
+                                            <i class="bi bi-plus-lg"></i>
+                                        </button>
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label small mb-1">Transfer Ücreti</label>
+                                    <div class="input-group input-group-sm">
+                                        <select name="currency" class="form-select form-select-sm" style="max-width:85px;">
+                                            <option value="EUR">€ EUR</option>
+                                            <option value="USD">$ USD</option>
+                                            <option value="TRY">₺ TRY</option>
+                                            <option value="GBP">£ GBP</option>
+                                        </select>
+                                        <input type="number" step="0.01" name="total_price" class="form-control form-control-sm" placeholder="0.00" value="0.00">
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Yolcu Bilgileri (Steppers & İsimler) -->
+                    <div class="card mb-3 border-0 bg-light">
+                        <div class="card-body py-2 px-3">
+                            <h6 class="card-title fw-semibold text-muted mb-2 small"><i class="bi bi-people me-1"></i>Yolcu Bilgileri</h6>
+                            <div class="row g-3 align-items-center mb-2">
+                                <div class="col-auto">
+                                    <label class="form-label small mb-1 d-block">Yetişkin</label>
+                                    <div class="input-group input-group-sm" style="width:110px;">
+                                        <button type="button" class="btn btn-outline-secondary inter-pax-step-btn" data-action="minus" data-target="inter-adults-input">-</button>
+                                        <input type="number" name="adults" id="inter-adults-input" class="form-control text-center px-1" value="1" min="1" max="50">
+                                        <button type="button" class="btn btn-outline-secondary inter-pax-step-btn" data-action="plus" data-target="inter-adults-input">+</button>
+                                    </div>
+                                </div>
+                                <div class="col-auto">
+                                    <label class="form-label small mb-1 d-block">Çocuk</label>
+                                    <div class="input-group input-group-sm" style="width:110px;">
+                                        <button type="button" class="btn btn-outline-secondary inter-pax-step-btn" data-action="minus" data-target="inter-children-input">-</button>
+                                        <input type="number" name="children" id="inter-children-input" class="form-control text-center px-1" value="0" min="0" max="20">
+                                        <button type="button" class="btn btn-outline-secondary inter-pax-step-btn" data-action="plus" data-target="inter-children-input">+</button>
+                                    </div>
+                                </div>
+                                <div class="col-auto">
+                                    <label class="form-label small mb-1 d-block">Çocuk Koltuğu</label>
+                                    <div class="input-group input-group-sm" style="width:110px;">
+                                        <button type="button" class="btn btn-outline-secondary inter-pax-step-btn" data-action="minus" data-target="inter-seat-input">-</button>
+                                        <input type="number" name="child_seat" id="inter-seat-input" class="form-control text-center px-1" value="0" min="0" max="10">
+                                        <button type="button" class="btn btn-outline-secondary inter-pax-step-btn" data-action="plus" data-target="inter-seat-input">+</button>
+                                    </div>
+                                </div>
+                            </div>
+                            <div id="inter-passenger-names-container">
+                                <!-- Yolcu isim alanları -->
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Notlar -->
+                    <div class="row g-2">
+                        <div class="col-md-6">
+                            <label class="form-label small mb-1">Müşteri Notu</label>
+                            <textarea name="notes" class="form-control form-control-sm" rows="2" placeholder="Özel istekler..."></textarea>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label small mb-1">Yönetici Notu <small class="text-muted">(iç not)</small></label>
+                            <textarea name="admin_notes" class="form-control form-control-sm" rows="2" placeholder="İç notlar..."></textarea>
+                        </div>
+                    </div>
+
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">İptal</button>
+                    <button type="submit" class="btn btn-info text-white btn-sm" id="save-inter-transfer-btn">
+                        <i class="bi bi-check-lg me-1"></i>Ara Transfer Oluştur
+                    </button>
                 </div>
             </form>
         </div>
@@ -1768,6 +2102,31 @@ $jsBookings = $db->query("
     ) )
     ORDER BY b.created_at DESC
 ")->fetchAll();
+
+try {
+    $jsInter = $db->query("
+        SELECT b.id, b.booking_number, 'transfer' AS booking_type, b.booking_status, 'inter_transfer' AS booking_direction,
+               b.destination_id, b.vehicle_id, b.customer_name, b.customer_email, b.customer_phone,
+               b.pickup_hotel_name AS pickup_location, b.pickup_date, b.pickup_time,
+               b.destination_hotel_name AS hotel_address,
+               NULL AS flight_date, NULL AS flight_time, NULL AS flight_number, NULL AS return_time,
+               b.adults, b.children, b.child_seat, b.total_price, b.currency, b.notes, b.admin_notes,
+               b.is_completed, b.is_outsourced, b.outsource_price, b.outsource_currency, b.created_at, b.updated_at,
+               b.outsource_name, b.outsource_pickup_time, b.outsource_partner_id, b.customer_id,
+               1 AS is_inter_transfer,
+               d.title AS destination_title,
+               CONCAT(v.brand,' ',v.model) AS vehicle_name,
+               COALESCE(v.capacity, 20) AS vehicle_capacity
+        FROM inter_hotel_transfers b
+        LEFT JOIN destinations d ON b.destination_id = d.id
+        LEFT JOIN vehicles v ON b.vehicle_id = v.id
+        WHERE b.is_deleted = 0
+        ORDER BY b.created_at DESC
+    ")->fetchAll();
+    if (!empty($jsInter)) {
+        $jsBookings = array_merge($jsBookings, $jsInter);
+    }
+} catch (Exception $e) {}
 ?>
 
 <script>
@@ -1782,31 +2141,32 @@ const bookingsData = <?= json_encode(array_map(function($b) {
         'customer_name'     => $b['customer_name'],
         'customer_email'    => $b['customer_email'],
         'customer_phone'    => $b['customer_phone'],
-        'tour_title'        => $b['tour_title'],
-        'destination_title' => $b['destination_title'],
+        'tour_title'        => $b['tour_title'] ?? null,
+        'destination_title' => $b['destination_title'] ?? null,
         'destination_id'    => (int)($b['destination_id'] ?? 0),
         'vehicle_id'        => (int)($b['vehicle_id'] ?? 0),
         'vehicle_name'      => trim($b['vehicle_name'] ?? ''),
-        'pickup_location'   => $b['pickup_location'],
-        'pickup_date'       => $b['pickup_date'],
-        'pickup_time'       => $b['pickup_time'],
-        'return_time'       => $b['return_time'],
-        'flight_date'       => $b['flight_date'],
-        'flight_time'       => $b['flight_time'],
-        'flight_number'     => $b['flight_number'],
-        'hotel_address'     => $b['hotel_address'],
-        'adults'            => (int)$b['adults'],
-        'children'          => (int)$b['children'],
-        'child_seat'        => (int)$b['child_seat'],
+        'pickup_location'   => $b['pickup_location'] ?? null,
+        'pickup_date'       => $b['pickup_date'] ?? null,
+        'pickup_time'       => $b['pickup_time'] ?? null,
+        'return_time'       => $b['return_time'] ?? null,
+        'flight_date'       => $b['flight_date'] ?? null,
+        'flight_time'       => $b['flight_time'] ?? null,
+        'flight_number'     => $b['flight_number'] ?? null,
+        'hotel_address'     => $b['hotel_address'] ?? null,
+        'adults'            => (int)($b['adults'] ?? 1),
+        'children'          => (int)($b['children'] ?? 0),
+        'child_seat'        => (int)($b['child_seat'] ?? 0),
         'vehicle_capacity'  => (int)($b['vehicle_capacity'] ?? 20),
-        'total_price'       => (float)$b['total_price'],
-        'currency'          => $b['currency'],
-        'notes'                => $b['notes'],
-        'admin_notes'          => $b['admin_notes'],
+        'total_price'       => (float)($b['total_price'] ?? 0),
+        'currency'          => $b['currency'] ?? 'EUR',
+        'notes'                => $b['notes'] ?? null,
+        'admin_notes'          => $b['admin_notes'] ?? null,
         'outsource_partner_id' => (int)($b['outsource_partner_id'] ?? 0),
         'outsource_name'       => $b['outsource_name'] ?? '',
-        'created_at'           => $b['created_at'],
+        'created_at'           => $b['created_at'] ?? null,
         'related_booking_id'   => (int)($b['related_booking_id'] ?? 0),
+        'is_inter_transfer'    => (int)($b['is_inter_transfer'] ?? 0),
     ];
 }, $jsBookings), JSON_UNESCAPED_UNICODE) ?>;
 
@@ -1833,6 +2193,8 @@ $(document).ready(function() {
                             extraClass = ' dtr-status-cell';
                         } else if (title.includes('Durum') || title.includes('İşlem')) {
                             extraClass = ' dtr-action-cell';
+                        } else if (title.includes('Otel') || title.includes('Adı')) {
+                            extraClass = ' dtr-info-full';
                         } else if (title.includes('Yön') || title.includes('Tarih') || title.includes('Saat') || title.includes('Müşteri') || title.includes('Kişi')) {
                             extraClass = ' dtr-info-cell';
                         } else if (title.includes('Tutar')) {
@@ -1949,6 +2311,19 @@ $(document).ready(function() {
         allowClear: true,
         tags: true,
         dropdownParent: $('#addBookingModal'),
+        createTag: function(params) {
+            return { id: params.term, text: params.term, newTag: true };
+        }
+    });
+
+    // ─── Ara transfer modalı select2'ları ─────────────────────────────────────
+    $('.hotel-select-inter').select2({
+        theme: 'bootstrap-5',
+        width: '100%',
+        placeholder: 'Otel seçin veya yazın...',
+        allowClear: true,
+        tags: true,
+        dropdownParent: $('#addInterTransferModal'),
         createTag: function(params) {
             return { id: params.term, text: params.term, newTag: true };
         }
@@ -2144,6 +2519,13 @@ function initCustomerAutocomplete(inputId, phoneId, emailId, hiddenId) {
 
 initCustomerAutocomplete('add-customer-name', 'add-customer-phone', 'add-customer-email', 'add-customer-id');
 initCustomerAutocomplete('modal-customer-name', 'modal-customer-phone', 'modal-customer-email', 'modal-customer-id');
+initCustomerAutocomplete('inter-customer-name', 'inter-customer-phone', 'inter-customer-email', 'inter-customer-id');
+
+// ─── Ara Transfer Müşteri adı → 1. yolcu ismi ─────────────────────────────
+document.getElementById('inter-customer-name')?.addEventListener('input', function() {
+    var firstPax = document.querySelector('#inter-passenger-names-container input[name="passenger_adult_name[]"]');
+    if (firstPax) firstPax.value = this.value;
+});
 
 // ─── Arrival otel adresi → depar otel adresi (depar açıksa) ────────────────────
 $('#add-hotel-address').on('change', function() {
@@ -2187,6 +2569,11 @@ $('#modal-hotel-address').on('change', function() {
 function openBookingModal(id) {
     const b = bookingsData.find(x => x.id == id);
     if (!b) return;
+
+    if (b.is_inter_transfer === 1) {
+        openEditInterTransferModal(id);
+        return;
+    }
 
     document.getElementById('modal-booking-id').value = b.id;
     document.getElementById('modal-booking-number').textContent = '#' + b.booking_number;
@@ -2312,8 +2699,13 @@ $wpTemplatesRaw = $db->query("SELECT template_key, content FROM whatsapp_templat
 const wpTemplates = <?php echo json_encode($wpTemplatesRaw ?: []); ?>;
 const AIRPORT_NAME = <?php echo json_encode(getSetting('airport_name', 'ANTALYA AİRPORT AYT')); ?>;
 
+const defaultWpTemplates = {
+    'outsource_inter_transfer': "*ARA TRANSFER DETAYI*\n{ROUTE}\n*Tarih/Saat:* {PICKUP_DATE} - {PICKUP_TIME}\n*Alınış Oteli:* {PICKUP_HOTEL}\n*Varış Oteli:* {DESTINATION_HOTEL}\n*Kişi:* {PAX}\n\n*TAHSİLAT:* {PRICE}\n*HAKEDİŞ:* {PARTNER_HAKEDIS}\n\n*Yolcular:*\n{PASSENGERS}\n\n*Not:* {NOTES}",
+    'driver_inter_transfer': "*SÜRÜCÜ ARA TRANSFER GÖREVİ*\nŞöför: {DRIVER_NAME}\n-----------------------------\n{ROUTE}\n*Alınış Tarihi / Saati:* {PICKUP_DATE} - {PICKUP_TIME}\n*Alınış Oteli:* {PICKUP_HOTEL}\n*Varış Oteli:* {DESTINATION_HOTEL}\n*Kişi:* {PAX}\n\n*TAHSİLAT:* {PRICE}\n\n*Yolcular:*\n{PASSENGERS}\n\n*Not:* {NOTES}"
+};
+
 function parseWhatsAppTemplate(templateKey, placeholders) {
-    var raw = wpTemplates[templateKey] || '';
+    var raw = wpTemplates[templateKey] || defaultWpTemplates[templateKey] || '';
     if (!raw) return '';
     
     var msg = raw;
@@ -2363,13 +2755,227 @@ document.getElementById('addBookingForm').addEventListener('submit', function(e)
     });
 });
 
+// ─── Ara Transfer Form Submission & Steppers & Edit ───────────────────────────
+document.getElementById('addInterTransferForm')?.addEventListener('submit', function(e) {
+    e.preventDefault();
+    const btn = document.getElementById('save-inter-transfer-btn');
+    if (btn) btn.disabled = true;
+    const fd = new FormData(this);
+    const act = fd.get('action') || 'create';
+    fetch(window.ADMIN_URL + '/api/handler.php?entity=inter_transfers&action=' + act, {
+        method: 'POST',
+        body: fd
+    })
+    .then(r => r.json())
+    .then(d => {
+        showToast(d.message, d.success);
+        if (d.success) {
+            var modalEl = document.getElementById('addInterTransferModal');
+            if (modalEl) bootstrap.Modal.getInstance(modalEl).hide();
+            setTimeout(() => location.reload(), 200);
+        } else {
+            if (btn) btn.disabled = false;
+        }
+    })
+    .catch(() => {
+        showToast('Bir hata oluştu.', false);
+        if (btn) btn.disabled = false;
+    });
+});
+
+function renderInterPassengerInputs() {
+    const adultsInput = document.getElementById('inter-adults-input');
+    const childrenInput = document.getElementById('inter-children-input');
+    if (!adultsInput || !childrenInput) return;
+    const adults = parseInt(adultsInput.value) || 1;
+    const children = parseInt(childrenInput.value) || 0;
+    const container = document.getElementById('inter-passenger-names-container');
+    if (!container) return;
+
+    const custName = document.querySelector('#addInterTransferForm input[name="customer_name"]')?.value || '';
+
+    const existingAdults = Array.from(container.querySelectorAll('input[name="passenger_adult_name[]"]')).map(i => i.value);
+    const existingChildren = Array.from(container.querySelectorAll('input[name="passenger_child_name[]"]')).map(i => i.value);
+
+    let html = '';
+    if (adults > 0) {
+        html += '<div class="fw-semibold text-muted mb-1" style="font-size:.75rem;">YETİŞKİN YOLCULAR</div>';
+        for (let i = 1; i <= adults; i++) {
+            let val = existingAdults[i - 1] !== undefined ? existingAdults[i - 1] : '';
+            if (i === 1 && !val && custName) val = custName;
+            html += '<div class="mb-1">'
+                + '<input type="text" name="passenger_adult_name[]" class="form-control form-control-sm" value="' + val.replace(/"/g, '&quot;') + '" placeholder="' + i + '. yetişkin adı soyadı (isteğe bağlı)">'
+                + '</div>';
+        }
+    }
+    if (children > 0) {
+        html += '<div class="fw-semibold text-muted mt-2 mb-1" style="font-size:.75rem;">ÇOCUK YOLCULAR</div>';
+        for (let i = 1; i <= children; i++) {
+            let val = existingChildren[i - 1] !== undefined ? existingChildren[i - 1] : '';
+            html += '<div class="mb-1">'
+                + '<input type="text" name="passenger_child_name[]" class="form-control form-control-sm" value="' + val.replace(/"/g, '&quot;') + '" placeholder="' + i + '. çocuk adı soyadı (isteğe bağlı)">'
+                + '</div>';
+        }
+    }
+    container.innerHTML = html;
+}
+
+// Müşteri adı yazıldığında 1. yetişkin yolcuya otomatik kopyala
+document.addEventListener('input', function(e) {
+    if (e.target && e.target.name === 'customer_name' && e.target.closest('#addInterTransferForm')) {
+        const firstPax = document.querySelector('#inter-passenger-names-container input[name="passenger_adult_name[]"]');
+        if (firstPax) {
+            firstPax.value = e.target.value;
+        }
+    }
+});
+
+function openEditInterTransferModal(id) {
+    const b = bookingsData.find(x => x.id == id);
+    if (!b) return;
+
+    const modalEl = document.getElementById('addInterTransferModal');
+    if (!modalEl) return;
+
+    modalEl.querySelector('.modal-title').innerHTML = '<i class="bi bi-pencil-square me-2"></i>Ara Transfer Düzenle (#' + b.booking_number + ')';
+    const form = document.getElementById('addInterTransferForm');
+
+    let actInp = form.querySelector('input[name="action"]');
+    if (!actInp) {
+        actInp = document.createElement('input');
+        actInp.type = 'hidden';
+        actInp.name = 'action';
+        form.appendChild(actInp);
+    }
+    actInp.value = 'update';
+
+    let idInp = form.querySelector('input[name="id"]');
+    if (!idInp) {
+        idInp = document.createElement('input');
+        idInp.type = 'hidden';
+        idInp.name = 'id';
+        form.appendChild(idInp);
+    }
+    idInp.value = b.id;
+
+    const saveBtn = document.getElementById('save-inter-transfer-btn');
+    if (saveBtn) saveBtn.innerHTML = '<i class="bi bi-check-lg me-1"></i>Ara Transfer Güncelle';
+
+    if (form.querySelector('select[name="destination_id"]')) {
+        $(form.querySelector('select[name="destination_id"]')).val(b.destination_id || '').trigger('change');
+    }
+    if (form.querySelector('select[name="vehicle_id"]')) {
+        $(form.querySelector('select[name="vehicle_id"]')).val(b.vehicle_id || '').trigger('change');
+    }
+    if (form.querySelector('input[name="customer_name"]')) form.querySelector('input[name="customer_name"]').value = b.customer_name || '';
+    if (form.querySelector('input[name="customer_email"]')) form.querySelector('input[name="customer_email"]').value = b.customer_email || '';
+    if (form.querySelector('input[name="customer_phone"]')) form.querySelector('input[name="customer_phone"]').value = b.customer_phone || '';
+
+    $('#inter-pickup-hotel-select').val(b.pickup_location || '').trigger('change');
+    $('#inter-dest-hotel-select').val(b.hotel_address || '').trigger('change');
+
+    if (form.querySelector('input[name="pickup_date"]')) form.querySelector('input[name="pickup_date"]').value = b.pickup_date || '';
+    if (form.querySelector('input[name="pickup_time"]')) form.querySelector('input[name="pickup_time"]').value = b.pickup_time ? b.pickup_time.substring(0, 5) : '';
+    if (form.querySelector('input[name="total_price"]')) form.querySelector('input[name="total_price"]').value = b.total_price || '0.00';
+    if (form.querySelector('select[name="currency"]')) form.querySelector('select[name="currency"]').value = b.currency || 'EUR';
+
+    if (document.getElementById('inter-adults-input')) document.getElementById('inter-adults-input').value = b.adults || 1;
+    if (document.getElementById('inter-children-input')) document.getElementById('inter-children-input').value = b.children || 0;
+    if (document.getElementById('inter-seat-input')) document.getElementById('inter-seat-input').value = b.child_seat || 0;
+
+    renderInterPassengerInputs();
+
+    if (form.querySelector('textarea[name="notes"]')) form.querySelector('textarea[name="notes"]').value = b.notes || '';
+    if (form.querySelector('textarea[name="admin_notes"]')) form.querySelector('textarea[name="admin_notes"]').value = b.admin_notes || '';
+
+    const fdPax = new FormData();
+    fdPax.append('action', 'get_passengers');
+    fdPax.append('id', b.id);
+    fdPax.append('csrf_token', csrfToken);
+
+    fetch(window.ADMIN_URL + '/api/handler.php?entity=inter_transfers', {method:'POST', body:fdPax})
+        .then(r => r.json())
+        .then(d => {
+            if (d.success && d.data && d.data.passengers) {
+                const adults = d.data.passengers.filter(p => p.passenger_type === 'adult');
+                const children = d.data.passengers.filter(p => p.passenger_type === 'child');
+                const adultInps = document.querySelectorAll('#inter-passenger-names-container input[name="passenger_adult_name[]"]');
+                const childInps = document.querySelectorAll('#inter-passenger-names-container input[name="passenger_child_name[]"]');
+                adults.forEach((p, idx) => {
+                    if (adultInps[idx]) adultInps[idx].value = p.full_name || '';
+                });
+                children.forEach((p, idx) => {
+                    if (childInps[idx]) childInps[idx].value = p.full_name || '';
+                });
+            }
+        }).catch(e => {});
+
+    new bootstrap.Modal(modalEl).show();
+}
+
+document.addEventListener('click', function(e) {
+    const stepBtn = e.target.closest('.inter-pax-step-btn');
+    if (stepBtn) {
+        const targetId = stepBtn.getAttribute('data-target');
+        const action = stepBtn.getAttribute('data-action');
+        const input = document.getElementById(targetId);
+        if (input) {
+            let val = parseInt(input.value) || 0;
+            const min = parseInt(input.getAttribute('min')) || 0;
+            const max = parseInt(input.getAttribute('max')) || 99;
+            if (action === 'plus' && val < max) val++;
+            if (action === 'minus' && val > min) val--;
+            input.value = val;
+            renderInterPassengerInputs();
+        }
+    }
+});
+
+document.getElementById('inter-adults-input')?.addEventListener('input', renderInterPassengerInputs);
+document.getElementById('inter-children-input')?.addEventListener('input', renderInterPassengerInputs);
+document.getElementById('addInterTransferModal')?.addEventListener('show.bs.modal', function(e) {
+    // Sadece yeni ekle butonundan tetiklendiyse sıfırla
+    if (e.relatedTarget) {
+        this.querySelector('.modal-title').innerHTML = '<i class="bi bi-arrows-expand me-2"></i>Yeni Ara Transfer Ekle (Otelden Otele)';
+        const form = document.getElementById('addInterTransferForm');
+        form.reset();
+        form.querySelector('input[name="action"]').value = 'create';
+        const idInp = form.querySelector('input[name="id"]');
+        if (idInp) idInp.value = '';
+        const saveBtn = document.getElementById('save-inter-transfer-btn');
+        if (saveBtn) saveBtn.innerHTML = '<i class="bi bi-check-lg me-1"></i>Ara Transfer Oluştur';
+    }
+});
+document.getElementById('addInterTransferModal')?.addEventListener('shown.bs.modal', function() {
+    renderInterPassengerInputs();
+});
+
+$(document).on('change', '#inter-pickup-hotel-select', function() {
+    var txt = $(this).find('option:selected').text();
+    if ($(this).val()) {
+        $('#inter-pickup-hotel-name').val(txt);
+    }
+});
+$(document).on('change', '#inter-dest-hotel-select', function() {
+    var txt = $(this).find('option:selected').text();
+    if ($(this).val()) {
+        $('#inter-dest-hotel-name').val(txt);
+    }
+});
+
 function performDelete(ids) {
     if (!ids || ids.length === 0) return;
+    const b = bookingsData.find(x => x.id == ids[0]);
+    const isInter = b && (b.is_inter_transfer === 1 || b.booking_direction === 'inter_transfer');
+    const targetDeleteApiUrl = isInter
+        ? (window.ADMIN_URL + '/api/handler.php?entity=inter_transfers')
+        : apiUrl;
+
     const fd = new FormData();
     fd.append('action', 'delete');
     ids.forEach(id => fd.append('ids[]', id));
     fd.append('csrf_token', csrfToken);
-    fetch(apiUrl, {method:'POST', body:fd})
+    fetch(targetDeleteApiUrl, {method:'POST', body:fd})
         .then(r => r.json())
         .then(d => {
             showToast(d.message, d.success);
@@ -2381,13 +2987,16 @@ function performDelete(ids) {
 // ─── Rezervasyon detay kartı HTML'i oluştur ─────────────────────────────────
 function buildBookingDetailCard(b, opts) {
     opts = opts || {};
-    const dirLabel = b.booking_direction === 'return' ? 'Depar' : 'Arrival';
-    const dirBadge = b.booking_direction === 'return' ? 'info' : 'primary';
-    const dateStr = b.flight_date ? new Date(b.flight_date).toLocaleDateString('tr-TR') : '-';
-    const timeStr = b.flight_time || '';
-    const pickupTime = b.pickup_time || b.return_time || '';
+    const isInter = b.is_inter_transfer === 1 || b.booking_direction === 'inter_transfer';
+    const dirLabel = isInter ? 'Ara Transfer' : (b.booking_direction === 'return' ? 'Depar' : 'Arrival');
+    const dirBadge = isInter ? 'info' : (b.booking_direction === 'return' ? 'info' : 'primary');
+    
+    const rawDate = isInter ? (b.pickup_date || b.flight_date) : b.flight_date;
+    const dateStr = rawDate ? new Date(rawDate).toLocaleDateString('tr-TR') : '-';
+    const timeStr = isInter ? (b.pickup_time ? b.pickup_time.substring(0, 5) : '') : (b.flight_time || '');
     const flightNo = b.flight_number || '-';
     const hotel = b.hotel_address || '-';
+    const pickupHotel = b.pickup_location || '-';
     const price = b.total_price ? parseFloat(b.total_price).toFixed(2) + ' ' + (b.currency || 'EUR') : '-';
     const dest = b.destination_title || '-';
 
@@ -2415,11 +3024,18 @@ function buildBookingDetailCard(b, opts) {
     html += '<div class="col-6"><i class="bi bi-person me-1 text-muted"></i>' + (b.customer_name || '-') + '</div>';
     html += '<div class="col-6"><i class="bi bi-geo-alt me-1 text-muted"></i>' + dest + '</div>';
     html += '<div class="col-6"><i class="bi bi-calendar me-1 text-muted"></i>' + dateStr + (timeStr ? ' ' + timeStr : '') + '</div>';
-    html += '<div class="col-6"><i class="bi bi-airplane me-1 text-muted"></i>' + flightNo + '</div>';
-    if (b.booking_direction === 'return' && pickupTime) {
-        html += '<div class="col-6"><i class="bi bi-clock me-1 text-muted"></i>Alış: ' + pickupTime + '</div>';
+    
+    if (isInter) {
+        html += '<div class="col-6"><i class="bi bi-building-up me-1 text-muted"></i>Alınış: ' + pickupHotel + '</div>';
+        html += '<div class="col-6"><i class="bi bi-building-down me-1 text-muted"></i>Varış: ' + hotel + '</div>';
+    } else {
+        html += '<div class="col-6"><i class="bi bi-airplane me-1 text-muted"></i>' + flightNo + '</div>';
+        if (b.booking_direction === 'return' && b.pickup_time) {
+            html += '<div class="col-6"><i class="bi bi-clock me-1 text-muted"></i>Alış: ' + b.pickup_time.substring(0, 5) + '</div>';
+        }
+        html += '<div class="col-6"><i class="bi bi-building me-1 text-muted"></i>' + hotel + '</div>';
     }
-    html += '<div class="col-6"><i class="bi bi-building me-1 text-muted"></i>' + hotel + '</div>';
+    
     html += '<div class="col-6"><i class="bi bi-currency-exchange me-1 text-muted"></i><strong>' + price + '</strong></div>';
     html += '</div>';
     html += '</div>';
@@ -2915,13 +3531,18 @@ function sendOutsourceWhatsApp(bookingId, partnerPhone, partnerName, partnerPric
     var bData = bookingsData.find(function(x) { return x.id == bookingId; });
     if (!bData) return;
 
+    var isInter = bData.is_inter_transfer === 1 || bData.booking_direction === 'inter_transfer';
+    var targetPaxApiUrl = isInter
+        ? (window.ADMIN_URL + '/api/handler.php?entity=inter_transfers')
+        : apiUrl;
+
     // Yolcuları çek
     var fdp = new FormData();
     fdp.append('action', 'get_passengers');
     fdp.append('id', bookingId);
     fdp.append('csrf_token', csrfToken);
 
-    fetch(apiUrl, {method:'POST', body:fdp})
+    fetch(targetPaxApiUrl, {method:'POST', body:fdp})
         .then(function(r) { return r.json(); })
         .then(function(d) {
             var passengers = (d.success && d.data && d.data.passengers) ? d.data.passengers : [];
@@ -2940,8 +3561,10 @@ function sendOutsourceWhatsApp(bookingId, partnerPhone, partnerName, partnerPric
 }
 
 function buildOutsourceMessage(b, partnerPrice, pickupTimeOverride, passengers, outsourceCurrency, noCollection, partnerName) {
+    var isInter = b.is_inter_transfer === 1 || b.booking_direction === 'inter_transfer';
     var AIRPORT  = AIRPORT_NAME;
     var hotel    = b.hotel_address || '-';
+    var pickupHotel = b.pickup_location || '-';
     var isReturn = b.booking_direction === 'return';
     var adults   = b.adults || 0;
     var children = b.children || 0;
@@ -2970,11 +3593,16 @@ function buildOutsourceMessage(b, partnerPrice, pickupTimeOverride, passengers, 
     }
     function fmtTime(t) { return t ? t.substring(0, 5) : ''; }
 
-    var route = isReturn ? (hotel + ' --> ' + AIRPORT) : (AIRPORT + ' --> ' + hotel);
-    var flightDateFormatted = fmtDate(b.flight_date);
-    var flightTimeFormatted = fmtTime(b.flight_time);
-    var pickupTimeFormatted = isReturn ? (pickupTimeOverride || (b.pickup_time ? b.pickup_time.substring(0,5) : '')) : '';
-    var pickupDateFormatted = isReturn ? fmtDate(b.flight_date) : '';
+    var route = isInter
+        ? (pickupHotel + ' ➔ ' + hotel)
+        : (isReturn ? (hotel + ' ➔ ' + AIRPORT) : (AIRPORT + ' ➔ ' + hotel));
+
+    var flightDateFormatted = isInter ? '' : fmtDate(b.flight_date);
+    var flightTimeFormatted = isInter ? '' : fmtTime(b.flight_time);
+    var pickupTimeFormatted = isInter
+        ? (pickupTimeOverride || (b.pickup_time ? b.pickup_time.substring(0,5) : ''))
+        : (isReturn ? (pickupTimeOverride || (b.pickup_time ? b.pickup_time.substring(0,5) : '')) : '');
+    var pickupDateFormatted = isInter ? fmtDate(b.pickup_date || b.flight_date) : (isReturn ? fmtDate(b.flight_date) : '');
 
     var passengerLines = [];
     passengers.forEach(function(p) {
@@ -2993,6 +3621,8 @@ function buildOutsourceMessage(b, partnerPrice, pickupTimeOverride, passengers, 
         '{PICKUP_TIME}': pickupTimeFormatted,
         '{FLIGHT_NO}': b.flight_number || '-',
         '{HOTEL}': hotel,
+        '{PICKUP_HOTEL}': pickupHotel,
+        '{DESTINATION_HOTEL}': hotel,
         '{PAX}': paxStr,
         '{PASSENGERS}': passengersStr,
         '{PRICE}': price,
@@ -3001,7 +3631,8 @@ function buildOutsourceMessage(b, partnerPrice, pickupTimeOverride, passengers, 
         '{PARTNER_HAKEDIS}': hak
     };
 
-    return parseWhatsAppTemplate('outsource_transfer', placeholders);
+    var templateKey = isInter ? 'outsource_inter_transfer' : 'outsource_transfer';
+    return parseWhatsAppTemplate(templateKey, placeholders);
 }
 
 // ─── İş Durumu Modalı ─────────────────────────────────────────────────────────
@@ -3019,6 +3650,10 @@ function openOpsStatus(id) {
 
     // Rezervasyon bilgilerini bookingsData'dan hemen doldur
     var bData = bookingsData.find(function(x) { return x.id == id; });
+    var targetOpsApiUrl = (bData && bData.is_inter_transfer) 
+        ? (window.ADMIN_URL + '/api/handler.php?entity=inter_transfers') 
+        : apiUrl;
+
     if (bData) {
         var rawDate = bData.flight_date || bData.pickup_date || '';
         if (rawDate) {
@@ -3033,10 +3668,11 @@ function openOpsStatus(id) {
         var priceVal = bData.total_price > 0
             ? (parseFloat(bData.total_price).toLocaleString('tr-TR', {minimumFractionDigits:2}) + ' ' + (bData.currency || 'EUR'))
             : '—';
+        var isInter  = bData.is_inter_transfer === 1;
         var isReturn = bData.booking_direction === 'return';
-        var dirLabel = isReturn ? 'Depar' : 'Arrival';
-        var dirBadge = isReturn ? 'info' : 'primary';
-        var dirIcon  = isReturn ? 'box-arrow-up-right' : 'box-arrow-in-down-right';
+        var dirLabel = isInter ? 'Ara Transfer' : (isReturn ? 'Depar' : 'Arrival');
+        var dirBadge = isInter ? 'info' : (isReturn ? 'info' : 'primary');
+        var dirIcon  = isInter ? 'arrows-expand' : (isReturn ? 'box-arrow-up-right' : 'box-arrow-in-down-right');
         var dirBadgeHtml = '<span class="badge bg-' + dirBadge + ' text-white px-2 py-1" style="font-size:.85rem !important;font-weight:600;display:inline-flex;align-items:center;">'
             + '<i class="bi bi-' + dirIcon + ' me-1"></i>' + dirLabel
             + '</span>';
@@ -3049,38 +3685,44 @@ function openOpsStatus(id) {
         }
 
         var infoHtml = infoCell('Müşteri', bData.customer_name, true)
-            + infoCell('Tarih', rawDate || '—')
-            + infoCell('Uçuş Saati', rawTime)
-            + infoCell('Uçuş No', bData.flight_number);
+            + infoCell('Tarih', rawDate || '—');
 
-        if (isReturn && bData.pickup_time) {
-            infoHtml += infoCell('Alış Saati', '<span style="color:#1c4b56;">' + bData.pickup_time.substring(0, 5) + '</span>', true);
+        if (isInter) {
+            infoHtml += infoCell('Alınış Saati', bData.pickup_time ? bData.pickup_time.substring(0, 5) : '—', true)
+                + infoCell('Transfer Güzergahı', bData.destination_title || '—')
+                + infoCell('Alınış Oteli', bData.pickup_location)
+                + infoCell('Varış Oteli', bData.hotel_address);
+        } else {
+            infoHtml += infoCell('Uçuş Saati', rawTime)
+                + infoCell('Uçuş No', bData.flight_number);
+
+            if (isReturn && bData.pickup_time) {
+                infoHtml += infoCell('Alış Saati', '<span style="color:#1c4b56;">' + bData.pickup_time.substring(0, 5) + '</span>', true);
+            }
+            infoHtml += infoCell('Otel / Adres', bData.hotel_address);
         }
 
-        infoHtml += infoCell('Otel / Adres', bData.hotel_address)
-            + infoCell('Araç', bData.vehicle_name)
+        infoHtml += infoCell('Araç', bData.vehicle_name)
             + infoCell('Kişi', paxStr);
 
         // Yolcu Listesi + Müşteri Notu + Rezervasyon Tutarı & Yön yan yana
         infoHtml += '<div class="col-12 mt-2 pt-2" style="border-top:1px dashed #b8d4f0;">'
-            + '<div class="row g-2 align-items-center">'
-            + '<div class="col-md-4" id="ops-modal-passengers-container" style="display:none;"></div>'
-            + '<div class="col-md-4" id="ops-modal-notes-container"' + (bData.notes && bData.notes.trim() ? '' : ' style="display:none;"') + '>'
-            +   '<div class="text-muted" style="font-size:.72rem;text-transform:uppercase;letter-spacing:.4px;"><i class="bi bi-chat-left-text me-1"></i>Müşteri Notu</div>'
-            +   '<div class="fw-semibold" style="white-space:pre-wrap;">' + (bData.notes || '') + '</div>'
-            + '</div>'
-            + '<div class="col-md-4 ms-auto">'
-            +   '<div class="d-flex align-items-center justify-content-between gap-2 flex-wrap">'
+            + '<div class="d-flex align-items-center justify-content-between flex-wrap gap-3">'
+            +   '<div id="ops-modal-passengers-container" style="display:none;flex:1 1 auto;min-width:180px;"></div>'
+            +   '<div id="ops-modal-notes-container"' + (bData.notes && bData.notes.trim() ? '' : ' style="display:none;"') + ' style="flex:1 1 auto;min-width:180px;">'
+            +     '<div class="text-muted" style="font-size:.72rem;text-transform:uppercase;letter-spacing:.4px;"><i class="bi bi-chat-left-text me-1"></i>Müşteri Notu</div>'
+            +     '<div class="fw-semibold" style="white-space:pre-wrap;">' + (bData.notes || '') + '</div>'
+            +   '</div>'
+            +   '<div class="d-flex align-items-center gap-4 ms-auto flex-nowrap" style="flex-shrink:0;">'
             +     '<div>'
             +       '<div class="text-muted" style="font-size:.72rem;text-transform:uppercase;letter-spacing:.4px;">Rezervasyon Tutarı</div>'
-            +       '<div class="fw-bold" style="font-size:1.4rem;color:#1c4b56;line-height:1.2;">' + priceVal + '</div>'
+            +       '<div class="fw-bold" style="font-size:1.35rem;color:#1c4b56;line-height:1.2;white-space:nowrap;">' + priceVal + '</div>'
             +     '</div>'
             +     '<div class="text-end">'
             +       '<div class="text-muted mb-1" style="font-size:.72rem;text-transform:uppercase;letter-spacing:.4px;">Yön</div>'
-            +       '<div>' + dirBadgeHtml + '</div>'
+            +       '<div style="white-space:nowrap;">' + dirBadgeHtml + '</div>'
             +     '</div>'
             +   '</div>'
-            + '</div>'
             + '</div>'
             + '</div>';
 
@@ -3091,7 +3733,7 @@ function openOpsStatus(id) {
         fdPax2.append('action', 'get_passengers');
         fdPax2.append('id', id);
         fdPax2.append('csrf_token', csrfToken);
-        fetch(apiUrl, {method:'POST', body:fdPax2})
+        fetch(targetOpsApiUrl, {method:'POST', body:fdPax2})
             .then(function(r) { return r.json(); })
             .then(function(d) {
                 if (d.success && d.data && d.data.passengers && d.data.passengers.length > 0) {
@@ -3116,7 +3758,7 @@ function openOpsStatus(id) {
     fd.append('id', id);
     fd.append('csrf_token', csrfToken);
 
-    fetch(apiUrl, {method:'POST', body:fd})
+    fetch(targetOpsApiUrl, {method:'POST', body:fd})
         .then(function(r) { return r.json(); })
         .then(function(d) {
             if (!d.success) { body.innerHTML = '<p class="text-danger mb-0">Veri alınamadı.</p>'; return; }
@@ -3485,8 +4127,8 @@ document.getElementById('quick-hotel-save-btn').addEventListener('click', functi
             var optVal  = name + (address ? ' — ' + address : '');
             var optText = name + (distance ? ' (' + Math.round(parseFloat(distance)) + ' km)' : '');
 
-            // Tüm hotel-select'lere (add + edit) yeni option ekle ve hedef select'te seç
-            document.querySelectorAll('.hotel-select, .hotel-select-edit').forEach(function(sel) {
+            // Tüm hotel-select'lere (add + edit + inter) yeni option ekle ve hedef select'te seç
+            document.querySelectorAll('.hotel-select, .hotel-select-edit, .hotel-select-inter').forEach(function(sel) {
                 var opt = new Option(optText, optVal, false, sel.id === targetId);
                 $(sel).append(opt);
                 if (sel.id === targetId) {
@@ -3511,6 +4153,11 @@ document.getElementById('ops-modal-driver-save').addEventListener('click', funct
 
     if (!bookingId) return;
 
+    var bData = bookingsData.find(function(x) { return x.id == bookingId; });
+    var targetDriverApiUrl = (bData && bData.is_inter_transfer)
+        ? (window.ADMIN_URL + '/api/handler.php?entity=inter_transfers')
+        : apiUrl;
+
     var btn = this;
     var statusEl = document.querySelector('.ops-modal-driver-status');
     btn.disabled = true;
@@ -3518,12 +4165,12 @@ document.getElementById('ops-modal-driver-save').addEventListener('click', funct
     statusEl.style.display = 'none';
 
     var fd = new FormData();
-    fd.append('action', 'set_driver');
-    fd.append('booking_id', bookingId);
+    fd.append('action', bData && bData.is_inter_transfer ? 'assign_driver' : 'set_driver');
+    fd.append(bData && bData.is_inter_transfer ? 'id' : 'booking_id', bookingId);
     fd.append('driver_id', driverId);
     fd.append('csrf_token', csrfToken);
 
-    fetch(apiUrl, {method:'POST', body:fd})
+    fetch(targetDriverApiUrl, {method:'POST', body:fd})
         .then(function(r) { return r.json(); })
         .then(function(d) {
             btn.disabled = false;
@@ -3564,12 +4211,17 @@ function sendDriverWhatsApp(bookingId, driverPhone, driverName) {
     var bData = bookingsData.find(function(x) { return x.id == bookingId; });
     if (!bData) return;
 
+    var isInter = bData.is_inter_transfer === 1 || bData.booking_direction === 'inter_transfer';
+    var targetPaxApiUrl = isInter
+        ? (window.ADMIN_URL + '/api/handler.php?entity=inter_transfers')
+        : apiUrl;
+
     var fdp = new FormData();
     fdp.append('action', 'get_passengers');
     fdp.append('id', bookingId);
     fdp.append('csrf_token', csrfToken);
 
-    fetch(apiUrl, {method:'POST', body:fdp})
+    fetch(targetPaxApiUrl, {method:'POST', body:fdp})
         .then(function(r) { return r.json(); })
         .then(function(d) {
             var passengers = (d.success && d.data && d.data.passengers) ? d.data.passengers : [];
@@ -3588,8 +4240,10 @@ function sendDriverWhatsApp(bookingId, driverPhone, driverName) {
 }
 
 function buildDriverMessage(b, driverName, passengers) {
+    var isInter = b.is_inter_transfer === 1 || b.booking_direction === 'inter_transfer';
     var AIRPORT  = AIRPORT_NAME;
     var hotel    = b.hotel_address || '-';
+    var pickupHotel = b.pickup_location || '-';
     var isReturn = b.booking_direction === 'return';
     var adults   = b.adults || 0;
     var children = b.children || 0;
@@ -3610,11 +4264,16 @@ function buildDriverMessage(b, driverName, passengers) {
     }
     function fmtTime(t) { return t ? t.substring(0, 5) : ''; }
 
-    var route = isReturn ? (hotel + ' --> ' + AIRPORT) : (AIRPORT + ' --> ' + hotel);
-    var flightDateFormatted = fmtDate(b.flight_date);
-    var flightTimeFormatted = fmtTime(b.flight_time);
-    var pickupTimeFormatted = isReturn ? (b.pickup_time ? b.pickup_time.substring(0,5) : '') : '';
-    var pickupDateFormatted = isReturn ? fmtDate(b.flight_date) : '';
+    var route = isInter
+        ? (pickupHotel + ' ➔ ' + hotel)
+        : (isReturn ? (hotel + ' ➔ ' + AIRPORT) : (AIRPORT + ' ➔ ' + hotel));
+
+    var flightDateFormatted = isInter ? '' : fmtDate(b.flight_date);
+    var flightTimeFormatted = isInter ? '' : fmtTime(b.flight_time);
+    var pickupTimeFormatted = isInter
+        ? (b.pickup_time ? b.pickup_time.substring(0,5) : '')
+        : (isReturn ? (b.pickup_time ? b.pickup_time.substring(0,5) : '') : '');
+    var pickupDateFormatted = isInter ? fmtDate(b.pickup_date || b.flight_date) : (isReturn ? fmtDate(b.flight_date) : '');
 
     var passengerLines = [];
     passengers.forEach(function(p) {
@@ -3633,6 +4292,8 @@ function buildDriverMessage(b, driverName, passengers) {
         '{PICKUP_TIME}': pickupTimeFormatted,
         '{FLIGHT_NO}': b.flight_number || '-',
         '{HOTEL}': hotel,
+        '{PICKUP_HOTEL}': pickupHotel,
+        '{DESTINATION_HOTEL}': hotel,
         '{PAX}': paxStr,
         '{PASSENGERS}': passengersStr,
         '{PRICE}': price,
@@ -3640,7 +4301,8 @@ function buildDriverMessage(b, driverName, passengers) {
         '{DRIVER_NAME}': driverName || '-'
     };
 
-    return parseWhatsAppTemplate('driver_transfer', placeholders);
+    var templateKey = isInter ? 'driver_inter_transfer' : 'driver_transfer';
+    return parseWhatsAppTemplate(templateKey, placeholders);
 }
 
 function openDriverModal(bookingId) {

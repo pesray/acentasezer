@@ -793,6 +793,10 @@ if ($siteLogo && defined('UPLOADS_URL')) {
                         <i class="bi bi-airplane nav-link-icon"></i>
                         <span class="nav-link-text">Depar</span>
                     </a>
+                    <a href="<?= ADMIN_URL ?>/bookings.php?view=inter_transfer" class="nav-link <?= ($currentPage === 'bookings' && ($_GET['view'] ?? '') === 'inter_transfer') ? 'active' : '' ?>">
+                        <i class="bi bi-arrows-expand nav-link-icon text-info"></i>
+                        <span class="nav-link-text">Ara Transferler</span>
+                    </a>
                     <a href="<?= ADMIN_URL ?>/deleted_bookings.php" class="nav-link <?= $currentPage === 'deleted_bookings' ? 'active' : '' ?>">
                         <i class="bi bi-trash nav-link-icon text-danger"></i>
                         <span class="nav-link-text text-danger">Silinen Rezervasyonlar</span>
@@ -813,6 +817,9 @@ if ($siteLogo && defined('UPLOADS_URL')) {
                 </a>
                 <a href="<?= ADMIN_URL ?>/bookings.php?view=return" class="flyout-item <?= ($currentPage === 'bookings' && ($_GET['view'] ?? '') === 'return') ? 'active' : '' ?>">
                     <i class="bi bi-airplane"></i> Depar
+                </a>
+                <a href="<?= ADMIN_URL ?>/bookings.php?view=inter_transfer" class="flyout-item <?= ($currentPage === 'bookings' && ($_GET['view'] ?? '') === 'inter_transfer') ? 'active' : '' ?>">
+                    <i class="bi bi-arrows-expand text-info"></i> Ara Transferler
                 </a>
                 <a href="<?= ADMIN_URL ?>/deleted_bookings.php" class="flyout-item <?= $currentPage === 'deleted_bookings' ? 'active' : '' ?> text-danger">
                     <i class="bi bi-trash text-danger"></i> Silinenler
