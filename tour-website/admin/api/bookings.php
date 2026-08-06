@@ -380,7 +380,6 @@ switch ($action) {
                             $customerId ?: null,
                             $returnId
                         ]);
-                    }
                     } else {
                         // Insert new return
                         $numReturn = 'TRF-' . date('Ymd') . '-' . str_pad(mt_rand(1, 9999), 4, '0', STR_PAD_LEFT);
@@ -582,7 +581,9 @@ switch ($action) {
             } else {
                 $val = (int)(bool)$value;
             }
-            $db->prepare("UPDATE bookings SET $field = ?, updated_at = NOW() WHERE id = ?")->execute([$val, $id]);
+            $isInter = $db->query("SELECT COUNT(*) FROM inter_hotel_transfers WHERE id = " . (int)$id)->fetchColumn() > 0;
+            $targetTable = $isInter ? 'inter_hotel_transfers' : 'bookings';
+            $db->prepare("UPDATE $targetTable SET $field = ?, updated_at = NOW() WHERE id = ?")->execute([$val, $id]);
             jsonResponse(true, 'Güncellendi');
         } catch (Exception $e) {
             jsonResponse(false, 'Hata: ' . $e->getMessage());
@@ -718,12 +719,17 @@ switch ($action) {
         if (!$bookingId) jsonResponse(false, 'Geçersiz Booking ID');
         try {
             $db->beginTransaction();
-            // Mevcut şöförü sil
-            $db->prepare("DELETE FROM booking_drivers WHERE booking_id = ?")->execute([$bookingId]);
-            // Yeni şöförü ekle (boş değilse)
-            if ($driverId > 0) {
-                $stmt = $db->prepare("INSERT INTO booking_drivers (booking_id, driver_id) VALUES (?, ?)");
-                $stmt->execute([$bookingId, $driverId]);
+            $isInter = $db->query("SELECT COUNT(*) FROM inter_hotel_transfers WHERE id = " . (int)$bookingId)->fetchColumn() > 0;
+            if ($isInter) {
+                $db->prepare("DELETE FROM booking_drivers WHERE inter_transfer_id = ?")->execute([$bookingId]);
+                if ($driverId > 0) {
+                    $db->prepare("INSERT INTO booking_drivers (booking_id, inter_transfer_id, driver_id) VALUES (NULL, ?, ?)")->execute([$bookingId, $driverId]);
+                }
+            } else {
+                $db->prepare("DELETE FROM booking_drivers WHERE booking_id = ?")->execute([$bookingId]);
+                if ($driverId > 0) {
+                    $db->prepare("INSERT INTO booking_drivers (booking_id, driver_id) VALUES (?, ?)")->execute([$bookingId, $driverId]);
+                }
             }
             $db->commit();
             jsonResponse(true, 'Şöför kaydedildi.');
