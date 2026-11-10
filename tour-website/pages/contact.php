@@ -1,118 +1,86 @@
 <?php
 /**
- * İletişim Sayfası
+ * İletişim sayfası
  */
 
 require_once dirname(__DIR__) . '/config/config.php';
-require_once INCLUDES_PATH . 'sections.php';
+require_once INCLUDES_PATH . 'sunline/core.php';
+require_once INCLUDES_PATH . 'schema.php';
 
-$pageTitle = __('menu_contact', 'header');
-$bodyClass = 'contact-page';
-
+$title = sl_t('contact_t');
+$url = sl_page_url('contact');
 $success = false;
 $error = '';
+$old = ['name' => '', 'email' => '', 'phone' => '', 'subject' => '', 'message' => ''];
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    $name = trim($_POST['name'] ?? '');
-    $email = trim($_POST['email'] ?? '');
-    $phone = trim($_POST['phone'] ?? '');
-    $subject = trim($_POST['subject'] ?? '');
-    $message = trim($_POST['message'] ?? '');
-    
-    if (empty($name) || empty($email) || empty($message)) {
-        $error = __('required_fields', 'general');
-    } elseif (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
-        $error = __('invalid_email', 'general');
+    foreach ($old as $k => $v) $old[$k] = trim((string)($_POST[$k] ?? ''));
+    $spam = trim((string)($_POST['website'] ?? '')) !== '';
+    if ($spam) {
+        $success = true; // botlara başarılı gibi görün
+    } elseif ($old['name'] === '' || $old['email'] === '' || $old['message'] === '') {
+        $error = sl_t('c_err');
+    } elseif (!filter_var($old['email'], FILTER_VALIDATE_EMAIL)) {
+        $error = sl_t('err_email');
     } else {
         try {
-            $db = getDB();
-            $stmt = $db->prepare("INSERT INTO contacts (name, email, phone, subject, message, ip_address, user_agent) VALUES (?, ?, ?, ?, ?, ?, ?)");
-            $stmt->execute([$name, $email, $phone, $subject, $message, $_SERVER['REMOTE_ADDR'], $_SERVER['HTTP_USER_AGENT'] ?? '']);
+            $stmt = getDB()->prepare("INSERT INTO contacts (name, email, phone, subject, message, ip_address, user_agent) VALUES (?, ?, ?, ?, ?, ?, ?)");
+            $stmt->execute([
+                mb_substr($old['name'], 0, 100), mb_substr($old['email'], 0, 100), mb_substr($old['phone'], 0, 20),
+                mb_substr($old['subject'], 0, 200), mb_substr($old['message'], 0, 5000),
+                $_SERVER['REMOTE_ADDR'] ?? '', mb_substr($_SERVER['HTTP_USER_AGENT'] ?? '', 0, 255),
+            ]);
             $success = true;
+            $old = array_fill_keys(array_keys($old), '');
         } catch (Exception $e) {
-            $error = __('error_occurred', 'general');
+            $error = sl_t('err_generic');
         }
     }
 }
 
-// Schema.org BreadcrumbList entegrasyonu
-require_once ROOT_PATH . 'includes/schema.php';
-$pageSchema = getBreadcrumbSchema([
-    ['name' => $pageTitle, 'url' => getPageSlugByKey('contact')]
-]);
+$address = trim((string)getSetting('contact_address', ''));
+$phone = trim((string)getSetting('contact_phone', ''));
+$email = trim((string)getSetting('contact_email', ''));
+$wa = sl_wa_link(sl_t('wa_hello'));
+
+$seoTitle = $title . ' · ' . getSetting('site_name', 'Sunline VIP Transfer');
+$metaDescription = sl_t('contact_s');
+$canonicalUrl = $url;
+$bodyClass = 'sl-contact';
+$pageSchema = [getBreadcrumbSchema([['name' => $title, 'url' => $url]])];
 
 require_once INCLUDES_PATH . 'header.php';
+sl_partial('page-hero', ['h1' => $title, 'sub' => sl_t('contact_s'), 'crumbs' => [[$title, $url]], 'size' => 'sm']);
 ?>
-
-<div class="page-title dark-background" style="background-image: url(<?= ASSETS_URL ?>img/page-title-bg.webp);">
-    <div class="container position-relative">
-        <h1><?= __('menu_contact', 'header') ?></h1>
-        <p><?= __('contact_subtitle', 'general') ?></p>
-    </div>
-</div>
-
-<section class="contact section">
-    <div class="container">
-        <div class="row gy-4">
-            <div class="col-lg-4">
-                <div class="info-item">
-                    <i class="bi bi-geo-alt"></i>
-                    <h4><?= __('address', 'general') ?></h4>
-                    <p><?= nl2br(e(getSetting('contact_address'))) ?></p>
-                </div>
-                
-                <div class="info-item">
-                    <i class="bi bi-telephone"></i>
-                    <h4><?= __('phone', 'general') ?></h4>
-                    <p><?= e(getSetting('contact_phone')) ?></p>
-                </div>
-                
-                <div class="info-item">
-                    <i class="bi bi-envelope"></i>
-                    <h4><?= __('email', 'general') ?></h4>
-                    <p><?= e(getSetting('contact_email')) ?></p>
-                </div>
-            </div>
-            
-            <div class="col-lg-8">
-                <?php if ($success): ?>
-                <div class="alert alert-success">
-                    <i class="bi bi-check-circle me-2"></i> <?= __('message_sent', 'general') ?>
-                </div>
-                <?php else: ?>
-                
-                <?php if ($error): ?>
-                <div class="alert alert-danger"><?= e($error) ?></div>
-                <?php endif; ?>
-                
-                <form method="post" class="contact-form">
-                    <div class="row">
-                        <div class="col-md-6 mb-3">
-                            <input type="text" name="name" class="form-control" placeholder="<?= __('your_name', 'general') ?>" required>
-                        </div>
-                        <div class="col-md-6 mb-3">
-                            <input type="email" name="email" class="form-control" placeholder="<?= __('your_email', 'general') ?>" required>
-                        </div>
-                    </div>
-                    <div class="row">
-                        <div class="col-md-6 mb-3">
-                            <input type="tel" name="phone" class="form-control" placeholder="<?= __('your_phone', 'general') ?>">
-                        </div>
-                        <div class="col-md-6 mb-3">
-                            <input type="text" name="subject" class="form-control" placeholder="<?= __('subject', 'general') ?>">
-                        </div>
-                    </div>
-                    <div class="mb-3">
-                        <textarea name="message" class="form-control" rows="6" placeholder="<?= __('your_message', 'general') ?>" required></textarea>
-                    </div>
-                    <button type="submit" class="btn btn-primary btn-lg">
-                        <i class="bi bi-send me-2"></i> <?= __('send_message', 'general') ?>
-                    </button>
-                </form>
-                <?php endif; ?>
-            </div>
+<div class="container">
+  <div class="qf">
+    <div class="row g-4">
+      <div class="col-lg-5">
+        <div class="cinfo">
+          <?php if ($wa !== ''): ?><a href="<?= e($wa) ?>" target="_blank" rel="noopener"><i class="bi bi-whatsapp"></i><span><small>WhatsApp</small><?= e($phone !== '' ? $phone : 'WhatsApp') ?></span></a><?php endif; ?>
+          <?php if ($phone !== ''): ?><a href="tel:<?= e(preg_replace('/[^\d+]/', '', $phone)) ?>"><i class="bi bi-telephone"></i><span><small><?= sl_e('c_phone') ?></small><?= e($phone) ?></span></a><?php endif; ?>
+          <?php if ($email !== ''): ?><a href="mailto:<?= e($email) ?>"><i class="bi bi-envelope"></i><span><small><?= sl_e('c_email') ?></small><?= e($email) ?></span></a><?php endif; ?>
+          <?php if ($address !== ''): ?><a href="https://www.google.com/maps/search/?api=1&amp;query=<?= e(rawurlencode($address)) ?>" target="_blank" rel="noopener"><i class="bi bi-geo-alt"></i><span><small><?= sl_e('address') ?></small><?= e($address) ?></span></a><?php endif; ?>
         </div>
+      </div>
+      <div class="col-lg-7">
+        <?php if ($success): ?>
+        <div class="alert-sl ok-msg mb-3" role="status"><i class="bi bi-check-circle-fill"></i><span><?= sl_e('c_ok') ?></span></div>
+        <?php elseif ($error !== ''): ?>
+        <div class="alert-sl err-msg mb-3" role="alert"><i class="bi bi-exclamation-triangle-fill"></i><span><?= e($error) ?></span></div>
+        <?php endif; ?>
+        <form method="post" class="fm row g-3" novalidate>
+          <div class="col-sm-6"><label class="d-block" for="cName"><?= sl_e('c_name') ?> *</label><input class="form-control" id="cName" name="name" required maxlength="100" autocomplete="name" value="<?= e($old['name']) ?>"></div>
+          <div class="col-sm-6"><label class="d-block" for="cEmail"><?= sl_e('c_email') ?> *</label><input class="form-control" id="cEmail" name="email" type="email" required maxlength="100" autocomplete="email" value="<?= e($old['email']) ?>"></div>
+          <div class="col-sm-6"><label class="d-block" for="cPhone"><?= sl_e('c_phone') ?></label><input class="form-control" id="cPhone" name="phone" type="tel" maxlength="20" autocomplete="tel" value="<?= e($old['phone']) ?>"></div>
+          <div class="col-sm-6"><label class="d-block" for="cSubject"><?= sl_e('c_subject') ?></label><input class="form-control" id="cSubject" name="subject" maxlength="200" value="<?= e($old['subject']) ?>"></div>
+          <div class="col-12"><label class="d-block" for="cMsg"><?= sl_e('c_message') ?> *</label><textarea class="form-control" id="cMsg" name="message" rows="5" required maxlength="5000"><?= e($old['message']) ?></textarea></div>
+          <div aria-hidden="true" style="position:absolute;left:-9999px;width:1px;height:1px;overflow:hidden"><label for="cWeb">Website</label><input id="cWeb" name="website" tabindex="-1" autocomplete="off"></div>
+          <div class="col-12"><button type="submit" class="btn btn-cta"><i class="bi bi-send me-2"></i><?= sl_e('c_send') ?></button></div>
+        </form>
+      </div>
     </div>
-</section>
-
+  </div>
+</div>
+<div class="sec pt-5"></div>
 <?php require_once INCLUDES_PATH . 'footer.php'; ?>

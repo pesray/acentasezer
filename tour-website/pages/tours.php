@@ -1,169 +1,89 @@
 <?php
 /**
- * Turlar Listesi
+ * Turlar listesi (veriler Tur Yönetimi > Turlar ekranından gelir)
  */
 
 require_once dirname(__DIR__) . '/config/config.php';
-require_once INCLUDES_PATH . 'sections.php';
+require_once INCLUDES_PATH . 'sunline/core.php';
+require_once INCLUDES_PATH . 'schema.php';
 
-$lang = getCurrentLang();
+$lang = sl_lang();
 $db = getDB();
 
-// Sayfa ayarlarını çek
-$pageSettings = null;
+$ps = null;
 try {
     $stmt = $db->prepare("
-        SELECT ps.*, pst.title as page_title, pst.subtitle as page_subtitle, pst.slug as page_slug
+        SELECT ps.background_image, pst.title AS page_title, pst.subtitle AS page_subtitle
         FROM page_settings ps
         LEFT JOIN page_setting_translations pst ON ps.id = pst.page_setting_id AND pst.language_code = ?
-        WHERE ps.page_key = 'tours'
+        WHERE ps.page_key = 'tours' LIMIT 1
     ");
     $stmt->execute([$lang]);
-    $pageSettings = $stmt->fetch();
+    $ps = $stmt->fetch();
 } catch (Exception $e) {}
 
-// Sayfa başlığı
-$pageTitle = !empty($pageSettings['page_title']) ? $pageSettings['page_title'] : __('menu_tours', 'header');
-$pageSubtitle = !empty($pageSettings['page_subtitle']) ? $pageSettings['page_subtitle'] : __('discover_tours', 'general');
-$pageBgImage = !empty($pageSettings['background_image']) ? getMediaUrl($pageSettings['background_image']) : ASSETS_URL . 'img/page-title-bg.webp';
+$title = !empty($ps['page_title']) ? $ps['page_title'] : sl_t('tours_t');
+$sub = !empty($ps['page_subtitle']) ? $ps['page_subtitle'] : '';
+$bg = !empty($ps['background_image']) ? getMediaUrl($ps['background_image']) : '';
+$prefix = getPageSlugByKey('tours');
+$url = langUrl($prefix);
 
-// Tur detay sayfası için dil bazlı prefix
-$tourDetailPrefix = 'tours';
-if (!empty($pageSettings['page_slug'])) {
-    $tourDetailPrefix = $pageSettings['page_slug'];
-}
+$tours = [];
+try {
+    $stmt = $db->prepare("
+        SELECT t.*, COALESCE(tt.title, t.title) AS title, COALESCE(tt.slug, t.slug) AS slug,
+               COALESCE(tt.description, t.description) AS description
+        FROM tours t
+        LEFT JOIN tour_translations tt ON t.id = tt.tour_id AND tt.language_code = ?
+        WHERE t.status = 'published'
+        ORDER BY t.is_featured DESC, t.sort_order
+    ");
+    $stmt->execute([$lang]);
+    $tours = $stmt->fetchAll();
+} catch (Exception $e) {}
 
-$bodyClass = 'tours-page';
+// En düşük araç fiyatı (önce bu dil, yoksa herhangi bir dil)
+$minPrices = [];
+try {
+    foreach ($db->query("SELECT tour_id, language_code, MIN(price) AS p, MAX(currency) AS c FROM tour_vehicles WHERE price > 0 GROUP BY tour_id, language_code")->fetchAll() as $r) {
+        $tid = (int)$r['tour_id'];
+        if ($r['language_code'] === $lang || !isset($minPrices[$tid])) $minPrices[$tid] = ['p' => (float)$r['p'], 'c' => $r['c']];
+    }
+} catch (Exception $e) {}
 
-// Turları getir
-$stmt = $db->prepare("
-    SELECT t.*, COALESCE(tt.title, t.title) as title, COALESCE(tt.slug, t.slug) as slug, 
-           COALESCE(tt.description, t.description) as description
-    FROM tours t
-    LEFT JOIN tour_translations tt ON t.id = tt.tour_id AND tt.language_code = ?
-    WHERE t.status = 'published'
-    ORDER BY t.is_featured DESC, t.sort_order
-");
-$stmt->execute([$lang]);
-$tours = $stmt->fetchAll();
-
-// Schema.org BreadcrumbList entegrasyonu
-require_once ROOT_PATH . 'includes/schema.php';
-$pageSchema = getBreadcrumbSchema([
-    ['name' => $pageTitle, 'url' => getPageSlugByKey('tours')]
-]);
+$seoTitle = $title . ' · ' . getSetting('site_name', 'Sunline VIP Transfer');
+$metaDescription = $sub !== '' ? $sub : sl_t('seo_home_d');
+$canonicalUrl = $url;
+$bodyClass = 'sl-tours';
+$pageSchema = [getBreadcrumbSchema([['name' => $title, 'url' => $url]])];
 
 require_once INCLUDES_PATH . 'header.php';
+sl_partial('page-hero', ['h1' => $title, 'sub' => $sub, 'crumbs' => [[$title, $url]], 'img' => $bg, 'eyebrow' => sl_t('tours_e')]);
 ?>
-
-<!-- Page Title -->
-<div class="page-title dark-background" data-aos="fade" style="background-image: url(<?= e($pageBgImage) ?>);">
-    <div class="container position-relative">
-        <h1><?= e($pageTitle) ?></h1>
-        <p><?= e($pageSubtitle) ?></p>
-        <nav class="breadcrumbs">
-            <ol>
-                <li><a href="<?= langUrl('') ?>"><?= __('menu_home', 'header') ?></a></li>
-                <li class="current"><?= e($pageTitle) ?></li>
-            </ol>
-        </nav>
-    </div>
-</div><!-- End Page Title -->
-
-<!-- Tours Section -->
-<section id="tours" class="tours section">
-    <div class="container" data-aos="fade-up" data-aos-delay="100">
-        
-        <!-- Tour Grid -->
-        <div class="row" data-aos="fade-up" data-aos-delay="200">
-            <div class="col-12">
-                <div class="row">
-                    <?php foreach ($tours as $tour): 
-                        $imageUrl = !empty($tour['image']) ? getMediaUrl($tour['image']) : ASSETS_URL . 'img/travel/tour-1.webp';
-                    ?>
-                    <div class="col-lg-4 col-md-6 mb-4">
-                        <div class="tour-card">
-                            <div class="tour-image">
-                                <img src="<?= e($imageUrl) ?>" alt="<?= e($tour['title']) ?>" class="img-fluid" loading="lazy">
-                            </div>
-                            <div class="tour-content">
-                                <h4><?= e($tour['title']) ?></h4>
-                                <?php if (!empty($tour['description'])): ?>
-                                <p><?= e(mb_substr($tour['description'], 0, 100)) ?><?= mb_strlen($tour['description']) > 100 ? '...' : '' ?></p>
-                                <?php endif; ?>
-                                <a href="<?= langUrl($tourDetailPrefix . '/' . $tour['slug']) ?>" class="btn btn-outline-primary"><?= __('view_tour', 'general') ?></a>
-                            </div>
-                        </div>
-                    </div>
-                    <?php endforeach; ?>
-                    
-                    <?php if (empty($tours)): ?>
-                    <div class="col-12 text-center py-5">
-                        <i class="bi bi-compass display-1 text-muted"></i>
-                        <h4 class="mt-3"><?= __('no_tours_found', 'general') ?></h4>
-                    </div>
-                    <?php endif; ?>
-                </div>
-            </div>
+<section class="sec">
+  <div class="container">
+    <div class="rc-grid">
+      <?php foreach ($tours as $tour):
+        $img = !empty($tour['image']) ? getMediaUrl($tour['image']) : sl_default_base()['hero']['image'];
+        $tUrl = langUrl($prefix . '/' . $tour['slug']);
+        $mp = $minPrices[(int)$tour['id']] ?? ((float)$tour['price'] > 0 ? ['p' => (float)$tour['price'], 'c' => $tour['currency']] : null);
+      ?>
+      <article class="rc">
+        <a class="rc-media" href="<?= e($tUrl) ?>">
+          <img src="<?= e($img) ?>" alt="<?= e($tour['title']) ?>" loading="lazy" decoding="async" width="640" height="420">
+          <div class="rc-ov"><h2 class="h3 m-0" style="color:#fff;font-size:1.7rem;font-weight:700"><?= e($tour['title']) ?></h2></div>
+        </a>
+        <div class="rc-body">
+          <?php if (!empty($tour['description'])): ?><p style="color:var(--cmuted);font-size:.92rem;line-height:1.6"><?= e(mb_strimwidth(strip_tags($tour['description']), 0, 140, '…')) ?></p><?php endif; ?>
+          <div class="tour-meta">
+            <?php if (!empty($tour['duration_days'])): ?><span><i class="bi bi-clock"></i><?= (int)$tour['duration_days'] ?> <?= $lang === 'tr' ? 'gün' : ($lang === 'de' ? 'Tag(e)' : ($lang === 'ru' ? 'дн.' : 'day(s)')) ?></span><?php endif; ?>
+            <?php if ($mp): ?><span><i class="bi bi-tag"></i><?= e(sl_money($mp['p'], $mp['c'])) ?></span><?php endif; ?>
+          </div>
+          <a class="btn btn-cta rc-book" href="<?= e($tUrl) ?>"><?= sl_e('details') ?></a>
         </div>
-
+      </article>
+      <?php endforeach; ?>
     </div>
-</section><!-- /Tours Section -->
-
-<style>
-/* Tour Card Styles */
-.tours .tour-card {
-    background: #fff;
-    border-radius: 12px;
-    overflow: hidden;
-    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
-    transition: all 0.3s ease;
-    height: 100%;
-}
-
-.tours .tour-card:hover {
-    transform: translateY(-5px);
-    box-shadow: 0 8px 30px rgba(0, 0, 0, 0.12);
-}
-
-.tours .tour-card .tour-image {
-    position: relative;
-    overflow: hidden;
-    height: 220px;
-}
-
-.tours .tour-card .tour-image img {
-    width: 100%;
-    height: 100%;
-    object-fit: cover;
-    transition: transform 0.5s ease;
-}
-
-.tours .tour-card:hover .tour-image img {
-    transform: scale(1.1);
-}
-
-.tours .tour-card .tour-content {
-    padding: 20px;
-}
-
-.tours .tour-card .tour-content h4 {
-    font-size: 1.1rem;
-    font-weight: 600;
-    margin-bottom: 10px;
-    color: var(--heading-color);
-}
-
-.tours .tour-card .tour-content p {
-    font-size: 0.9rem;
-    color: #666;
-    margin-bottom: 15px;
-    line-height: 1.5;
-}
-
-.tours .tour-card .tour-content .btn {
-    width: 100%;
-}
-</style>
-
+  </div>
+</section>
 <?php require_once INCLUDES_PATH . 'footer.php'; ?>

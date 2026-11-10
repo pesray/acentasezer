@@ -1,27 +1,34 @@
 <?php
 /**
- * 404 Sayfa Bulunamadı
+ * 404 — Sayfa bulunamadı
  */
 
 if (!defined('ROOT_PATH')) {
     require_once dirname(__DIR__) . '/config/config.php';
 }
+require_once INCLUDES_PATH . 'sunline/core.php';
 
-$pageTitle = '404 - ' . __('page_not_found', 'general');
-$bodyClass = 'error-page';
+if (!headers_sent()) http_response_code(404);
+$pageTitle = '404 · ' . sl_t('nf_t');
+$seoTitle = $pageTitle;
+$metaDescription = sl_t('nf_s');
+$metaRobots = 'noindex, follow';
+$bodyClass = 'sl-404';
 
 require_once INCLUDES_PATH . 'header.php';
 ?>
-
-<section class="error-404 section">
-    <div class="container text-center py-5">
-        <h1 class="display-1 fw-bold text-primary">404</h1>
-        <h2><?= __('page_not_found', 'general') ?></h2>
-        <p class="lead text-muted mb-4"><?= __('page_not_found_desc', 'general') ?></p>
-        <a href="<?= SITE_URL ?>" class="btn btn-primary btn-lg">
-            <i class="bi bi-house me-2"></i> <?= __('back_to_home', 'general') ?>
-        </a>
+<section class="nf">
+  <div class="container">
+    <b>404</b>
+    <h1 class="sec-t mt-3"><?= sl_e('nf_t') ?></h1>
+    <p class="sec-s mx-auto mb-4"><?= sl_e('nf_s') ?></p>
+    <div class="d-flex flex-wrap gap-2 justify-content-center">
+      <a class="btn btn-cta" href="<?= e(langUrl('')) ?>"><i class="bi bi-house me-2"></i><?= sl_e('nf_btn') ?></a>
+      <a class="btn btn-ghost" href="<?= e(sl_page_url('destinations')) ?>"><?= sl_e('all_transfers') ?></a>
     </div>
+    <div class="chip-links justify-content-center">
+      <?php foreach (array_slice(sl_bookable_destinations(true), 0, 10) as $d): ?><a href="<?= e($d['url']) ?>"><?= e($d['title']) ?></a><?php endforeach; ?>
+    </div>
+  </div>
 </section>
-
 <?php require_once INCLUDES_PATH . 'footer.php'; ?>

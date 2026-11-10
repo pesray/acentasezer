@@ -271,6 +271,12 @@ function getAlternateLanguageUrl($targetLang) {
                 'target' => $row['target_slug'] ?? ''
             ];
         }
+        // Veritabanında olmayan diller/sayfalar için varsayılan adresler
+        foreach (defaultPageSlugs() as $defKey => $defSlugs) {
+            if (!isset($pageSlugs[$defKey])) $pageSlugs[$defKey] = ['current' => '', 'target' => ''];
+            if ($pageSlugs[$defKey]['current'] === '' && !empty($defSlugs[$currentLang])) $pageSlugs[$defKey]['current'] = $defSlugs[$currentLang];
+            if ($pageSlugs[$defKey]['target'] === '' && !empty($defSlugs[$targetLang])) $pageSlugs[$defKey]['target'] = $defSlugs[$targetLang];
+        }
         
         // 1. Listeleme sayfası kontrolü (transferler, turlar, vb.)
         foreach ($pageSlugs as $pageKey => $slugs) {
@@ -514,6 +520,18 @@ function getMenuItems($menuSlug, $parentId = null) {
     }
 }
 
+// Sayfa ayarı (page_settings) girilmemiş diller için varsayılan liste sayfası adresleri
+function defaultPageSlugs() {
+    return [
+        'destinations' => ['tr' => 'transferler', 'en' => 'transfers', 'de' => 'transfers', 'ru' => 'transfery'],
+        'tours'        => ['tr' => 'turlar', 'en' => 'tours', 'de' => 'touren', 'ru' => 'tury'],
+        'blog'         => ['tr' => 'blog', 'en' => 'blog', 'de' => 'blog', 'ru' => 'blog'],
+        'contact'      => ['tr' => 'iletisim', 'en' => 'contact', 'de' => 'kontakt', 'ru' => 'kontakty'],
+        'faq'          => ['tr' => 'sss', 'en' => 'faq', 'de' => 'faq', 'ru' => 'faq'],
+        'gallery'      => ['tr' => 'galeri', 'en' => 'gallery', 'de' => 'galerie', 'ru' => 'galereya'],
+    ];
+}
+
 // Sayfa slug'ını page_key değerine göre getir
 function getPageSlugByKey($key, $lang = null) {
     if ($lang === null) {
@@ -535,9 +553,11 @@ function getPageSlugByKey($key, $lang = null) {
         ");
         $stmt->execute([$lang, $key]);
         $slug = $stmt->fetchColumn();
-        $cache[$cacheKey] = $slug ?: $key;
+        $defaults = defaultPageSlugs();
+        $cache[$cacheKey] = $slug ?: ($defaults[$key][$lang] ?? ($defaults[$key]['en'] ?? $key));
         return $cache[$cacheKey];
     } catch (Exception $e) {
-        return $key;
+        $defaults = defaultPageSlugs();
+        return $defaults[$key][$lang] ?? $key;
     }
 }

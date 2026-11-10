@@ -1,0 +1,136 @@
+<?php
+/**
+ * Sunline anasayfa — temadaki bölümlerin birebir PHP karşılığı
+ * Sıra: Hero → Hızlı form → Bölgeler & Fiyatlar → Bilgilendirme → Misafirlerimiz → Blog → SSS
+ * İçerik: Admin > Anasayfa & Tema
+ */
+
+require_once __DIR__ . '/core.php';
+
+function sl_render_home() {
+    $lang = sl_lang();
+    $hero = sl_section('hero');
+    $reg = sl_section('regions');
+    $info = sl_section('info');
+    $guests = sl_section('guests');
+    $blog = sl_section('blog');
+    $faq = sl_section('faq');
+
+    $heroImg = trim((string)($hero['image'] ?? '')) !== '' ? getMediaUrl($hero['image']) : sl_default_base()['hero']['image'];
+
+    // Bölge kartları (Tur Yönetimi > Transferler > "Öne Çıkan")
+    $onlyFeatured = !isset($reg['only_featured']) || (int)$reg['only_featured'] === 1;
+    $cards = sl_bookable_destinations($onlyFeatured);
+    if (!$cards) $cards = sl_bookable_destinations(false);
+
+    // Kartlarda geçen bölgelere göre filtre düğmeleri
+    $used = [];
+    foreach ($cards as $c) if ($c['region'] !== '') $used[$c['region']] = true;
+    $filters = [];
+    foreach (sl_region_filters() as $f) {
+        $k = (string)($f['k'] ?? '');
+        if ($k === '' || empty($used[$k])) continue;
+        $label = $f['l'][$lang] ?? ($f['l']['en'] ?? $k);
+        $filters[] = ['k' => $k, 'l' => $label];
+    }
+    $allLabel = $reg['all_label'][$lang] ?? ($reg['all_label']['en'] ?? 'All');
+
+    $photos = array_values(array_filter((array)($guests['photos'] ?? []), function ($p) { return trim((string)$p) !== ''; }));
+    $showGuests = $guests['_active'] && $photos;
+    $posts = $blog['_active'] ? sl_blog_posts((int)($blog['limit'] ?? 6)) : [];
+    $faqItems = $faq['_active'] ? array_values(array_filter((array)($faq['items'] ?? []), function ($i) { return trim((string)($i['q'] ?? '')) !== '' && trim((string)($i['a'] ?? '')) !== ''; })) : [];
+    ?>
+<header class="hero"<?= $hero['_active'] ? '' : ' style="min-height:420px"' ?>>
+  <div class="hero-bg" style="background-image:url('<?= e($heroImg) ?>')"></div>
+  <div class="container hero-in">
+    <?php if (trim((string)($hero['eyebrow'] ?? '')) !== ''): ?><div class="eyebrow"><?= e($hero['eyebrow']) ?></div><?php endif; ?>
+    <h1><?= sl_rich($hero['title'] ?? 'Antalya VIP Transfer') ?></h1>
+    <?php if (trim((string)($hero['subtitle'] ?? '')) !== ''): ?><p><?= e($hero['subtitle']) ?></p><?php endif; ?>
+  </div>
+</header>
+<div class="container">
+  <?php sl_partial('quickform'); ?>
+</div>
+
+<?php if ($reg['_active']): ?>
+<section class="sec" id="bolgeler">
+  <div class="container">
+    <?php if (trim((string)($reg['eyebrow'] ?? '')) !== ''): ?><div class="eyebrow"><?= e($reg['eyebrow']) ?></div><?php endif; ?>
+    <h2 class="sec-t"><?= e($reg['title'] ?? '') ?></h2>
+    <?php if (trim((string)($reg['subtitle'] ?? '')) !== ''): ?><p class="sec-s"><?= e($reg['subtitle']) ?></p><?php endif; ?>
+    <?php if (count($filters) > 1): ?>
+    <div class="flt" role="toolbar" aria-label="<?= e($reg['title'] ?? '') ?>">
+      <button type="button" class="on" data-f="all" aria-pressed="true"><?= e($allLabel) ?></button>
+      <?php foreach ($filters as $f): ?><button type="button" data-f="<?= e($f['k']) ?>" aria-pressed="false"><?= e($f['l']) ?></button><?php endforeach; ?>
+    </div>
+    <?php endif; ?>
+    <div class="rc-grid">
+      <?php foreach ($cards as $d) sl_card($d); ?>
+    </div>
+    <div class="rc-more"><a class="btn btn-ghost" href="<?= e(sl_page_url('destinations')) ?>"><?= sl_e('all_transfers_link') ?></a></div>
+  </div>
+</section>
+<?php endif; ?>
+
+<?php if ($info['_active']): ?>
+<section class="sec info" id="bilgi">
+  <div class="container"><div class="row g-4 g-lg-5">
+    <div class="col-lg-4">
+      <?php if (trim((string)($info['eyebrow'] ?? '')) !== ''): ?><div class="eyebrow"><?= e($info['eyebrow']) ?></div><?php endif; ?>
+      <h2 class="sec-t"><?= e($info['title'] ?? '') ?></h2>
+      <?php if (trim((string)($info['subtitle'] ?? '')) !== ''): ?><p class="sec-s"><?= e($info['subtitle']) ?></p><?php endif; ?>
+      <?php if (trim((string)($info['sign'] ?? '')) !== ''): ?><p class="mt-4" style="color:var(--muted);font-size:.9rem"><?= e($info['sign']) ?></p><?php endif; ?>
+    </div>
+    <div class="col-lg-8"><div class="info-list">
+      <?php foreach ((array)($info['items'] ?? []) as $it): if (trim((string)($it['t'] ?? '')) === '') continue; ?>
+      <div class="info-it"><i class="bi <?= e($it['i'] ?? 'bi-check2-circle') ?>" aria-hidden="true"></i><div><h3><?= e($it['t']) ?></h3><p><?= e($it['p'] ?? '') ?></p></div></div>
+      <?php endforeach; ?>
+    </div></div>
+  </div></div>
+</section>
+<?php endif; ?>
+
+<?php if ($showGuests): ?>
+<section class="sec" id="misafir">
+  <div class="container">
+    <?php if (trim((string)($guests['eyebrow'] ?? '')) !== ''): ?><div class="eyebrow"><?= e($guests['eyebrow']) ?></div><?php endif; ?>
+    <h2 class="sec-t"><?= e($guests['title'] ?? '') ?></h2>
+    <div class="guests">
+      <?php foreach ($photos as $i => $p): ?>
+      <figure class="gst"><img src="<?= e(getMediaUrl($p)) ?>" alt="<?= e(($guests['eyebrow'] ?? '') . ' ' . ($i + 1)) ?>" loading="lazy" decoding="async" width="300" height="400"></figure>
+      <?php endforeach; ?>
+    </div>
+  </div>
+</section>
+<?php endif; ?>
+
+<?php if ($posts): ?>
+<section class="sec<?= $showGuests ? ' pt-0' : '' ?>" id="blog">
+  <div class="container">
+    <?php if (trim((string)($blog['eyebrow'] ?? '')) !== ''): ?><div class="eyebrow"><?= e($blog['eyebrow']) ?></div><?php endif; ?>
+    <h2 class="sec-t"><?= e($blog['title'] ?? '') ?></h2>
+    <div class="row g-4 mt-2">
+      <?php foreach ($posts as $p): ?>
+      <div class="col-md-6 col-lg-4"><article class="blog-c">
+        <?php if ($p['img'] !== ''): ?><a class="bimg" href="<?= e($p['url']) ?>" tabindex="-1" aria-hidden="true"><img src="<?= e($p['img']) ?>" alt="" loading="lazy" decoding="async" width="640" height="360"></a><?php else: ?><div class="ph"><?= e($blog['title'] ?? '') ?></div><?php endif; ?>
+        <h3><a href="<?= e($p['url']) ?>"><?= e($p['title']) ?></a></h3>
+        <a href="<?= e($p['url']) ?>"><?= sl_e('read') ?></a>
+      </article></div>
+      <?php endforeach; ?>
+    </div>
+  </div>
+</section>
+<?php endif; ?>
+
+<?php if ($faqItems): ?>
+<section class="sec<?= ($posts || $showGuests) ? ' pt-0' : '' ?>" id="sss">
+  <div class="container" style="max-width:920px">
+    <?php if (trim((string)($faq['eyebrow'] ?? '')) !== ''): ?><div class="eyebrow"><?= e($faq['eyebrow']) ?></div><?php endif; ?>
+    <h2 class="sec-t"><?= e($faq['title'] ?? '') ?></h2>
+    <?php sl_partial('faq', ['items' => $faqItems]); ?>
+  </div>
+</section>
+<?php endif; ?>
+<?php
+    return ['faq' => $faqItems, 'cards' => $cards, 'hero_img' => $heroImg];
+}

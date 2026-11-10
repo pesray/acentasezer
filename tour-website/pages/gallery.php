@@ -1,90 +1,40 @@
 <?php
 /**
- * Galeri Sayfası
+ * Galeri (Admin > Galeri kayıtları)
  */
 
 require_once dirname(__DIR__) . '/config/config.php';
-require_once INCLUDES_PATH . 'sections.php';
+require_once INCLUDES_PATH . 'sunline/core.php';
+require_once INCLUDES_PATH . 'schema.php';
 
-$pageTitle = __('menu_gallery', 'header');
-$bodyClass = 'gallery-page';
+$items = [];
+try {
+    $items = getDB()->query("SELECT * FROM gallery ORDER BY sort_order, id")->fetchAll();
+} catch (Exception $e) {}
 
-$db = getDB();
-
-// Tek sorguda galeri ve kategorileri al (optimize edildi)
-$gallery = $db->query("
-    SELECT g.*, gc.slug as category_slug, gc.name as category_name, gc.id as cat_id
-    FROM gallery g 
-    LEFT JOIN gallery_categories gc ON g.category_id = gc.id 
-    ORDER BY g.sort_order
-")->fetchAll();
-
-// Kategorileri galeri sonuçlarından çıkar (ayrı sorgu yerine)
-$categories = [];
-foreach ($gallery as $item) {
-    if (!empty($item['cat_id']) && !isset($categories[$item['cat_id']])) {
-        $categories[$item['cat_id']] = [
-            'id' => $item['cat_id'],
-            'slug' => $item['category_slug'],
-            'name' => $item['category_name']
-        ];
-    }
-}
+$title = sl_t('gallery_t');
+$url = sl_page_url('gallery');
+$seoTitle = $title . ' · ' . getSetting('site_name', 'Sunline VIP Transfer');
+$metaDescription = sl_t('seo_home_d');
+$canonicalUrl = $url;
+$bodyClass = 'sl-gallery';
+if (!$items) $metaRobots = 'noindex, follow';
+$pageSchema = [getBreadcrumbSchema([['name' => $title, 'url' => $url]])];
 
 require_once INCLUDES_PATH . 'header.php';
+sl_partial('page-hero', ['h1' => $title, 'crumbs' => [[$title, $url]]]);
 ?>
-
-<div class="page-title dark-background" style="background-image: url(<?= ASSETS_URL ?>img/page-title-bg.webp);">
-    <div class="container position-relative">
-        <h1><?= __('menu_gallery', 'header') ?></h1>
+<section class="sec">
+  <div class="container">
+    <div class="row g-3">
+      <?php foreach ($items as $it): if (empty($it['image'])) continue; ?>
+      <div class="col-6 col-md-4 col-lg-3">
+        <a class="gst d-block" style="aspect-ratio:1/1" href="<?= e(getMediaUrl($it['image'])) ?>" target="_blank" rel="noopener">
+          <img src="<?= e(getMediaUrl(!empty($it['thumbnail']) ? $it['thumbnail'] : $it['image'])) ?>" alt="<?= e($it['title'] ?? $title) ?>" loading="lazy" decoding="async" width="400" height="400">
+        </a>
+      </div>
+      <?php endforeach; ?>
     </div>
-</div>
-
-<section class="gallery section">
-    <div class="container">
-        <!-- Filter -->
-        <div class="gallery-filters text-center mb-4">
-            <ul class="list-inline">
-                <li class="list-inline-item"><button class="btn btn-outline-primary active" data-filter="*"><?= __('all', 'general') ?></button></li>
-                <?php foreach ($categories as $cat): ?>
-                <li class="list-inline-item"><button class="btn btn-outline-primary" data-filter=".<?= e($cat['slug']) ?>"><?= e($cat['name']) ?></button></li>
-                <?php endforeach; ?>
-            </ul>
-        </div>
-        
-        <!-- Gallery Grid -->
-        <div class="row gallery-container gy-4">
-            <?php foreach ($gallery as $item): ?>
-            <div class="col-lg-3 col-md-4 col-6 gallery-item <?= e($item['category_slug'] ?? '') ?>">
-                <a href="<?= UPLOADS_URL . e($item['image']) ?>" class="glightbox" data-gallery="gallery">
-                    <img src="<?= UPLOADS_URL . e($item['thumbnail'] ?: $item['image']) ?>" alt="<?= e($item['title']) ?>" class="img-fluid" loading="lazy">
-                    <?php if ($item['title']): ?>
-                    <div class="gallery-overlay">
-                        <span><?= e($item['title']) ?></span>
-                    </div>
-                    <?php endif; ?>
-                </a>
-            </div>
-            <?php endforeach; ?>
-        </div>
-    </div>
+  </div>
 </section>
-
-<?php 
-$extraJs = '<script>
-$(document).ready(function() {
-    $(".gallery-filters button").on("click", function() {
-        $(".gallery-filters button").removeClass("active");
-        $(this).addClass("active");
-        var filter = $(this).data("filter");
-        if (filter === "*") {
-            $(".gallery-item").show();
-        } else {
-            $(".gallery-item").hide();
-            $(filter).show();
-        }
-    });
-});
-</script>';
-require_once INCLUDES_PATH . 'footer.php'; 
-?>
+<?php require_once INCLUDES_PATH . 'footer.php'; ?>

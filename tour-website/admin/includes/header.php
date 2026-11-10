@@ -865,21 +865,25 @@ if ($siteLogo && defined('UPLOADS_URL')) {
         </a>
 
         <div class="nav-section">İçerik</div>
-        <a href="<?= ADMIN_URL ?>/homepage.php" class="nav-link <?= $currentPage === 'homepage' ? 'active' : '' ?>" title="Anasayfa">
-            <i class="bi bi-house-door nav-link-icon"></i>
-            <span class="nav-link-text">Anasayfa</span>
+        <a href="<?= ADMIN_URL ?>/homepage.php" class="nav-link <?= $currentPage === 'homepage' ? 'active' : '' ?>" title="Anasayfa & Tema">
+            <i class="bi bi-palette nav-link-icon"></i>
+            <span class="nav-link-text">Anasayfa & Tema</span>
         </a>
-        <a href="<?= ADMIN_URL ?>/sections.php" class="nav-link <?= $currentPage === 'sections' ? 'active' : '' ?>" title="Section'lar">
-            <i class="bi bi-layout-text-window nav-link-icon"></i>
-            <span class="nav-link-text">Section'lar</span>
+        <a href="<?= ADMIN_URL ?>/blog.php" class="nav-link <?= $currentPage === 'blog' ? 'active' : '' ?>" title="Blog">
+            <i class="bi bi-journal-text nav-link-icon"></i>
+            <span class="nav-link-text">Blog</span>
         </a>
-        <a href="<?= ADMIN_URL ?>/menus.php" class="nav-link <?= $currentPage === 'menus' ? 'active' : '' ?>" title="Menüler">
-            <i class="bi bi-list-task nav-link-icon"></i>
-            <span class="nav-link-text">Menüler</span>
+        <a href="<?= ADMIN_URL ?>/faq.php" class="nav-link <?= $currentPage === 'faq' ? 'active' : '' ?>" title="SSS">
+            <i class="bi bi-question-circle nav-link-icon"></i>
+            <span class="nav-link-text">SSS</span>
         </a>
-        <a href="<?= ADMIN_URL ?>/sliders.php" class="nav-link <?= $currentPage === 'sliders' ? 'active' : '' ?>" title="Slider">
-            <i class="bi bi-images nav-link-icon"></i>
-            <span class="nav-link-text">Slider</span>
+        <a href="<?= ADMIN_URL ?>/pages.php" class="nav-link <?= $currentPage === 'pages' ? 'active' : '' ?>" title="Sayfalar">
+            <i class="bi bi-file-earmark-text nav-link-icon"></i>
+            <span class="nav-link-text">Sayfalar</span>
+        </a>
+        <a href="<?= ADMIN_URL ?>/contacts.php" class="nav-link <?= $currentPage === 'contacts' ? 'active' : '' ?>" title="İletişim Mesajları">
+            <i class="bi bi-envelope nav-link-icon"></i>
+            <span class="nav-link-text">İletişim Mesajları</span>
         </a>
         <a href="<?= ADMIN_URL ?>/media.php" class="nav-link <?= $currentPage === 'media' ? 'active' : '' ?>" title="Medya">
             <i class="bi bi-collection nav-link-icon"></i>

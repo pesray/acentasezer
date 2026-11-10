@@ -1,0 +1,291 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Sunline VIP Transfer — Antalya</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin="">
+<link href="https://fonts.googleapis.com/css2?family=Zilla+Slab:wght@600;700&family=Hanken+Grotesk:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+<link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet">
+<style>
+:root{--bg:#0b0b0c;--bg2:#121214;--card:#1a1a1a;--card2:#2a2a2a;--accent:#FFD700;--cta1:#c9a227;--cta2:#e8c547;--text:#ffffff;--muted:#b9b9b9;--line:rgba(255,255,255,.09);--red:#ff4d4d;--redbg:rgba(220,30,30,.18);--ff-d:'Zilla Slab',serif;--ff:'Hanken Grotesk',sans-serif}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{background:var(--bg);color:var(--text);font-family:var(--ff);margin:0;transition:background .3s,color .3s}
+a{color:var(--accent);text-decoration:none}a:hover{color:var(--cta2)}
+.promo{background:#c4161c;border-bottom:2px solid #FFD700;color:#fff;font-size:.85rem;font-weight:600;position:relative;overflow:hidden;height:38px;display:flex;align-items:center}
+.promo-track{display:flex;gap:3rem;white-space:nowrap;animation:mq 32s linear infinite;padding-left:100%}
+.promo-track span{display:flex;align-items:center;gap:.5rem}.promo-track b{color:#FFD700}
+@keyframes mq{to{transform:translateX(-100%)}}
+.promo-x{position:absolute;right:0;top:0;bottom:0;width:38px;background:#c4161c;border:0;color:#fff;font-size:1.3rem}
+.hdr{position:sticky;top:0;z-index:1030;background:color-mix(in oklab,var(--bg) 88%,transparent);backdrop-filter:blur(12px);border-bottom:1px solid var(--line)}
+.brand{display:flex;flex-direction:column;line-height:1}.brand b{font-family:var(--ff-d);font-size:1.45rem;color:var(--accent);letter-spacing:.04em}.brand small{font-size:.62rem;letter-spacing:.32em;color:var(--muted);margin-top:4px}
+.logo{display:inline-flex}.logo img{height:52px;width:auto;display:block}
+.hdr .nav-link{color:var(--text);font-weight:500;font-size:.92rem;padding:.5rem .8rem!important}.hdr .nav-link:hover{color:var(--accent)}
+.navbar-toggler{border-color:var(--line);color:var(--text)}
+.lang{display:flex;gap:4px}.lang button{background:none;border:1px solid var(--line);color:var(--muted);font-size:.72rem;font-weight:700;padding:5px 9px;border-radius:8px}.lang button.on{background:var(--accent);color:#111;border-color:var(--accent)}
+.btn-cta{background:linear-gradient(135deg,var(--cta1),var(--cta2));border:1px solid rgba(0,0,0,.14);color:#0b0b0c!important;font-weight:800;border-radius:12px;padding:10px 16px;transition:transform .15s,filter .15s}
+.btn-cta:hover{transform:translateY(-1px);filter:brightness(1.06)}
+.btn-ghost{border:1px solid var(--accent);color:var(--accent);background:transparent;font-weight:700;border-radius:12px;padding:9px 15px}
+.hero{position:relative;min-height:560px;display:flex;align-items:center;overflow:hidden}
+.hero-bg{position:absolute;inset:0;background:url('https://images.unsplash.com/photo-1507525428034-b723cf961d3e?w=1800&q=80') center/cover;animation:kb 24s ease-in-out infinite alternate}
+@keyframes kb{to{transform:scale(1.08)}}
+.hero::after{content:'';position:absolute;inset:0;background:linear-gradient(180deg,rgba(0,0,0,.35),rgba(0,0,0,.55) 60%,var(--bg))}
+.hero-in{position:relative;z-index:2;width:100%;padding:90px 0 150px}
+.hero h1{font-family:var(--ff-d);font-size:clamp(2.3rem,6vw,4.4rem);font-weight:700;color:#fff;text-shadow:0 4px 30px rgba(0,0,0,.5);margin:0 0 .6rem}
+.hero h1 em{font-style:normal;color:var(--accent)}
+.hero p{color:#eee;font-size:clamp(1rem,2vw,1.2rem);max-width:620px;margin:0}
+.qf{position:relative;z-index:3;margin-top:-110px;background:linear-gradient(135deg,var(--card),var(--card2));border:1px solid color-mix(in oklab,var(--accent) 35%,transparent);border-radius:20px;padding:24px;box-shadow:0 20px 60px rgba(0,0,0,.45)}
+.qf label{font-size:.72rem;font-weight:700;letter-spacing:.14em;color:var(--accent);margin-bottom:6px}
+.qf .form-select,.fm .form-control,.fm .form-select{background-color:var(--bg2);border:1px solid var(--line);color:var(--text);border-radius:12px;padding:.7rem .9rem}
+.qf .form-select:focus,.fm .form-control:focus,.fm .form-select:focus{border-color:var(--accent);box-shadow:0 0 0 3px color-mix(in oklab,var(--accent) 22%,transparent)}
+.qf-note{font-size:.85rem;color:var(--muted);margin-top:14px;display:flex;gap:.5rem;align-items:center}
+.trust{display:flex;flex-wrap:wrap;gap:10px 22px;margin-top:16px;padding-top:16px;border-top:1px solid var(--line)}
+.trust span{display:flex;gap:7px;align-items:center;font-size:.86rem;color:var(--text)}.trust i{color:var(--accent)}
+.sec{padding:80px 0}
+.eyebrow{font-size:.75rem;font-weight:700;letter-spacing:.24em;color:var(--accent);text-transform:uppercase;margin-bottom:.6rem}
+.sec-t{font-family:var(--ff-d);font-size:clamp(1.8rem,4vw,2.7rem);font-weight:700;margin:0 0 .5rem}
+.sec-s{color:var(--muted);max-width:640px}
+/* ===== transfer kartları (birebir) ===== */
+.rc-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(320px,1fr));gap:30px;margin-top:40px}
+@media(max-width:380px){.rc-grid{grid-template-columns:1fr}}
+.rc{background:linear-gradient(135deg,var(--card) 0%,var(--card2) 100%);border-radius:20px;overflow:hidden;box-shadow:0 10px 40px rgba(0,0,0,.5);transition:transform .3s,box-shadow .3s}
+.rc:hover{transform:translateY(-8px);box-shadow:0 18px 50px rgba(0,0,0,.6)}
+.rc-media{position:relative;display:block;height:280px;overflow:hidden}
+.rc-media img{width:100%;height:100%;object-fit:cover;transition:transform .5s}.rc:hover .rc-media img{transform:scale(1.08)}
+.rc-badge{position:absolute;top:14px;right:14px;background:linear-gradient(180deg,#ff2a2a,#c80000);color:#fff;font-weight:800;font-size:.9rem;letter-spacing:.12em;padding:8px 16px;border-radius:10px;border:1px solid rgba(255,255,255,.35);box-shadow:0 4px 18px rgba(255,0,0,.45)}
+.rc-ov{position:absolute;left:0;right:0;bottom:0;background:linear-gradient(to top,rgba(0,0,0,.9) 0%,transparent 100%);padding:30px 24px 20px}
+.rc-ov h3{color:#fff;font-size:1.95rem;font-weight:700;margin:0;text-shadow:2px 2px 4px rgba(0,0,0,.5)}
+.rc-body{padding:26px 22px 24px;background:var(--card)}
+.rc-ozel{font-size:.78rem;font-weight:800;letter-spacing:.16em;color:var(--red);text-transform:uppercase;margin-bottom:12px}
+.rc-row{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.rc-box{border-radius:14px;padding:12px;min-width:0;border:1px solid var(--cline);background:color-mix(in oklab,var(--ctext) 3%,transparent)}
+.rc-rt{border-color:color-mix(in oklab,var(--accent) 45%,transparent);background:color-mix(in oklab,var(--accent) 6%,transparent);box-shadow:0 0 24px color-mix(in oklab,var(--accent) 12%,transparent),inset 0 0 18px color-mix(in oklab,var(--accent) 6%,transparent)}
+.rc-rt-h{font-size:.72rem;font-weight:800;letter-spacing:.1em;color:var(--ctext);text-transform:uppercase;white-space:nowrap}
+.rc-ow .rc-rt-h{color:var(--cmuted)}
+.rc-rt-p{display:flex;align-items:baseline;flex-wrap:wrap;gap:4px 8px;margin:4px 0 8px}
+.rc del{color:var(--red);font-weight:700;opacity:.85;text-decoration-thickness:2px;font-size:1rem}
+.rc-now{font-size:1.9rem;font-weight:800;color:var(--accent);line-height:1;text-shadow:0 2px 12px color-mix(in oklab,var(--accent) 35%,transparent)}
+.rc-ow .rc-now{font-size:1.6rem;text-shadow:none}
+.rc-disc{display:inline-flex;align-items:center;gap:5px;background:var(--redbg);border:1px solid color-mix(in oklab,var(--red) 55%,transparent);color:var(--red);font-size:.75rem;font-weight:700;padding:3px 8px;border-radius:7px;white-space:nowrap}
+.rc-disc i{color:#f4b13c;font-size:.72rem}
+.rc-book{display:block;width:100%;margin-top:16px;font-size:1.15rem;padding:15px 18px!important;border-radius:14px!important;letter-spacing:.02em}
+.rc-stars{display:flex;gap:6px;margin-top:16px;color:#FFD700;font-size:1.3rem}
+/* ===== */
+.flt{display:flex;flex-wrap:wrap;gap:8px;margin-top:24px}
+.flt button{background:var(--bg2);border:1px solid var(--line);color:var(--muted);border-radius:999px;padding:7px 15px;font-size:.85rem;font-weight:600}
+.flt button.on{background:var(--accent);color:#111;border-color:var(--accent)}
+.guests{display:grid;grid-auto-flow:column;grid-auto-columns:minmax(220px,1fr);gap:16px;overflow-x:auto;padding-bottom:10px;margin-top:32px;scroll-snap-type:x mandatory}
+.ph{background:repeating-linear-gradient(45deg,var(--card),var(--card) 14px,var(--card2) 14px,var(--card2) 28px);border:1px solid var(--line);border-radius:16px;display:flex;align-items:center;justify-content:center;color:var(--muted);font-family:monospace;font-size:.72rem;text-align:center;padding:12px;scroll-snap-align:start}
+.guests .ph{aspect-ratio:3/4}
+.info{background:var(--bg2);border-top:1px solid var(--line);border-bottom:1px solid var(--line)}
+.info-list{display:grid;gap:14px}
+.info-it{display:grid;grid-template-columns:44px 1fr;gap:14px;background:var(--card);border:1px solid var(--line);border-radius:16px;padding:18px}
+.info-it i{width:44px;height:44px;border-radius:12px;display:flex;align-items:center;justify-content:center;background:color-mix(in oklab,var(--accent) 14%,transparent);color:var(--accent);font-size:1.2rem}
+.info-it h4{font-size:1rem;font-weight:700;margin:0 0 4px}.info-it p{color:var(--muted);margin:0;font-size:.93rem;line-height:1.6;text-wrap:pretty}
+.blog-c{background:var(--card);border:1px solid var(--line);border-radius:16px;overflow:hidden;height:100%}
+.blog-c .ph{aspect-ratio:16/9;border:0;border-radius:0}
+.blog-c h5{font-size:1.02rem;font-weight:600;padding:16px 18px 0;margin:0;color:var(--text);line-height:1.4}
+.blog-c a{display:inline-block;padding:10px 18px 18px;font-weight:600;font-size:.88rem}
+.kw{border-top:1px solid var(--line);overflow:hidden;padding:18px 0;color:var(--muted);font-size:.85rem}
+.ftr{background:var(--bg2);border-top:1px solid var(--line);padding:60px 0 24px}
+.ftr h6{color:var(--accent);font-size:.75rem;letter-spacing:.2em;text-transform:uppercase;font-weight:700;margin-bottom:14px}
+.ftr ul{list-style:none;padding:0;margin:0;display:grid;gap:8px}.ftr li a{color:var(--muted)}.ftr li a:hover{color:var(--accent)}
+.ftr p{color:var(--muted);font-size:.92rem}
+.copy{border-top:1px solid var(--line);margin-top:36px;padding-top:18px;color:var(--muted);font-size:.8rem}
+.wa{position:fixed;left:20px;bottom:20px;z-index:1040;width:58px;height:58px;border-radius:50%;background:#25D366;color:#fff;display:flex;align-items:center;justify-content:center;font-size:1.7rem;box-shadow:0 8px 24px rgba(37,211,102,.45);animation:pl 2.4s infinite}
+.wa:hover{color:#fff}@keyframes pl{50%{transform:scale(1.1)}}
+.modal-content{background:var(--card);color:var(--text);border:1px solid color-mix(in oklab,var(--accent) 35%,transparent);border-radius:20px}
+.modal-header,.modal-footer{border-color:var(--line)}
+.fm label{font-size:.75rem;font-weight:700;color:var(--muted);margin-bottom:5px}
+.trip{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.trip label{border:1px solid var(--line);border-radius:14px;padding:12px;cursor:pointer;display:block;margin:0}
+.trip input{display:none}.trip input:checked+label{border-color:var(--accent);background:color-mix(in oklab,var(--accent) 8%,transparent)}
+.trip b{display:block;color:var(--accent);font-size:1.4rem}
+.ok{display:none;text-align:center;padding:30px 10px}.ok i{font-size:3rem;color:var(--accent)}
+/* tweaks */
+#tw{position:fixed;right:18px;bottom:18px;z-index:2000;width:290px;background:#141416;color:#eee;border:1px solid rgba(255,255,255,.12);border-radius:16px;box-shadow:0 20px 50px rgba(0,0,0,.5);font-family:var(--ff);display:none}
+#tw.show{display:block}
+#tw header{display:flex;justify-content:space-between;align-items:center;padding:12px 14px;border-bottom:1px solid rgba(255,255,255,.1);font-weight:700}
+#tw header button{background:none;border:0;color:#aaa;font-size:1.2rem}
+#tw section{padding:12px 14px;border-bottom:1px solid rgba(255,255,255,.06)}
+#tw h6{font-size:.68rem;letter-spacing:.16em;color:#999;text-transform:uppercase;margin:0 0 8px}
+.sw{display:flex;flex-wrap:wrap;gap:8px}
+.sw button{width:30px;height:30px;border-radius:8px;border:2px solid rgba(255,255,255,.15);padding:0}
+.sw button.on{border-color:#fff;outline:2px solid #888;outline-offset:1px}
+.pre{display:grid;grid-template-columns:1fr 1fr;gap:6px}
+.pre button{display:flex;align-items:center;gap:7px;background:#1e1e21;border:1px solid rgba(255,255,255,.1);color:#ddd;border-radius:9px;padding:6px 8px;font-size:.75rem;text-align:left}
+.pre button.on{border-color:#fff}
+.pre i{width:22px;height:14px;border-radius:4px;flex-shrink:0}
+</style>
+</head>
+<body>
+<div class="promo" id="promo"><div class="promo-track" id="promoTrack"></div><button class="promo-x" onclick="document.getElementById('promo').remove()" aria-label="Kapat">×</button></div>
+<nav class="navbar navbar-expand-lg hdr">
+<div class="container">
+<a class="navbar-brand logo" href="#"><img src="assets/sunline-logo.png" alt="Sunline VIP Transfer Antalya"></a>
+<button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#nv" aria-label="Menü"><i class="bi bi-list" style="font-size:1.5rem"></i></button>
+<div class="collapse navbar-collapse" id="nv">
+<ul class="navbar-nav mx-auto" id="navLinks"></ul>
+<div class="d-flex flex-wrap gap-2 align-items-center py-2 py-lg-0"><div class="lang" id="langBtns"></div><a href="#bolgeler" class="btn btn-cta btn-sm" data-t="navCta"></a></div>
+</div>
+</div>
+</nav>
+<header class="hero"><div class="hero-bg"></div><div class="container hero-in"><div class="eyebrow" style="color:#FFD700" data-t="heroEy"></div><h1 data-t="heroT"></h1><p data-t="heroS"></p></div></header>
+<div class="container">
+<div class="qf">
+<div class="row g-3 align-items-end">
+<div class="col-md-4"><label class="d-block" data-t="from"></label><select class="form-select" id="qFrom"></select></div>
+<div class="col-md-4"><label class="d-block" data-t="to"></label><select class="form-select" id="qTo"></select></div>
+<div class="col-6 col-md-2"><label class="d-block" data-t="pax"></label><select class="form-select" id="qPax"></select></div>
+<div class="col-6 col-md-2"><button class="btn btn-cta w-100" style="padding:.72rem" onclick="quick()" data-t="see"></button></div>
+</div>
+<div class="qf-note" id="qNote"><i class="bi bi-qr-code" style="color:var(--accent)"></i><span data-t="note"></span></div>
+<div class="trust" id="trust"></div>
+</div>
+</div>
+<section class="sec" id="bolgeler">
+<div class="container">
+<div class="eyebrow" data-t="regEy"></div>
+<h2 class="sec-t" data-t="regT"></h2>
+<p class="sec-s" data-t="regS"></p>
+<div class="flt" id="flt"></div>
+<div class="rc-grid" id="grid"></div>
+</div>
+</section>
+<section class="sec info" id="bilgi">
+<div class="container"><div class="row g-5">
+<div class="col-lg-4"><div class="eyebrow">sunlinevip.com</div><h2 class="sec-t" data-t="infoT"></h2><p class="sec-s" data-t="infoS"></p><p class="mt-4" style="color:var(--muted);font-size:.9rem" data-t="infoSign"></p></div>
+<div class="col-lg-8"><div class="info-list" id="infoList"></div></div>
+</div></div>
+</section>
+<section class="sec" id="misafir">
+<div class="container"><div class="eyebrow" data-t="gEy"></div><h2 class="sec-t" data-t="gT"></h2>
+<div class="guests" id="guests"></div></div>
+</section>
+<section class="sec pt-0" id="blog">
+<div class="container"><div class="eyebrow">Blog</div><h2 class="sec-t" data-t="blogT"></h2>
+<div class="row g-4 mt-2" id="blogRow"></div></div>
+</section>
+<div class="kw"><div class="promo-track" style="animation-duration:60s" id="kwTrack"></div></div>
+<footer class="ftr" id="iletisim">
+<div class="container"><div class="row g-4">
+<div class="col-lg-4"><div class="logo mb-3"><img src="assets/sunline-logo.png" alt="Sunline VIP Transfer Antalya" style="height:64px"></div><p data-t="fAbout"></p></div>
+<div class="col-6 col-lg-2"><h6 data-t="fQuick"></h6><ul id="fQuick"></ul></div>
+<div class="col-6 col-lg-3"><h6 data-t="fPop"></h6><ul id="fPop"></ul></div>
+<div class="col-lg-3"><h6 data-t="fContact"></h6><ul><li><a href="#"><i class="bi bi-geo-alt me-2"></i>Lara Cad. No:42, Antalya</a></li><li><a href="tel:+905320000000"><i class="bi bi-telephone me-2"></i>+90 532 000 00 00</a></li><li><a href="https://wa.me/905320000000"><i class="bi bi-whatsapp me-2"></i>WhatsApp</a></li><li><a href="mailto:info@sunlinevip.com"><i class="bi bi-envelope me-2"></i>info@sunlinevip.com</a></li></ul></div>
+</div><div class="copy">© 2026 SUNLINE VIP TRANSFER — <span data-t="rights"></span></div></div>
+</footer>
+<a class="wa" href="https://wa.me/905320000000" aria-label="WhatsApp"><i class="bi bi-whatsapp"></i></a>
+<div class="modal fade" id="bm" tabindex="-1"><div class="modal-dialog modal-dialog-centered"><div class="modal-content">
+<div class="modal-header"><h5 class="modal-title" style="font-family:var(--ff-d)" id="bmT"></h5><button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button></div>
+<div class="modal-body fm" id="bmBody"></div>
+</div></div></div>
+<div id="tw"><header><span>Tweaks</span><button onclick="twClose()">×</button></header>
+<section><h6>Hazır Tema</h6><div class="pre" id="twPre"></div></section>
+<section><h6>Arka Plan</h6><div class="sw" id="twBg"></div></section>
+<section><h6>Kart Rengi</h6><div class="sw" id="twCard"></div></section>
+<section><h6>Vurgu (Fiyat & Buton)</h6><div class="sw" id="twAcc"></div></section>
+</div>
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+<script>
+const TWEAK_DEFAULTS=/*EDITMODE-BEGIN*/{
+  "preset": "",
+  "bg": "#f4efe6",
+  "card": "#1a1a1a",
+  "accent": "#FFD700",
+  "lang": "tr"
+}/*EDITMODE-END*/;
+const PRESETS={
+gece:{n:"Gece Altın",bg:"#0b0b0c",card:"#1a1a1a",accent:"#FFD700",light:0},
+lacivert:{n:"Lacivert",bg:"#0a1224",card:"#131e38",accent:"#f2c94c",light:0},
+bordo:{n:"Bordo",bg:"#14080c",card:"#251219",accent:"#e9c27a",light:0},
+turkuaz:{n:"Akdeniz",bg:"#08161a",card:"#11252b",accent:"#3fd6c6",light:0},
+zumrut:{n:"Zümrüt",bg:"#07130e",card:"#11231a",accent:"#d8b45a",light:0},
+krem:{n:"Krem",bg:"#f4efe6",card:"#ffffff",accent:"#b8860b",light:1}};
+const BGS=["#0b0b0c","#111827","#0a1224","#14080c","#08161a","#07130e","#1c1917","#f4efe6","#f7f7f5","#eef3f6"];
+const CARDS=["#1a1a1a","#222226","#131e38","#251219","#11252b","#11231a","#ffffff","#faf6ee"];
+const ACCS=["#FFD700","#e8c547","#f2c94c","#e9c27a","#d8b45a","#3fd6c6","#ff8a3d","#b8860b"];
+let T={...TWEAK_DEFAULTS};
+function lum(h){h=h.replace('#','');const [r,g,b]=[0,2,4].map(i=>parseInt(h.substr(i,2),16)/255);return .2126*r+.7152*g+.0722*b}
+function mix(h,amt){h=h.replace('#','');let [r,g,b]=[0,2,4].map(i=>parseInt(h.substr(i,2),16));const t=amt>0?255:0,a=Math.abs(amt);[r,g,b]=[r,g,b].map(v=>Math.round(v+(t-v)*a));return '#'+[r,g,b].map(v=>v.toString(16).padStart(2,'0')).join('')}
+function applyTheme(){const s=document.documentElement.style,lb=lum(T.bg)>.5,lc=lum(T.card)>.5;
+s.setProperty('--bg',T.bg);s.setProperty('--bg2',mix(T.bg,lb?-.04:.04));
+s.setProperty('--card',T.card);s.setProperty('--card2',mix(T.card,lc?-.05:.07));
+s.setProperty('--accent',T.accent);s.setProperty('--cta1',mix(T.accent,-.2));s.setProperty('--cta2',mix(T.accent,.12));
+s.setProperty('--text',lb?'#141414':'#ffffff');s.setProperty('--muted',lb?'#5a5550':'#b9b9b9');s.setProperty('--line',lb?'rgba(0,0,0,.1)':'rgba(255,255,255,.09)');
+s.setProperty('--red',lc?'#d11a1a':'#ff4d4d');
+s.setProperty('--ctext',lc?'#141414':'#ffffff');s.setProperty('--cmuted',lc?'#6b6560':'#b9b9b9');s.setProperty('--cline',lc?'rgba(0,0,0,.12)':'rgba(255,255,255,.12)');
+document.querySelectorAll('.rc-body,.modal-content,.qf').forEach(e=>e.style.color=lc?'#141414':'#fff');
+renderTw()}
+function setT(k){Object.assign(T,k);applyTheme();try{parent.postMessage({type:'__edit_mode_set_keys',edits:k},'*')}catch(e){}}
+function renderTw(){
+twPre.innerHTML=Object.entries(PRESETS).map(([k,p])=>`<button class="${T.preset===k?'on':''}" onclick="setT({preset:'${k}',bg:'${p.bg}',card:'${p.card}',accent:'${p.accent}'})"><i style="background:linear-gradient(90deg,${p.bg} 50%,${p.accent} 50%)"></i>${p.n}</button>`).join('');
+const sw=(arr,key)=>arr.map(c=>`<button class="${T[key].toLowerCase()===c.toLowerCase()?'on':''}" style="background:${c}" title="${c}" onclick="setT({${key}:'${c}',preset:''})"></button>`).join('');
+twBg.innerHTML=sw(BGS,'bg');twCard.innerHTML=sw(CARDS,'card');twAcc.innerHTML=sw(ACCS,'accent')}
+function twClose(){tw.classList.remove('show');try{parent.postMessage({type:'__edit_mode_dismissed'},'*')}catch(e){}}
+addEventListener('message',e=>{const d=e.data||{};if(d.type==='__activate_edit_mode')tw.classList.add('show');if(d.type==='__deactivate_edit_mode')tw.classList.remove('show')});
+try{parent.postMessage({type:'__edit_mode_available'},'*')}catch(e){}
+
+const IMG_FB='https://images.unsplash.com/photo-1507525428034-b723cf961d3e?w=800&h=600&fit=crop';
+const R=[["Konyaaltı",80,70,40,35,"konyaalti-1768762794","yakin"],["Lara",90,80,45,40,"lara-transfer-1768762786","yakin"],["Kundu",90,80,45,40,"kundu-1768762805","yakin"],["Belek",100,90,50,45,"belek-transfer-1768811887","dogu"],["Beldibi",120,110,60,55,"beldibi-1768762815","bati"],["Kumköy",120,110,60,55,"kumkoy-1768762918","dogu"],["Side",120,110,60,55,"side-1768762856","dogu"],["Evrenseki",120,110,60,55,"evrenseki-1768762908","dogu"],["Çolaklı",120,110,60,55,"colakli-1768762900","dogu"],["Gündoğdu",120,110,60,55,"gundogdu-1768827156","dogu"],["Kemer",120,110,60,55,"kemer-1768826700","bati"],["Sorgun",120,110,60,55,"sorgun-1768762971","dogu"],["Göynük",120,110,60,55,"goynuk-1768812228","bati"],["Kızılot",140,130,70,65,"kizilot-1768812374","dogu"],["Kızılağaç",140,130,70,65,"kizilagac-1768826378-1768826378","dogu"],["Manavgat",140,130,70,65,"manavgat-1768762936","dogu"],["Çenger",150,140,75,70,"cenger-1768853339","bati"],["Tekirova",150,140,75,70,"tekirova-1768826917","bati"],["Okurcalar",150,140,75,70,"okurcalar-1768848359","alanya"],["Avsallar",150,140,75,70,"avsallar-1768848406","alanya"],["İncekum",150,140,75,70,"incekum-1768848461","alanya"],["Türkler",160,150,80,75,"turkler-1768849229","alanya"],["Çıralı",160,150,80,75,"cirali-1768853647","bati"],["Olimpos",160,150,80,75,"olimpos-1768853540","bati"],["Konaklı",160,150,80,75,"konakli-1768849323","alanya"],["Alanya",170,160,85,80,"alanya-1768849394","alanya"],["Oba",170,160,85,80,"oba-1768852788","alanya"],["Kestel",170,160,85,80,"kestel-1768852851","alanya"],["Mahmutlar",210,200,105,100,"mahmutlar-1768852963","alanya"],["Kargıcak",210,200,105,100,"kargicak-1768853178","alanya"]];
+
+const L={
+tr:{nav:["Anasayfa","Bölgeler","Bilgilendirme","Misafirlerimiz","Blog","İletişim"],navCta:"Rezervasyon Sorgula",heroEy:"Antalya Havalimanı · Özel Transfer",heroT:"Antalya <em>VIP Transfer</em>",heroS:"Havalimanından otelinize; araç başı sabit fiyat, QR/PNR ile karşılama ve ödemeyi araçta yapma imkânı.",from:"NEREDEN",to:"NEREYE",pax:"YOLCU",sel:"Lütfen seçiniz",airport:"Antalya Havalimanı (AYT)",person:"Kişi",see:"Fiyat Gör",pick:"Açılan kutulardan seçim yapınız!",note:"Terminal çıkışında PNR numarası ve QR bilet ile karşılama & 1. çocuk koltuğu ücretsiz dahil",trust:["Araç başı sabit fiyat","Ücretsiz iptal","1. çocuk koltuğu ücretsiz","Ücretsiz uçuş takibi","7/24 destek"],promo:[["Mayıs sonuna kadar:","Ücretsiz İptal & Araçta Nakit Ödeme İmkânı!"],["","KISA SÜRELİ KAMPANYALI FİYATLARLA!"],["Sunline VIP:","QR / PNR ile hızlı karşılama"]],regEy:"Bölgeler & Fiyatlar",regT:"Transfer Fiyatları",regS:"Fiyatlar kişi başı değil, araç başı toplam fiyattır. Sürpriz ek ücret yok.",flt:{all:"Tümü",yakin:"Merkez",dogu:"Belek & Side",bati:"Kemer",alanya:"Alanya"},badge:"İNDİRİM",ozel:"Özel Fiyat",rt:"Gidiş-Dönüş",ow:"Tek Yön",book:"Rezervasyon",infoT:"Profesyonel Hizmet ve Karşılama Standartlarımız",infoS:"Antalya'daki konforunuzu şansa bırakmıyoruz. Havalimanı otoritelerinin (Fraport TAV) yeni düzenlemelerine tam uyumlu operasyon merkezimiz ve QR / PNR dijital karşılama sistemimizle, rezervasyon anından otelinize ulaşana kadar her adımı titizlikle yönetiyoruz:",infoSign:"Saygılarımızla, Sunline VIP Transfer Operasyon Merkezi",info:[["bi-whatsapp","Anlık İletişim","Web sitemizden rezervasyonunuzu yaptığınız an, WhatsApp hattımız üzerinden sizinle iletişime geçerek tüm detayları netleştiriyoruz."],["bi-camera-video","Çift Onay ve \"Görüntülü Rehber\" Sistemi","Yolculuğunuza 2 gün kala transferinizi kesinleştirmek için size tekrar ulaşıyoruz. Bu aşamada, havalimanındaki yeni kurallar nedeniyle karışıklık yaşamamanız için buluşma noktamızı gösteren özel yönlendirme videomuzu size iletiyoruz. Böylece havalimanına indiğinizde nereye gideceğinizi bilerek kendinizi güvende hissediyorsunuz."],["bi-qr-code-scan","Sabit Buluşma Noktası — QR / PNR ile Hızlı Karşılama","Yeni kurallarla kağıt tabelalar arasında isim aramanıza gerek kalmaz. Terminal çıkışından sonra WhatsApp üzerinden ilettiğimiz sabit buluşma noktasına gelin; QR biletinizi gösterin veya PNR numaranızı söyleyin — anında eşleşir, VIP aracınıza hızla eşlik edilirsiniz."],["bi-wifi","Üst Segment Donanım","En yeni model araçlarımızda yüksek hızlı internet, TV, buzdolabı ve bebek koltuğu gibi tüm premium hizmetler standart ve ücretsizdir."],["bi-cash-coin","Net Fiyat, Şeffaf Ödeme","Fiyatlarımız kişi başı değil, araç başı toplam fiyattır. Sürpriz ek ücretler yok! Ödemenizi transfer sonunda kaptanımıza nakit olarak yapabilirsiniz."],["bi-shield-check","Yasal Güvence","Tüm seyahatiniz özel sigorta kapsamındadır. Sunline VIP Transfer ile sadece konforu değil, güvenliği de satın alırsınız."]],gEy:"Misafirlerimiz",gT:"Onlar denedi ve onayladı. Şimdi sıra sizde!",blogT:"Blog Yazıları",read:"Devamını oku →",fAbout:"Sunline VIP Transfer, Antalya ve çevresinde havalimanı transferi ve VIP transfer hizmeti sunan özel bir şirkettir.",fQuick:"Hızlı Bağlantılar",fQ:["Sıkça Sorulan Sorular","KVKK","Ücretsiz İptal ve Değişiklik"],fPop:"Popüler Destinasyonlar",fContact:"Bize Ulaşın",rights:"Tüm hakları saklıdır.",m:{trip:"Transfer tipi",name:"Ad Soyad",phone:"Telefon / WhatsApp",flight:"Uçuş No",date:"Varış tarihi & saati",hotel:"Otel / Adres",send:"Rezervasyonu Gönder",ok:"Rezervasyonunuz alındı!",ok2:"WhatsApp üzerinden kısa süre içinde sizinle iletişime geçeceğiz.",total:"Toplam (araç başı)",cash:"Ödeme araçta nakit"}},
+en:{nav:["Home","Regions","Information","Our Guests","Blog","Contact"],navCta:"Check Booking",heroEy:"Antalya Airport · Private Transfer",heroT:"Antalya <em>VIP Transfer</em>",heroS:"From the airport to your hotel; fixed price per vehicle, QR/PNR meet & greet and pay in the car.",from:"FROM",to:"TO",pax:"PASSENGERS",sel:"Please select",airport:"Antalya Airport (AYT)",person:"Pax",see:"See Price",pick:"Please make a selection!",note:"Meet & greet at terminal exit with PNR number and QR ticket & 1st child seat included free",trust:["Fixed price per vehicle","Free cancellation","1st child seat free","Free flight tracking","24/7 support"],promo:[["Until end of May:","Free Cancellation & Cash Payment in the Car!"],["","LIMITED-TIME CAMPAIGN PRICES!"],["Sunline VIP:","Fast meet & greet with QR / PNR"]],regEy:"Regions & Prices",regT:"Transfer Prices",regS:"Prices are per vehicle, not per person. No hidden extras.",flt:{all:"All",yakin:"City",dogu:"Belek & Side",bati:"Kemer",alanya:"Alanya"},badge:"DISCOUNT",ozel:"Special Price",rt:"Round Trip",ow:"One Way",book:"Book Now",infoT:"Our Professional Service & Meeting Standards",infoS:"We leave nothing to chance. Our operations centre fully complies with the new airport (Fraport TAV) regulations and, with our QR / PNR digital meeting system, we manage every step from booking to your hotel:",infoSign:"Kind regards, Sunline VIP Transfer Operations Centre",info:[["bi-whatsapp","Instant Contact","As soon as you book on our website, we contact you via WhatsApp to confirm all details."],["bi-camera-video","Double Confirmation & Video Guide","2 days before your trip we contact you again to finalise the transfer and send a short video showing our meeting point, so you know exactly where to go on arrival."],["bi-qr-code-scan","Fixed Meeting Point — Fast QR / PNR Check-in","No more searching name boards. After the terminal exit, come to the fixed meeting point we send via WhatsApp; show your QR ticket or tell us your PNR and you are escorted to your VIP vehicle."],["bi-wifi","Premium Equipment","High-speed internet, TV, fridge and baby seat come standard and free in our latest-model vehicles."],["bi-cash-coin","Net Price, Transparent Payment","Prices are per vehicle, not per person. No surprise fees. Pay your driver in cash at the end of the transfer."],["bi-shield-check","Legal Assurance","Your entire journey is covered by private insurance."]],gEy:"Our Guests",gT:"They tried it and approved. Now it's your turn!",blogT:"Blog Posts",read:"Read more →",fAbout:"Sunline VIP Transfer is a private company providing airport and VIP transfers in and around Antalya.",fQuick:"Quick Links",fQ:["FAQ","Privacy Policy","Free Cancellation & Changes"],fPop:"Popular Destinations",fContact:"Contact Us",rights:"All rights reserved.",m:{trip:"Transfer type",name:"Full name",phone:"Phone / WhatsApp",flight:"Flight no.",date:"Arrival date & time",hotel:"Hotel / Address",send:"Send Booking",ok:"Your booking has been received!",ok2:"We'll contact you shortly via WhatsApp.",total:"Total (per vehicle)",cash:"Pay cash in the car"}},
+de:{nav:["Startseite","Regionen","Informationen","Unsere Gäste","Blog","Kontakt"],navCta:"Buchung prüfen",heroEy:"Flughafen Antalya · Privattransfer",heroT:"VIP-Transfer <em>Antalya</em>",heroS:"Vom Flughafen zu Ihrem Hotel; Festpreis pro Fahrzeug, Empfang per QR/PNR und Barzahlung im Fahrzeug.",from:"VON",to:"NACH",pax:"PERSONEN",sel:"Bitte wählen",airport:"Flughafen Antalya (AYT)",person:"Pers.",see:"Preis sehen",pick:"Bitte treffen Sie eine Auswahl!",note:"Empfang am Terminalausgang mit PNR-Nummer und QR-Ticket & 1. Kindersitz gratis inklusive",trust:["Festpreis pro Fahrzeug","Kostenlose Stornierung","1. Kindersitz gratis","Kostenlose Flugverfolgung","24/7 Support"],promo:[["Bis Ende Mai:","Kostenlose Stornierung & Barzahlung im Fahrzeug!"],["","KURZZEITIGE AKTIONSPREISE!"],["Sunline VIP:","Schneller Empfang per QR / PNR"]],regEy:"Regionen & Preise",regT:"Transferpreise",regS:"Preise gelten pro Fahrzeug, nicht pro Person. Keine versteckten Kosten.",flt:{all:"Alle",yakin:"Zentrum",dogu:"Belek & Side",bati:"Kemer",alanya:"Alanya"},badge:"RABATT",ozel:"Sonderpreis",rt:"Hin- und Rückfahrt",ow:"Einweg",book:"Reservierung",infoT:"Unsere Service- und Empfangsstandards",infoS:"Wir überlassen nichts dem Zufall. Unsere Einsatzzentrale erfüllt die neuen Flughafenregeln (Fraport TAV) vollständig, und mit unserem digitalen QR / PNR-Empfang begleiten wir jeden Schritt bis zu Ihrem Hotel:",infoSign:"Mit freundlichen Grüßen, Sunline VIP Transfer Einsatzzentrale",info:[["bi-whatsapp","Sofortiger Kontakt","Sobald Sie online buchen, melden wir uns per WhatsApp und klären alle Details."],["bi-camera-video","Doppelte Bestätigung & Video-Wegweiser","2 Tage vor der Reise bestätigen wir Ihren Transfer erneut und senden ein kurzes Video zum Treffpunkt, damit Sie bei der Ankunft genau wissen, wohin."],["bi-qr-code-scan","Fester Treffpunkt — schneller Empfang per QR / PNR","Kein Suchen nach Namensschildern. Kommen Sie nach dem Terminalausgang zum Treffpunkt aus WhatsApp; zeigen Sie Ihr QR-Ticket oder nennen Sie Ihre PNR."],["bi-wifi","Premium-Ausstattung","Schnelles Internet, TV, Kühlschrank und Babysitz sind in unseren neuesten Fahrzeugen Standard und kostenlos."],["bi-cash-coin","Nettopreis, transparente Zahlung","Preise pro Fahrzeug, nicht pro Person. Keine Überraschungen. Bezahlung bar beim Fahrer am Ende der Fahrt."],["bi-shield-check","Rechtliche Absicherung","Ihre gesamte Reise ist privat versichert."]],gEy:"Unsere Gäste",gT:"Sie haben es getestet und genehmigt. Jetzt sind Sie dran!",blogT:"Blogbeiträge",read:"Weiterlesen →",fAbout:"Sunline VIP Transfer ist ein privates Unternehmen für Flughafen- und VIP-Transfers in und um Antalya.",fQuick:"Schnellzugriff",fQ:["FAQ","Datenschutz","Kostenlose Stornierung & Änderung"],fPop:"Beliebte Ziele",fContact:"Kontakt",rights:"Alle Rechte vorbehalten.",m:{trip:"Transferart",name:"Vor- und Nachname",phone:"Telefon / WhatsApp",flight:"Flugnummer",date:"Ankunft Datum & Uhrzeit",hotel:"Hotel / Adresse",send:"Buchung senden",ok:"Ihre Buchung ist eingegangen!",ok2:"Wir melden uns in Kürze per WhatsApp.",total:"Gesamt (pro Fahrzeug)",cash:"Barzahlung im Fahrzeug"}}};
+const BLOG=["Antalya Havalimanı yeni karşılama protokolü hakkında önemli bilgiler","Antalya'da Sprinter VIP hizmeti ile ayrıcalıklı yolculuk","Antalya – Belek transferi","Antalya Havalimanı transferi: Lara & Kundu","Antalya Havalimanı transferi ile tatile VIP başlangıç","Özel transfer, taksi veya shuttle? Antalya için dürüst karşılaştırma"];
+const KW=["antalya transfer","antalya vip transfer","antalya airport transfer","antalya havalimanı transfer","privattransfer antalya","belek transfer","side transfer","alanya transfer","kemer transfer","lara transfer"];
+let lang=T.lang||'tr',filter='all';
+const $=id=>document.getElementById(id);
+function t(){return L[lang]}
+function card(r,i){const[n,ow0,rt,ow1,owN,img]=[r[0],r[1],r[2],r[3],r[4],r[5]];const x=t();
+return `<article class="rc"><a class="rc-media" href="#" onclick="openB(${i});return false"><img src="images/bolgeler/${img}.webp" alt="${n} VIP Transfer" loading="lazy" onerror="this.onerror=null;this.src='${IMG_FB}'"><span class="rc-badge">${x.badge}</span><div class="rc-ov"><h3>${n}</h3></div></a>
+<div class="rc-body"><div class="rc-ozel">${x.ozel}</div><div class="rc-row"><div class="rc-box rc-rt"><div class="rc-rt-h">${x.rt}</div><div class="rc-rt-p"><del>${ow0}€</del><span class="rc-now">${rt}€</span></div><span class="rc-disc"><i class="bi bi-tag-fill"></i>−${ow0-rt} €</span></div><div class="rc-box rc-ow"><div class="rc-rt-h">${x.ow}</div><div class="rc-rt-p"><del>${ow1}€</del><span class="rc-now">${owN}€</span></div><span class="rc-disc"><i class="bi bi-tag-fill"></i>−${ow1-owN} €</span></div></div>
+<button class="btn btn-cta rc-book" onclick="openB(${i})">${x.book}</button>
+</div></article>`}
+function render(){const x=t();document.documentElement.lang=lang;
+document.querySelectorAll('[data-t]').forEach(e=>e.innerHTML=x[e.dataset.t]);
+const ids=['top','bolgeler','bilgi','misafir','blog','iletisim'];
+navLinks.innerHTML=x.nav.map((n,i)=>`<li class="nav-item"><a class="nav-link" href="#${ids[i]}">${n}</a></li>`).join('');
+langBtns.innerHTML=['tr','en','de'].map(l=>`<button class="${l===lang?'on':''}" onclick="setLang('${l}')">${l.toUpperCase()}</button>`).join('');
+const p=x.promo.map(([a,b])=>`<span><i class="bi bi-check-circle-fill"></i>${a?`<b>${a}</b>`:''}${b}</span>`).join('');promoTrack.innerHTML=p+p;
+kwTrack.innerHTML=(KW.map(k=>`<span>${k}</span>`).join('')).repeat(2);
+trust.innerHTML=x.trust.map((s,i)=>`<span><i class="bi ${['bi-cash-stack','bi-arrow-counterclockwise','bi-person-arms-up','bi-airplane','bi-headset'][i]}"></i>${s}</span>`).join('');
+qFrom.innerHTML=`<option value="">${x.sel}</option><option value="ayt">${x.airport}</option>`+R.map((r,i)=>`<option value="${i}">${r[0]}</option>`).join('');
+qTo.innerHTML=`<option value="">${x.sel}</option><option value="ayt">${x.airport}</option>`+R.map((r,i)=>`<option value="${i}">${r[0]}</option>`).join('');
+qPax.innerHTML=Array.from({length:14},(_,i)=>`<option>${i+1} ${x.person}</option>`).join('');
+flt.innerHTML=Object.entries(x.flt).map(([k,v])=>`<button class="${k===filter?'on':''}" onclick="setF('${k}')">${v}</button>`).join('');
+grid.innerHTML=R.map((r,i)=>[r,i]).filter(([r])=>filter==='all'||r[6]===filter).map(([r,i])=>card(r,i)).join('');
+infoList.innerHTML=x.info.map(([ic,h,p])=>`<div class="info-it"><i class="bi ${ic}"></i><div><h4>${h}</h4><p>${p}</p></div></div>`).join('');
+guests.innerHTML=Array.from({length:8},(_,i)=>`<div class="ph">misafir fotoğrafı ${i+1}</div>`).join('');
+blogRow.innerHTML=BLOG.map(b=>`<div class="col-md-6 col-lg-4"><div class="blog-c"><div class="ph">blog görseli</div><h5>${b}</h5><a href="#">${x.read}</a></div></div>`).join('');
+fQuick.innerHTML=x.fQ.map(q=>`<li><a href="#">${q}</a></li>`).join('');
+fPop.innerHTML=['Lara','Belek','Side','Alanya','Kemer','Konyaaltı','Kundu','Beldibi'].map(q=>`<li><a href="#bolgeler">${q}</a></li>`).join('');
+applyTheme()}
+function setLang(l){lang=l;setT({lang:l});render()}
+function setF(f){filter=f;render()}
+function quick(){const f=qFrom.value,to=qTo.value;if(!f||!to||f===to){qNote.querySelector('span').textContent=t().pick;qNote.style.color='var(--red)';return}
+qNote.style.color='';qNote.querySelector('span').innerHTML=t().note;const i=f==='ayt'?+to:+f;openB(i,qPax.selectedIndex+1)}
+let bm;
+function openB(i,pax){const r=R[i],x=t(),m=x.m;bm=bm||new bootstrap.Modal($('bm'));
+$('bmT').textContent=`${x.airport.split(' (')[0]} ⇄ ${r[0]}`;
+$('bmBody').innerHTML=`<form id="bf" class="row g-3" onsubmit="sendB(event)">
+<div class="col-12"><label class="d-block">${m.trip}</label><div class="trip"><input type="radio" name="tt" id="tt1" value="${r[2]}" checked onchange="tot()"><label for="tt1">${x.rt}<b>${r[2]}€</b></label><input type="radio" name="tt" id="tt2" value="${r[4]}" onchange="tot()"><label for="tt2">${x.ow}<b>${r[4]}€</b></label></div></div>
+<div class="col-sm-6"><label class="d-block">${m.name}</label><input class="form-control" required></div>
+<div class="col-sm-6"><label class="d-block">${m.phone}</label><input class="form-control" type="tel" required></div>
+<div class="col-sm-6"><label class="d-block">${m.flight}</label><input class="form-control" placeholder="TK 1234"></div>
+<div class="col-sm-6"><label class="d-block">${x.pax}</label><select class="form-select">${Array.from({length:14},(_,k)=>`<option ${k+1===(pax||1)?'selected':''}>${k+1} ${x.person}</option>`).join('')}</select></div>
+<div class="col-sm-6"><label class="d-block">${m.date}</label><input class="form-control" type="datetime-local" required></div>
+<div class="col-sm-6"><label class="d-block">${m.hotel}</label><input class="form-control" required></div>
+<div class="col-12 d-flex justify-content-between align-items-center pt-2" style="border-top:1px solid var(--line)"><div><div style="font-size:.8rem;color:var(--muted)">${m.total} · ${m.cash}</div><div id="tot" style="font-size:1.8rem;font-weight:800;color:var(--accent)">${r[2]}€</div></div><button class="btn btn-cta">${m.send}</button></div>
+</form><div class="ok" id="ok"><i class="bi bi-check-circle-fill"></i><h4 class="mt-3">${m.ok}</h4><p style="color:var(--muted)">${m.ok2}</p></div>`;applyTheme();bm.show()}
+function tot(){$('tot').textContent=document.querySelector('input[name=tt]:checked').value+'€'}
+function sendB(e){e.preventDefault();$('bf').style.display='none';$('ok').style.display='block'}
+document.body.id='top';
+render();
+</script>
+</body>
+</html>

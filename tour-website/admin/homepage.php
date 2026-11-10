@@ -1,28 +1,61 @@
 <?php
 /**
- * Anasayfa İçerik Yönetimi — Çoklu Dil Destekli
- * Tüm section'ları tek sayfada her dil için yönet
+ * Anasayfa & Tema Yönetimi (Sunline teması)
+ *
+ * - Tema renkleri: Claude Design "Tweaks" panelinin aynısı (Hazır Tema / Arka Plan / Kart Rengi / Vurgu)
+ *   açık ve koyu tema için ayrı ayrı; ziyaretçinin cihazına göre otomatik geçiş.
+ * - Anasayfa bölümleri ve site geneli metinler her dil için ayrı (TR / EN / DE / RU ...).
+ * - Kayıt: sections (section_type = sun_*) + section_translations (dile özel ayarlar JSON)
+ * - Bölge kartları ve fiyatlar Tur Yönetimi > Transferler ekranından gelir (burada düzenlenmez).
  */
 
 require_once __DIR__ . '/includes/auth.php';
 requireLogin();
+require_once INCLUDES_PATH . 'sunline/core.php';
 
 $db = getDB();
-
-// Anasayfa
 $homepage = $db->query("SELECT * FROM pages WHERE is_homepage = 1 LIMIT 1")->fetch();
-
-// Aktif diller (dinamik, sıralı)
 $languages = $db->query("SELECT * FROM languages WHERE is_active = 1 ORDER BY is_default DESC, sort_order")->fetchAll();
 $defaultLang = 'tr';
 foreach ($languages as $l) { if ($l['is_default']) { $defaultLang = $l['code']; break; } }
+$types = sl_section_types();
+$typeLabels = [
+    'global' => 'Genel', 'hero' => 'Hero', 'regions' => 'Bölgeler & Fiyatlar', 'info' => 'Bilgilendirme',
+    'guests' => 'Misafirlerimiz', 'blog' => 'Blog', 'faq' => 'Sıkça Sorulan Sorular',
+];
 
-// POST işlemi
+function hp_str($v, $max = 2000) {
+    return mb_substr(trim((string)$v), 0, $max);
+}
+
+function hp_rows($arr, $fields, $max = 60) {
+    $out = [];
+    if (!is_array($arr)) return $out;
+    foreach ($arr as $r) {
+        if (!is_array($r)) continue;
+        $row = [];
+        $empty = true;
+        foreach ($fields as $f => $len) {
+            $row[$f] = hp_str($r[$f] ?? '', $len);
+            if ($row[$f] !== '') $empty = false;
+        }
+        if (!$empty) $out[] = $row;
+        if (count($out) >= $max) break;
+    }
+    return $out;
+}
+
+function hp_icon($v) {
+    $v = trim((string)$v);
+    return preg_match('/^bi-[a-z0-9-]+$/', $v) ? $v : 'bi-check2-circle';
+}
+
+/* ======================================================================
+ * KAYDET
+ * ====================================================================== */
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && $homepage) {
-    // CSRF kontrolü
-    $csrfToken = $_POST['csrf_token'] ?? '';
-    if (!validateCSRFToken($csrfToken)) {
-        setFlashMessage('error', 'Güvenlik doğrulaması başarısız. Lütfen sayfayı yenileyip tekrar deneyin.');
+    if (!validateCSRFToken($_POST['csrf_token'] ?? '')) {
+        setFlashMessage('error', 'Güvenlik doğrulaması başarısız. Sayfayı yenileyip tekrar deneyin.');
         header('Location: ' . ADMIN_URL . '/homepage.php');
         exit;
     }
@@ -30,749 +63,756 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $homepage) {
     try {
         $db->beginTransaction();
 
-        // SEO — page_translations'a her dil için ayrı kayıt
-        $seoStmt = $db->prepare("
-            INSERT INTO page_translations
-                (page_id, language_code, title, slug, meta_title, meta_description, meta_keywords)
-            VALUES (?, ?, ?, ?, ?, ?, ?)
-            ON DUPLICATE KEY UPDATE
-                title = VALUES(title),
-                slug = VALUES(slug),
-                meta_title = VALUES(meta_title),
-                meta_description = VALUES(meta_description),
-                meta_keywords = VALUES(meta_keywords)
+        $existing = [];
+        $st = $db->prepare("SELECT id, section_type FROM sections WHERE page_id = ? ORDER BY id");
+        $st->execute([$homepage['id']]);
+        foreach ($st->fetchAll() as $r) {
+            if (!isset($existing[$r['section_type']])) $existing[$r['section_type']] = (int)$r['id'];
+        }
+
+        $insSec = $db->prepare("INSERT INTO sections (page_id, section_key, section_type, title, settings, sort_order, is_active) VALUES (?, ?, ?, ?, ?, ?, 1)");
+        $updSec = $db->prepare("UPDATE sections SET settings = ?, is_active = ? WHERE id = ?");
+        $upTr = $db->prepare("
+            INSERT INTO section_translations (section_id, language_code, title, settings)
+            VALUES (?, ?, ?, ?)
+            ON DUPLICATE KEY UPDATE title = VALUES(title), settings = VALUES(settings)
         ");
-        if (isset($_POST['seo']) && is_array($_POST['seo'])) {
-            foreach ($_POST['seo'] as $langCode => $seo) {
-                $title    = trim($seo['meta_title'] ?? '');
-                $slugRaw  = trim($seo['slug'] ?? '');
-                $slug     = $slugRaw !== '' ? $slugRaw : ($langCode === $defaultLang ? '/' : 'home-' . $langCode);
-                $seoStmt->execute([
-                    $homepage['id'],
-                    $langCode,
-                    $title !== '' ? $title : ($homepage['title'] ?: 'Anasayfa'),
-                    $slug,
-                    $title ?: null,
-                    trim($seo['meta_description'] ?? '') ?: null,
-                    trim($seo['meta_keywords'] ?? '') ?: null,
-                ]);
+
+        $presets = sl_theme_presets();
+        $B = isset($_POST['base']) && is_array($_POST['base']) ? $_POST['base'] : [];
+        $TR = isset($_POST['tr']) && is_array($_POST['tr']) ? $_POST['tr'] : [];
+
+        foreach ($types as $i => $type) {
+            $stype = 'sun_' . $type;
+            if (!isset($existing[$stype])) {
+                $insSec->execute([$homepage['id'], $stype, $stype, 'Sunline · ' . $typeLabels[$type], '{}', 100 + $i]);
+                $existing[$stype] = (int)$db->lastInsertId();
+            }
+            $sid = $existing[$stype];
+            $b = isset($B[$type]) && is_array($B[$type]) ? $B[$type] : [];
+
+            // ---- dilden bağımsız ayarlar
+            $base = [];
+            if ($type === 'global') {
+                $pal = function ($p, $fb) use ($presets) {
+                    $p = is_array($p) ? $p : [];
+                    $preset = isset($presets[$p['preset'] ?? '']) ? $p['preset'] : '';
+                    return [
+                        'preset' => $preset,
+                        'bg' => sl_hex($p['bg'] ?? '', $fb['bg']),
+                        'card' => sl_hex($p['card'] ?? '', $fb['card']),
+                        'accent' => sl_hex($p['accent'] ?? '', $fb['accent']),
+                    ];
+                };
+                $base = [
+                    'mode' => in_array($b['mode'] ?? '', ['auto', 'light', 'dark'], true) ? $b['mode'] : 'auto',
+                    'toggle' => !empty($b['toggle']) ? 1 : 0,
+                    'light' => $pal($b['light'] ?? [], $presets['krem_siyah']),
+                    'dark' => $pal($b['dark'] ?? [], $presets['gece']),
+                    'logo_light' => hp_str($b['logo_light'] ?? '', 255),
+                    'logo_dark' => hp_str($b['logo_dark'] ?? '', 255),
+                    'discount' => max(0, min(90, (float)str_replace(',', '.', (string)($b['discount'] ?? 0)))),
+                    'whatsapp' => preg_replace('/[^\d+]/', '', (string)($b['whatsapp'] ?? '')),
+                ];
+            } elseif ($type === 'hero') {
+                $base = ['image' => hp_str($b['image'] ?? '', 500)];
+            } elseif ($type === 'regions') {
+                $filters = [];
+                foreach ((array)($b['filters'] ?? []) as $f) {
+                    if (!is_array($f)) continue;
+                    $k = preg_replace('/[^a-z0-9_-]/', '', strtolower(hp_str($f['k'] ?? '', 30)));
+                    if ($k === '' || $k === 'all' || $k === 'x') continue;
+                    $labels = [];
+                    foreach ($languages as $l) $labels[$l['code']] = hp_str($f['l'][$l['code']] ?? '', 40);
+                    $filters[] = ['k' => $k, 'm' => hp_str($f['m'] ?? '', 1000), 'l' => $labels];
+                }
+                $all = [];
+                foreach ($languages as $l) $all[$l['code']] = hp_str($b['all_label'][$l['code']] ?? '', 40);
+                $base = ['only_featured' => !empty($b['only_featured']) ? 1 : 0, 'filters' => $filters, 'all_label' => $all];
+            } elseif ($type === 'guests') {
+                $photos = [];
+                foreach ((array)($b['photos'] ?? []) as $p) {
+                    $p = hp_str($p, 500);
+                    if ($p !== '') $photos[] = $p;
+                }
+                $base = ['photos' => array_slice($photos, 0, 40)];
+            } elseif ($type === 'blog') {
+                $base = ['limit' => max(1, min(12, (int)($b['limit'] ?? 6)))];
+            }
+
+            $active = $type === 'global' ? 1 : (!empty($_POST['active'][$type]) ? 1 : 0);
+            $updSec->execute([json_encode($base, JSON_UNESCAPED_UNICODE), $active, $sid]);
+
+            // ---- dile bağlı içerik
+            foreach ($languages as $l) {
+                $code = $l['code'];
+                if (!isset($TR[$code][$type]) || !is_array($TR[$code][$type])) continue;
+                $L = $TR[$code][$type];
+                $s = [];
+                switch ($type) {
+                    case 'global':
+                        $s = [
+                            'promo' => hp_rows($L['promo'] ?? [], ['b' => 80, 't' => 200]),
+                            'nav' => hp_rows($L['nav'] ?? [], ['l' => 60, 'u' => 300]),
+                            'cta_label' => hp_str($L['cta_label'] ?? '', 60),
+                            'cta_url' => hp_str($L['cta_url'] ?? '', 300),
+                            'note' => hp_str($L['note'] ?? '', 300),
+                            'trust' => array_map(function ($r) { $r['i'] = hp_icon($r['i']); return $r; }, hp_rows($L['trust'] ?? [], ['i' => 60, 't' => 120], 8)),
+                            'footer_about' => hp_str($L['footer_about'] ?? '', 600),
+                            'footer_links' => hp_rows($L['footer_links'] ?? [], ['l' => 80, 'u' => 300], 12),
+                            'keywords' => hp_str($L['keywords'] ?? '', 4000),
+                        ];
+                        break;
+                    case 'hero':
+                    case 'regions':
+                        $s = ['eyebrow' => hp_str($L['eyebrow'] ?? '', 120), 'title' => hp_str($L['title'] ?? '', 160), 'subtitle' => hp_str($L['subtitle'] ?? '', 400)];
+                        break;
+                    case 'info':
+                        $s = [
+                            'eyebrow' => hp_str($L['eyebrow'] ?? '', 120), 'title' => hp_str($L['title'] ?? '', 160),
+                            'subtitle' => hp_str($L['subtitle'] ?? '', 1200), 'sign' => hp_str($L['sign'] ?? '', 200),
+                            'items' => array_map(function ($r) { $r['i'] = hp_icon($r['i']); return $r; }, hp_rows($L['items'] ?? [], ['i' => 60, 't' => 160, 'p' => 1200], 12)),
+                        ];
+                        break;
+                    case 'guests':
+                    case 'blog':
+                        $s = ['eyebrow' => hp_str($L['eyebrow'] ?? '', 120), 'title' => hp_str($L['title'] ?? '', 160)];
+                        break;
+                    case 'faq':
+                        $s = ['eyebrow' => hp_str($L['eyebrow'] ?? '', 120), 'title' => hp_str($L['title'] ?? '', 160), 'items' => hp_rows($L['items'] ?? [], ['q' => 300, 'a' => 3000], 30)];
+                        break;
+                }
+                $title = $s['title'] ?? ($typeLabels[$type] ?? $type);
+                $upTr->execute([$sid, $code, mb_substr((string)$title, 0, 250), json_encode($s, JSON_UNESCAPED_UNICODE)]);
             }
         }
 
-        // Section'lar
-        if (isset($_POST['sections']) && is_array($_POST['sections'])) {
-            // Base section update — SADECE dil-bağımsız alanlar.
-            // title/subtitle/content/settings ASLA buradan yazılmaz (veri kaybı önleme).
-            // Her dil için içerik section_translations'da saklanır; frontend COALESCE ile fallback yapar.
-            $secBaseStmt = $db->prepare("
-                UPDATE sections SET
-                    is_active = ?,
-                    background_image = ?,
-                    background_video = ?
-                WHERE id = ?
-            ");
-
-            // Translation upsert (her dil için ayrı kayıt)
-            $secTransStmt = $db->prepare("
-                INSERT INTO section_translations
-                    (section_id, language_code, title, subtitle, content, settings)
-                VALUES (?, ?, ?, ?, ?, ?)
-                ON DUPLICATE KEY UPDATE
-                    title = VALUES(title),
-                    subtitle = VALUES(subtitle),
-                    content = VALUES(content),
-                    settings = VALUES(settings)
-            ");
-
-            foreach ($_POST['sections'] as $sectionId => $sec) {
-                $sectionId = (int)$sectionId;
-                $isActive  = !empty($sec['is_active']) ? 1 : 0;
-                $bgImage   = trim($sec['background_image'] ?? '');
-                $bgVideo   = trim($sec['background_video'] ?? '');
-
-                // Base güncelle (sadece dil-bağımsız alanlar)
-                $secBaseStmt->execute([
-                    $isActive, $bgImage, $bgVideo,
-                    $sectionId
-                ]);
-
-                // Her dil için translation kaydet
-                if (!empty($sec['translations']) && is_array($sec['translations'])) {
-                    foreach ($sec['translations'] as $langCode => $tr) {
-                        $title    = trim($tr['title']    ?? '');
-                        $subtitle = trim($tr['subtitle'] ?? '');
-                        $content  = trim($tr['content']  ?? '');
-                        $settings = $tr['settings'] ?? [];
-                        $settingsJson = json_encode($settings, JSON_UNESCAPED_UNICODE);
-
-                        $secTransStmt->execute([
-                            $sectionId, $langCode,
-                            $title !== '' ? $title : null,
-                            $subtitle !== '' ? $subtitle : null,
-                            $content !== '' ? $content : null,
-                            $settingsJson
-                        ]);
-                    }
-                }
-            }
+        // ---- Anasayfa SEO (page_translations)
+        $seoStmt = $db->prepare("
+            INSERT INTO page_translations (page_id, language_code, title, slug, meta_title, meta_description, meta_keywords)
+            VALUES (?, ?, ?, ?, ?, ?, ?)
+            ON DUPLICATE KEY UPDATE title = VALUES(title), meta_title = VALUES(meta_title),
+                meta_description = VALUES(meta_description), meta_keywords = VALUES(meta_keywords)
+        ");
+        foreach ((array)($_POST['seo'] ?? []) as $code => $seo) {
+            if (!is_array($seo)) continue;
+            $mt = hp_str($seo['meta_title'] ?? '', 120);
+            $seoStmt->execute([
+                $homepage['id'], $code, $mt !== '' ? $mt : ($homepage['title'] ?: 'Anasayfa'),
+                $code === $defaultLang ? '/' : 'home-' . $code,
+                $mt !== '' ? $mt : null,
+                hp_str($seo['meta_description'] ?? '', 320) ?: null,
+                hp_str($seo['meta_keywords'] ?? '', 255) ?: null,
+            ]);
         }
 
         $db->commit();
-        setFlashMessage('success', 'Anasayfa içeriği başarıyla güncellendi.');
-        header('Location: ' . ADMIN_URL . '/homepage.php');
-        exit;
+        setFlashMessage('success', 'Anasayfa ve tema ayarları kaydedildi.');
     } catch (Exception $e) {
-        $db->rollBack();
-        setFlashMessage('error', 'Hata: ' . $e->getMessage());
+        if ($db->inTransaction()) $db->rollBack();
+        setFlashMessage('error', 'Kaydedilemedi: ' . $e->getMessage());
     }
+    header('Location: ' . ADMIN_URL . '/homepage.php' . (!empty($_POST['_tab']) ? '#' . preg_replace('/[^a-z0-9-]/', '', $_POST['_tab']) : ''));
+    exit;
 }
 
-// Header
-$pageTitle = 'Anasayfa İçerik Yönetimi';
+/* ======================================================================
+ * GÖRÜNÜM
+ * ====================================================================== */
+$pageTitle = 'Anasayfa & Tema';
 require_once __DIR__ . '/includes/header.php';
 
 if (!$homepage) {
-    echo '<div class="alert alert-danger">Anasayfa bulunamadı! `pages` tablosunda <code>is_homepage = 1</code> olan kayıt yok.</div>';
+    echo '<div class="alert alert-danger">Anasayfa bulunamadı: <code>pages</code> tablosunda <code>is_homepage = 1</code> olan kayıt yok.</div>';
     require_once __DIR__ . '/includes/footer.php';
     exit;
 }
 
-// Mevcut SEO çevirileri (her dil için)
+// Mevcut (varsayılanlarla birleşmiş) değerler
+$val = [];
+foreach ($languages as $l) {
+    foreach ($types as $type) $val[$l['code']][$type] = sl_section($type, $l['code']);
+}
+$baseVal = [];
+foreach ($types as $type) $baseVal[$type] = sl_section($type, $defaultLang);
+$theme = sl_theme_config();
+$G = $baseVal['global'];
+$lightPreset = $G['light']['preset'] ?? '';
+$darkPreset = $G['dark']['preset'] ?? '';
+
 $seoData = [];
-$seoStmt = $db->prepare("SELECT language_code, title, slug, meta_title, meta_description, meta_keywords FROM page_translations WHERE page_id = ?");
-$seoStmt->execute([$homepage['id']]);
-foreach ($seoStmt->fetchAll() as $row) {
-    $seoData[$row['language_code']] = $row;
+$st = $db->prepare("SELECT language_code, meta_title, meta_description, meta_keywords FROM page_translations WHERE page_id = ?");
+$st->execute([$homepage['id']]);
+foreach ($st->fetchAll() as $r) $seoData[$r['language_code']] = $r;
+
+$presets = sl_theme_presets();
+$swatches = sl_theme_swatches();
+$featuredCount = count(sl_bookable_destinations(true));
+
+/** Tekrarlanabilir satır listesi */
+function hp_repeater($base, $rows, $fields, $addLabel, $minRows = 0) {
+    $render = function ($row, $i) use ($base, $fields) {
+        $h = '<div class="rep-row"><div class="row g-2 align-items-start">';
+        foreach ($fields as $f) {
+            $name = $base . '[' . $i . '][' . str_replace('.', '][', $f['f']) . ']';
+            $v = $row;
+            foreach (explode('.', $f['f']) as $part) $v = is_array($v) && isset($v[$part]) ? $v[$part] : '';
+            $v = is_array($v) ? '' : (string)$v;
+            $h .= '<div class="' . $f['col'] . '">';
+            if (!empty($f['label'])) $h .= '<label class="form-label-sm">' . e($f['label']) . '</label>';
+            if (($f['type'] ?? 'text') === 'textarea') {
+                $h .= '<textarea class="form-control form-control-sm" rows="' . (int)($f['rows'] ?? 2) . '" data-f="' . e($f['f']) . '" name="' . e($name) . '">' . e($v) . '</textarea>';
+            } elseif (($f['type'] ?? '') === 'icon') {
+                $h .= '<div class="input-group input-group-sm"><span class="input-group-text ico-prev"><i class="bi ' . e($v ?: 'bi-question') . '"></i></span><input class="form-control ico-in" list="biIcons" data-f="' . e($f['f']) . '" name="' . e($name) . '" value="' . e($v) . '" placeholder="bi-..."></div>';
+            } else {
+                $h .= '<input class="form-control form-control-sm" data-f="' . e($f['f']) . '" name="' . e($name) . '" value="' . e($v) . '"' . (!empty($f['ph']) ? ' placeholder="' . e($f['ph']) . '"' : '') . '>';
+            }
+            $h .= '</div>';
+        }
+        $h .= '<div class="col-auto rep-tools"><button type="button" class="btn btn-sm btn-light rep-up" title="Yukarı"><i class="bi bi-arrow-up"></i></button><button type="button" class="btn btn-sm btn-light rep-down" title="Aşağı"><i class="bi bi-arrow-down"></i></button><button type="button" class="btn btn-sm btn-outline-danger rep-del" title="Sil"><i class="bi bi-trash"></i></button></div>';
+        return $h . '</div></div>';
+    };
+    $rows = is_array($rows) ? array_values($rows) : [];
+    while (count($rows) < $minRows) $rows[] = [];
+    $out = '<div class="rep" data-base="' . e($base) . '"><div class="rep-rows">';
+    foreach ($rows as $i => $r) $out .= $render($r, $i);
+    $out .= '</div><template class="rep-tpl">' . $render([], '__i__') . '</template>';
+    $out .= '<button type="button" class="btn btn-sm btn-outline-primary rep-add mt-2"><i class="bi bi-plus-lg me-1"></i>' . e($addLabel) . '</button></div>';
+    return $out;
 }
 
-// Section'lar
-$sectionsStmt = $db->prepare("SELECT * FROM sections WHERE page_id = ? ORDER BY sort_order");
-$sectionsStmt->execute([$homepage['id']]);
-$sections = $sectionsStmt->fetchAll();
-
-// Section çevirileri
-$sectionTrans = [];
-if ($sections) {
-    $sectionIds = array_map(function($s) { return (int)$s['id']; }, $sections);
-    $placeholders = implode(',', array_fill(0, count($sectionIds), '?'));
-    $stTransStmt = $db->prepare("SELECT * FROM section_translations WHERE section_id IN ($placeholders)");
-    $stTransStmt->execute($sectionIds);
-    foreach ($stTransStmt->fetchAll() as $row) {
-        $sectionTrans[$row['section_id']][$row['language_code']] = $row;
-    }
+function hp_text($name, $value, $ph = '', $max = 0) {
+    return '<input class="form-control" name="' . e($name) . '" value="' . e((string)$value) . '"' . ($ph !== '' ? ' placeholder="' . e($ph) . '"' : '') . ($max ? ' maxlength="' . (int)$max . '"' : '') . '>';
 }
 
-// Section meta (tasarım için)
-$sectionMeta = [
-    'hero'                  => ['icon' => 'bi-film',          'label' => 'Hero / Slider Bölümü',     'color' => '#6366f1'],
-    'why_us'                => ['icon' => 'bi-patch-check',   'label' => 'Neden Biz Bölümü',         'color' => '#10b981'],
-    'featured_destinations' => ['icon' => 'bi-geo-alt',       'label' => 'Öne Çıkan Destinasyonlar', 'color' => '#f59e0b'],
-    'featured_tours'        => ['icon' => 'bi-compass',       'label' => 'Öne Çıkan Turlar',         'color' => '#3b82f6'],
-    'testimonials'          => ['icon' => 'bi-chat-quote',    'label' => 'Müşteri Yorumları',        'color' => '#8b5cf6'],
-    'cta'                   => ['icon' => 'bi-megaphone',     'label' => 'Call to Action',           'color' => '#ef4444'],
-];
-
-/**
- * Section için ilgili dilde değer döner (translations'tan, yoksa base, yoksa default)
- */
-function getSectionValue($sectionTrans, $section, $sectionId, $langCode, $field, $default = '') {
-    if (isset($sectionTrans[$sectionId][$langCode][$field]) && $sectionTrans[$sectionId][$langCode][$field] !== null) {
-        return $sectionTrans[$sectionId][$langCode][$field];
-    }
-    return $section[$field] ?? $default;
+function hp_area($name, $value, $rows = 3, $ph = '') {
+    return '<textarea class="form-control" rows="' . (int)$rows . '" name="' . e($name) . '"' . ($ph !== '' ? ' placeholder="' . e($ph) . '"' : '') . '>' . e((string)$value) . '</textarea>';
 }
 
-function getSectionSetting($sectionTrans, $section, $sectionId, $langCode, $key, $default = '') {
-    // Dile özgü settings
-    if (isset($sectionTrans[$sectionId][$langCode]['settings'])) {
-        $s = json_decode($sectionTrans[$sectionId][$langCode]['settings'] ?? '{}', true) ?: [];
-        if (array_key_exists($key, $s)) return $s[$key];
+function hp_card_open($id, $icon, $color, $title, $summary, $activeName = null, $active = true) {
+    $h = '<div class="hp-card" id="' . e($id) . '"><div class="hp-head" role="button" tabindex="0">';
+    $h .= '<div class="d-flex align-items-center gap-3"><span class="hp-ico" style="background:' . e($color) . '"><i class="bi ' . e($icon) . '"></i></span><div><div class="hp-title">' . e($title) . '</div><div class="hp-sum">' . e($summary) . '</div></div></div>';
+    $h .= '<div class="d-flex align-items-center gap-3">';
+    if ($activeName) {
+        $h .= '<label class="toggle-switch mb-0" onclick="event.stopPropagation()"><input type="checkbox" name="' . e($activeName) . '" value="1"' . ($active ? ' checked' : '') . '><span class="toggle-slider"></span></label>';
     }
-    // Base settings
-    $base = json_decode($section['settings'] ?? '{}', true) ?: [];
-    return $base[$key] ?? $default;
+    $h .= '<i class="bi bi-chevron-down hp-chev"></i></div></div><div class="hp-body">';
+    return $h;
 }
 ?>
-
 <style>
-.lang-tabs-bar {
-    display: flex;
-    gap: 4px;
-    background: var(--hover-bg);
-    padding: 4px;
-    border-radius: 10px;
-    flex-wrap: wrap;
-}
-.lang-tab-btn {
-    background: transparent;
-    border: 0;
-    padding: 6px 14px;
-    border-radius: 7px;
-    font-size: .85rem;
-    font-weight: 600;
-    color: var(--text-muted);
-    cursor: pointer;
-    transition: all .18s;
-    display: inline-flex;
-    align-items: center;
-    gap: 6px;
-}
-.lang-tab-btn:hover { color: var(--text-base); background: rgba(0,0,0,.04); }
-.lang-tab-btn.active { background: var(--sidebar-bg); color: var(--primary); box-shadow: var(--shadow-sm); }
-[data-bs-theme="dark"] .lang-tab-btn:hover { background: rgba(255,255,255,.05); }
-
-.section-card {
-    border: 1px solid var(--sidebar-border);
-    border-radius: 12px;
-    margin-bottom: 18px;
-    overflow: hidden;
-    background: var(--sidebar-bg);
-    transition: box-shadow .25s;
-}
-.section-card:hover { box-shadow: var(--shadow-md); }
-.section-header {
-    padding: 14px 18px;
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    cursor: pointer;
-    background: var(--hover-bg);
-    border-bottom: 1px solid var(--sidebar-border);
-}
-.section-header .section-icon {
-    width: 38px; height: 38px;
-    border-radius: 10px;
-    display: flex; align-items: center; justify-content: center;
-    color: white; font-size: 17px;
-}
-.section-header .section-title { font-weight: 600; font-size: 15px; color: var(--text-base); }
-.section-body { padding: 20px; display: none; }
-.section-card.expanded .section-body { display: block; }
-.section-card.expanded .section-header { border-bottom: 1px solid var(--sidebar-border); }
-.chevron-icon { transition: transform .25s; color: var(--text-soft); }
-.section-card.expanded .chevron-icon { transform: rotate(180deg); }
-
-.toggle-switch { position: relative; width: 44px; height: 24px; flex-shrink: 0; }
-.toggle-switch input { opacity: 0; width: 0; height: 0; }
-.toggle-slider {
-    position: absolute; cursor: pointer;
-    top: 0; left: 0; right: 0; bottom: 0;
-    background-color: #cbd5e1;
-    transition: .3s;
-    border-radius: 24px;
-}
-.toggle-slider:before {
-    position: absolute; content: "";
-    height: 18px; width: 18px;
-    left: 3px; bottom: 3px;
-    background-color: white;
-    transition: .3s;
-    border-radius: 50%;
-}
-input:checked + .toggle-slider { background-color: #10b981; }
-input:checked + .toggle-slider:before { transform: translateX(20px); }
-.toggle-label { font-size: 12px; color: var(--text-muted); min-width: 50px; }
-
-.form-label-sm { font-size: 12px; font-weight: 600; color: var(--text-muted); margin-bottom: 4px; text-transform: uppercase; letter-spacing: .3px; }
-
-.lang-pane { display: none; }
-.lang-pane.active { display: block; animation: fadeIn .2s; }
-@keyframes fadeIn { from { opacity: 0; transform: translateY(4px);} to { opacity: 1; transform: none; }}
-
-.seo-card {
-    background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%);
-    border-radius: 12px;
-    padding: 22px;
-    margin-bottom: 22px;
-    color: white;
-}
-.seo-card .form-label-sm { color: rgba(255,255,255,.85); }
-.seo-card .form-control { background: rgba(255,255,255,.95); border: none; color: #111827; }
-[data-bs-theme="dark"] .seo-card .form-control { background: rgba(255,255,255,.95); color: #111827; }
-.seo-card .char-count { color: rgba(255,255,255,.7); font-size: 11px; }
-
-.lang-flag-emoji { font-size: 1rem; line-height: 1; }
-.section-summary { color: var(--text-muted); font-size: .82rem; margin-top: 2px; }
+.hp-top{display:flex;justify-content:space-between;align-items:center;gap:14px;flex-wrap:wrap;margin-bottom:18px}
+.hp-sticky{position:sticky;top:64px;z-index:20;background:var(--bs-body-bg);padding:10px 0;margin-bottom:10px;border-bottom:1px solid var(--sidebar-border)}
+.lang-tabs-bar{display:flex;gap:4px;background:var(--hover-bg);padding:4px;border-radius:10px;flex-wrap:wrap}
+.lang-tab-btn{background:transparent;border:0;padding:6px 14px;border-radius:7px;font-size:.85rem;font-weight:600;color:var(--text-muted);display:inline-flex;align-items:center;gap:6px}
+.lang-tab-btn.active{background:var(--sidebar-bg);color:var(--primary);box-shadow:var(--shadow-sm)}
+.lang-pane{display:none}.lang-pane.active{display:block}
+.hp-card{border:1px solid var(--sidebar-border);border-radius:14px;margin-bottom:14px;background:var(--sidebar-bg);overflow:hidden}
+.hp-head{padding:14px 18px;display:flex;align-items:center;justify-content:space-between;cursor:pointer;background:var(--hover-bg);gap:10px}
+.hp-ico{width:38px;height:38px;border-radius:10px;display:flex;align-items:center;justify-content:center;color:#fff;font-size:17px;flex-shrink:0}
+.hp-title{font-weight:700;font-size:15px}
+.hp-sum{font-size:.8rem;color:var(--text-muted)}
+.hp-body{display:none;padding:18px;border-top:1px solid var(--sidebar-border)}
+.hp-card.open .hp-body{display:block}
+.hp-chev{transition:transform .2s;color:var(--text-muted)}
+.hp-card.open .hp-chev{transform:rotate(180deg)}
+.form-label-sm{font-size:11.5px;font-weight:700;color:var(--text-muted);margin-bottom:4px;text-transform:uppercase;letter-spacing:.3px;display:block}
+.hp-note{font-size:.8rem;color:var(--text-muted)}
+.hp-sub{font-weight:700;font-size:.82rem;text-transform:uppercase;letter-spacing:.06em;color:var(--text-muted);margin:18px 0 8px}
+.rep-row{border:1px dashed var(--sidebar-border);border-radius:10px;padding:10px;margin-bottom:8px;background:var(--bs-body-bg)}
+.rep-tools{display:flex;gap:4px;padding-top:20px}
+.toggle-switch{position:relative;width:44px;height:24px;flex-shrink:0;display:inline-block}
+.toggle-switch input{opacity:0;width:0;height:0}
+.toggle-slider{position:absolute;cursor:pointer;inset:0;background:#cbd5e1;transition:.3s;border-radius:24px}
+.toggle-slider:before{position:absolute;content:"";height:18px;width:18px;left:3px;bottom:3px;background:#fff;transition:.3s;border-radius:50%}
+input:checked+.toggle-slider{background:#10b981}
+input:checked+.toggle-slider:before{transform:translateX(20px)}
+/* Tweaks (Claude Design) kopyası */
+.tw{background:#141416;color:#eee;border:1px solid rgba(255,255,255,.12);border-radius:16px;box-shadow:0 12px 34px rgba(0,0,0,.25);overflow:hidden;height:100%}
+.tw header{display:flex;justify-content:space-between;align-items:center;padding:12px 14px;border-bottom:1px solid rgba(255,255,255,.1);font-weight:700}
+.tw section{padding:12px 14px;border-bottom:1px solid rgba(255,255,255,.06)}
+.tw section:last-child{border-bottom:0}
+.tw h6{font-size:.68rem;letter-spacing:.16em;color:#999;text-transform:uppercase;margin:0 0 8px}
+.tw .sw{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.tw .sw button{width:30px;height:30px;border-radius:8px;border:2px solid rgba(255,255,255,.15);padding:0}
+.tw .sw button.on{border-color:#fff;outline:2px solid #888;outline-offset:1px}
+.tw .sw input[type=color]{width:30px;height:30px;border:2px dashed rgba(255,255,255,.3);border-radius:8px;padding:0;background:none;cursor:pointer}
+.tw .pre{display:grid;grid-template-columns:1fr 1fr;gap:6px}
+.tw .pre button{display:flex;align-items:center;gap:7px;background:#1e1e21;border:1px solid rgba(255,255,255,.1);color:#ddd;border-radius:9px;padding:6px 8px;font-size:.75rem;text-align:left}
+.tw .pre button.on{border-color:#fff}
+.tw .pre i{width:22px;height:14px;border-radius:4px;flex-shrink:0;display:inline-block}
+.tw .hexv{font-family:monospace;font-size:.72rem;color:#aaa;margin-left:4px}
+.pv{border-radius:14px;overflow:hidden;border:1px solid rgba(0,0,0,.15);background:var(--bg);color:var(--text);font-family:system-ui,sans-serif;margin-top:12px}
+.pv-h{display:flex;justify-content:space-between;align-items:center;padding:8px 12px;border-bottom:1px solid var(--line);font-size:.72rem}
+.pv-h b{color:var(--acc-t)}
+.pv-h span{background:linear-gradient(135deg,var(--cta1),var(--cta2));color:#0b0b0c;font-weight:800;border-radius:7px;padding:3px 8px}
+.pv-b{padding:12px}
+.pv-e{font-size:.6rem;letter-spacing:.2em;font-weight:800;color:var(--acc-t);text-transform:uppercase}
+.pv-t{font-weight:800;font-size:1rem;margin:2px 0 8px}
+.pv-c{background:linear-gradient(135deg,var(--card),var(--card2));border-radius:12px;padding:10px;color:var(--ctext)}
+.pv-c small{color:var(--red);font-weight:800;font-size:.6rem;letter-spacing:.14em}
+.pv-r{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin:6px 0}
+.pv-r div{border:1px solid var(--cline);border-radius:8px;padding:6px;font-size:.6rem;font-weight:800;color:var(--cmuted)}
+.pv-r div:first-child{border-color:var(--acc-c)}
+.pv-r b{display:block;color:var(--acc-c);font-size:1rem}
+.pv-btn{background:linear-gradient(135deg,var(--cta1),var(--cta2));color:#0b0b0c;text-align:center;font-weight:800;border-radius:9px;padding:6px;font-size:.75rem}
+.mode-opt{display:flex;gap:8px;flex-wrap:wrap}
+.mode-opt label{border:1px solid var(--sidebar-border);border-radius:10px;padding:8px 12px;cursor:pointer;font-weight:600;font-size:.88rem}
+.mode-opt input{margin-right:6px}
+.gst-list{display:flex;flex-wrap:wrap;gap:10px}
+.gst-it{position:relative;width:96px;height:128px;border-radius:10px;overflow:hidden;border:1px solid var(--sidebar-border);background:var(--hover-bg)}
+.gst-it img{width:100%;height:100%;object-fit:cover}
+.gst-it button{position:absolute;top:4px;right:4px;width:24px;height:24px;border-radius:50%;border:0;background:rgba(0,0,0,.65);color:#fff;font-size:.8rem;line-height:1}
+.gst-add{width:96px;height:128px;border-radius:10px;border:2px dashed var(--sidebar-border);background:transparent;color:var(--text-muted);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;font-size:.8rem}
+.img-prev{max-height:70px;border-radius:8px;margin-top:6px;border:1px solid var(--sidebar-border)}
+.char-count{font-size:11px;color:var(--text-muted)}
+.char-count.over{color:#dc2626;font-weight:700}
 </style>
 
-<form method="post" id="homepageForm">
-    <input type="hidden" name="csrf_token" value="<?= e(generateCSRFToken()) ?>">
+<datalist id="biIcons">
+  <?php foreach (['bi-whatsapp','bi-camera-video','bi-qr-code-scan','bi-wifi','bi-cash-coin','bi-shield-check','bi-cash-stack','bi-arrow-counterclockwise','bi-person-arms-up','bi-airplane','bi-airplane-engines','bi-headset','bi-car-front','bi-clock','bi-star','bi-geo-alt','bi-telephone','bi-check2-circle','bi-award','bi-snow','bi-briefcase','bi-people','bi-translate','bi-credit-card','bi-hand-thumbs-up','bi-gem','bi-lightning-charge','bi-map'] as $ic): ?>
+  <option value="<?= $ic ?>"></option>
+  <?php endforeach; ?>
+</datalist>
 
-    <!-- Page Header -->
-    <div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-3">
-        <div class="d-flex align-items-center gap-3">
-            <div style="width:48px;height:48px;background:linear-gradient(135deg,#f59e0b,#d97706);border-radius:12px;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
-                <i class="bi bi-house-door text-white" style="font-size:24px;"></i>
-            </div>
-            <div>
-                <h1 class="h4 mb-0 fw-bold">Anasayfa İçerik Yönetimi</h1>
-                <small class="text-muted">Tüm bölümleri her dil için ayrı ayrı yönetin</small>
-            </div>
-        </div>
+<form method="post" id="hpForm" autocomplete="off">
+  <input type="hidden" name="csrf_token" value="<?= e(generateCSRFToken()) ?>">
+  <input type="hidden" name="_tab" id="hpTab" value="">
 
-        <!-- Dil Tab Bar -->
-        <div class="lang-tabs-bar" id="langTabsBar">
-            <?php foreach ($languages as $i => $lang): ?>
-            <button type="button" class="lang-tab-btn <?= $i === 0 ? 'active' : '' ?>" data-lang="<?= e($lang['code']) ?>">
-                <span class="lang-flag-emoji"><?= e($lang['flag']) ?></span>
-                <?= e($lang['native_name']) ?>
-                <?php if ($lang['is_default']): ?>
-                <span class="badge bg-primary ms-1" style="font-size:.6rem;">Varsayılan</span>
-                <?php endif; ?>
-            </button>
+  <div class="hp-top">
+    <div class="d-flex align-items-center gap-3">
+      <div style="width:48px;height:48px;background:linear-gradient(135deg,#c9a227,#FFD700);border-radius:12px;display:flex;align-items:center;justify-content:center;flex-shrink:0"><i class="bi bi-palette text-dark" style="font-size:24px"></i></div>
+      <div>
+        <h1 class="h4 mb-0 fw-bold">Anasayfa & Tema</h1>
+        <small class="text-muted">Sunline teması · renkler, anasayfa bölümleri, menü, footer ve SEO — her dil için ayrı</small>
+      </div>
+    </div>
+    <div class="d-flex gap-2 flex-wrap">
+      <a href="<?= e(SITE_URL) ?>/" target="_blank" class="btn btn-outline-secondary"><i class="bi bi-box-arrow-up-right me-1"></i>Siteyi Aç</a>
+      <button type="submit" class="btn btn-primary"><i class="bi bi-check-lg me-1"></i>Tümünü Kaydet</button>
+    </div>
+  </div>
+
+  <div class="hp-sticky d-flex justify-content-between align-items-center gap-2 flex-wrap">
+    <div class="lang-tabs-bar" id="langTabsBar">
+      <?php foreach ($languages as $i => $l): ?>
+      <button type="button" class="lang-tab-btn <?= $i === 0 ? 'active' : '' ?>" data-lang="<?= e($l['code']) ?>"><span><?= e($l['flag']) ?></span><?= e($l['native_name']) ?><?php if ($l['is_default']): ?><span class="badge bg-primary ms-1" style="font-size:.6rem">Varsayılan</span><?php endif; ?></button>
+      <?php endforeach; ?>
+    </div>
+    <span class="hp-note"><i class="bi bi-info-circle me-1"></i>Dil sekmesi; menü, metin ve SSS alanlarının hangi dilde düzenlendiğini belirler. Renkler ve görseller tüm diller için ortaktır.</span>
+  </div>
+
+  <?php /* ============================ TEMA RENKLERİ ============================ */ ?>
+  <?= hp_card_open('tema', 'bi-palette2', '#c9a227', 'Tema Renkleri', 'Açık ve koyu tema · Claude Design Tweaks paneli · ziyaretçinin cihazına göre otomatik') ?>
+    <div class="mb-3">
+      <span class="form-label-sm">Görünüm</span>
+      <div class="mode-opt">
+        <label><input type="radio" name="base[global][mode]" value="auto" <?= $theme['mode'] === 'auto' ? 'checked' : '' ?>>Otomatik (cihaza göre açık/koyu)</label>
+        <label><input type="radio" name="base[global][mode]" value="light" <?= $theme['mode'] === 'light' ? 'checked' : '' ?>>Her zaman açık</label>
+        <label><input type="radio" name="base[global][mode]" value="dark" <?= $theme['mode'] === 'dark' ? 'checked' : '' ?>>Her zaman koyu</label>
+      </div>
+      <div class="form-check form-switch mt-2">
+        <input class="form-check-input" type="checkbox" role="switch" id="twToggle" name="base[global][toggle]" value="1" <?= $theme['toggle'] ? 'checked' : '' ?>>
+        <label class="form-check-label" for="twToggle">Sitenin üst menüsünde ziyaretçiye açık/koyu tema düğmesi göster (Otomatik modda)</label>
+      </div>
+    </div>
+    <div class="row g-3">
+      <?php foreach (['light' => ['☀️ Açık Tema', $lightPreset], 'dark' => ['🌙 Koyu Tema', $darkPreset]] as $pk => $pInfo): $pal = $theme[$pk]; ?>
+      <div class="col-xl-6">
+        <div class="tw" data-pal="<?= $pk ?>">
+          <header><span><?= $pInfo[0] ?></span><span class="hexv" data-hex></span></header>
+          <input type="hidden" name="base[global][<?= $pk ?>][preset]" value="<?= e($pInfo[1]) ?>" data-k="preset">
+          <input type="hidden" name="base[global][<?= $pk ?>][bg]" value="<?= e($pal['bg']) ?>" data-k="bg">
+          <input type="hidden" name="base[global][<?= $pk ?>][card]" value="<?= e($pal['card']) ?>" data-k="card">
+          <input type="hidden" name="base[global][<?= $pk ?>][accent]" value="<?= e($pal['accent']) ?>" data-k="accent">
+          <section><h6>Hazır Tema</h6><div class="pre">
+            <?php foreach ($presets as $key => $p): ?>
+            <button type="button" data-preset="<?= e($key) ?>" data-bg="<?= e($p['bg']) ?>" data-card="<?= e($p['card']) ?>" data-accent="<?= e($p['accent']) ?>"><i style="background:linear-gradient(90deg,<?= e($p['bg']) ?> 50%,<?= e($p['accent']) ?> 50%)"></i><?= e($p['n']) ?></button>
             <?php endforeach; ?>
+          </div></section>
+          <?php foreach (['bg' => 'Arka Plan', 'card' => 'Kart Rengi', 'accent' => 'Vurgu (Fiyat & Buton)'] as $sk => $sl): ?>
+          <section><h6><?= $sl ?></h6><div class="sw" data-sw="<?= $sk ?>">
+            <?php foreach ($swatches[$sk] as $c): ?><button type="button" style="background:<?= e($c) ?>" title="<?= e($c) ?>" data-c="<?= e(strtolower($c)) ?>"></button><?php endforeach; ?>
+            <input type="color" value="<?= e($pal[$sk]) ?>" title="Özel renk seç" data-custom="<?= $sk ?>">
+          </div></section>
+          <?php endforeach; ?>
+          <section>
+            <h6>Önizleme</h6>
+            <div class="pv">
+              <div class="pv-h"><b>SunLine</b><span>Rezervasyon</span></div>
+              <div class="pv-b">
+                <div class="pv-e">Bölgeler & Fiyatlar</div>
+                <div class="pv-t">Transfer Fiyatları</div>
+                <div class="pv-c"><small>ÖZEL FİYAT</small>
+                  <div class="pv-r"><div>GİDİŞ-DÖNÜŞ<b>70€</b></div><div>TEK YÖN<b>35€</b></div></div>
+                  <div class="pv-btn">Rezervasyon</div>
+                </div>
+              </div>
+            </div>
+          </section>
         </div>
+      </div>
+      <?php endforeach; ?>
+    </div>
+    <div class="row g-3 mt-2">
+      <div class="col-md-6">
+        <label class="form-label-sm">Logo — açık zemin için (boş = tema logosu)</label>
+        <div class="input-group"><input class="form-control" id="logoL" name="base[global][logo_light]" value="<?= e($G['logo_light'] ?? '') ?>" placeholder="assets logosu kullanılır"><button type="button" class="btn btn-outline-secondary" onclick="openMediaPicker('logoL','image')"><i class="bi bi-folder2-open"></i></button></div>
+      </div>
+      <div class="col-md-6">
+        <label class="form-label-sm">Logo — koyu zemin için (boş = beyaz yazılı tema logosu)</label>
+        <div class="input-group"><input class="form-control" id="logoD" name="base[global][logo_dark]" value="<?= e($G['logo_dark'] ?? '') ?>" placeholder="assets logosu kullanılır"><button type="button" class="btn btn-outline-secondary" onclick="openMediaPicker('logoD','image')"><i class="bi bi-folder2-open"></i></button></div>
+      </div>
+    </div>
+  </div></div>
 
-        <button type="submit" class="btn btn-primary">
-            <i class="bi bi-check-lg me-2"></i>Tümünü Kaydet
-        </button>
+  <?php /* ============================ GENEL ============================ */ ?>
+  <?= hp_card_open('genel', 'bi-sliders', '#0ea5e9', 'Genel Ayarlar', 'Kampanya (üstü çizili fiyat) · WhatsApp · menü · duyuru şeridi · footer') ?>
+    <div class="row g-3">
+      <div class="col-md-4">
+        <label class="form-label-sm">Kampanya indirimi gösterimi (%)</label>
+        <div class="input-group"><input class="form-control" type="number" step="0.5" min="0" max="90" name="base[global][discount]" value="<?= e((string)($G['discount'] ?? 0)) ?>"><span class="input-group-text">%</span></div>
+        <div class="hp-note mt-1">Kartlardaki üstü çizili "eski fiyat" ve "İNDİRİM" rozeti bu orana göre hesaplanır. <b>0</b> yazarsanız gösterilmez. (Ör. 12,5 → 35€ yerine <del>40€</del> 35€)</div>
+      </div>
+      <div class="col-md-4">
+        <label class="form-label-sm">WhatsApp numarası</label>
+        <input class="form-control" name="base[global][whatsapp]" value="<?= e($G['whatsapp'] ?? '') ?>" placeholder="<?= e(getSetting('contact_phone', '+90 5XX XXX XX XX')) ?>">
+        <div class="hp-note mt-1">Boş bırakılırsa Site Ayarları'ndaki telefon kullanılır.</div>
+      </div>
+      <div class="col-md-4">
+        <div class="alert alert-info small mb-0"><i class="bi bi-geo-alt me-1"></i>Anasayfadaki bölge kartları <b>Tur Yönetimi › Transferler</b> ekranında <b>"Öne Çıkan"</b> işaretli transferlerdir (şu an <?= (int)$featuredCount ?> adet). Fiyatlar da oradan gelir.</div>
+      </div>
     </div>
 
-    <!-- SEO Ayarları -->
-    <div class="seo-card">
-        <div class="d-flex align-items-center gap-2 mb-3">
-            <i class="bi bi-search" style="font-size:20px;"></i>
-            <h5 class="mb-0 fw-bold">SEO Ayarları</h5>
-            <span class="ms-auto small opacity-75">Her dil için ayrı SEO bilgisi</span>
-        </div>
+    <?php foreach ($languages as $i => $l): $c = $l['code']; $v = $val[$c]['global']; $n = 'tr[' . $c . '][global]'; ?>
+    <div class="lang-pane <?= $i === 0 ? 'active' : '' ?>" data-lang-pane="<?= e($c) ?>">
+      <div class="hp-sub"><?= e($l['flag'] . ' ' . $l['native_name']) ?> — Üst duyuru şeridi (kırmızı kayan bant)</div>
+      <?= hp_repeater($n . '[promo]', $v['promo'] ?? [], [
+          ['f' => 'b', 'label' => 'Vurgulu (sarı) kısım', 'col' => 'col-md-4', 'ph' => 'Mayıs sonuna kadar:'],
+          ['f' => 't', 'label' => 'Metin', 'col' => 'col-md', 'ph' => 'Ücretsiz İptal & Araçta Nakit Ödeme İmkânı!'],
+      ], 'Duyuru ekle') ?>
 
-        <?php foreach ($languages as $i => $lang):
-            $code = $lang['code'];
-            $s    = $seoData[$code] ?? [];
-        ?>
-        <div class="lang-pane <?= $i === 0 ? 'active' : '' ?>" data-lang-pane="<?= e($code) ?>">
-            <div class="row g-3">
-                <div class="col-md-6">
-                    <label class="form-label-sm">URL Slug <span class="opacity-75">(<?= $code === $defaultLang ? 'Varsayılan dil için "/" kullan' : 'Örn: home-' . $code ?>)</span></label>
-                    <input type="text" name="seo[<?= e($code) ?>][slug]" class="form-control"
-                           value="<?= e($s['slug'] ?? ($code === $defaultLang ? '/' : 'home-' . $code)) ?>"
-                           placeholder="<?= $code === $defaultLang ? '/' : 'home-' . $code ?>">
-                </div>
-                <div class="col-md-6">
-                    <label class="form-label-sm">Meta Başlık (60 karakter ideal)</label>
-                    <input type="text" name="seo[<?= e($code) ?>][meta_title]" class="form-control char-counter"
-                           data-max="60" value="<?= e($s['meta_title'] ?? '') ?>" maxlength="80">
-                    <div class="char-count mt-1" data-for-input>0/60 karakter</div>
-                </div>
-                <div class="col-md-8">
-                    <label class="form-label-sm">Meta Açıklama (160 karakter ideal)</label>
-                    <textarea name="seo[<?= e($code) ?>][meta_description]" class="form-control char-counter"
-                              data-max="160" rows="2" maxlength="200"><?= e($s['meta_description'] ?? '') ?></textarea>
-                    <div class="char-count mt-1" data-for-input>0/160 karakter</div>
-                </div>
-                <div class="col-md-4">
-                    <label class="form-label-sm">Anahtar Kelimeler (virgülle)</label>
-                    <input type="text" name="seo[<?= e($code) ?>][meta_keywords]" class="form-control"
-                           value="<?= e($s['meta_keywords'] ?? '') ?>"
-                           placeholder="tur, transfer, antalya">
-                </div>
-            </div>
-        </div>
-        <?php endforeach; ?>
-    </div>
+      <div class="hp-sub">Üst menü</div>
+      <?= hp_repeater($n . '[nav]', $v['nav'] ?? [], [
+          ['f' => 'l', 'label' => 'Menü adı', 'col' => 'col-md-4'],
+          ['f' => 'u', 'label' => 'Bağlantı', 'col' => 'col-md', 'ph' => '{home} · #bolgeler · {blog} · {contact} · /sayfa · https://...'],
+      ], 'Menü öğesi ekle') ?>
+      <div class="row g-2 mt-1">
+        <div class="col-md-4"><label class="form-label-sm">Sağdaki buton metni</label><?= hp_text($n . '[cta_label]', $v['cta_label'] ?? '', '', 60) ?></div>
+        <div class="col-md-8"><label class="form-label-sm">Buton bağlantısı</label><?= hp_text($n . '[cta_url]', $v['cta_url'] ?? '', '#bolgeler') ?></div>
+      </div>
+      <div class="hp-note mt-2">Kısaltmalar: <code>{home}</code> anasayfa, <code>{transfers}</code> tüm transferler, <code>{blog}</code>, <code>{contact}</code>, <code>{faq}</code>, <code>{page:kvkk}</code> (Sayfalar'daki bir sayfa), <code>#bolgeler</code> <code>#bilgi</code> <code>#misafir</code> <code>#sss</code> (anasayfa bölümleri).</div>
 
-    <!-- Section'lar -->
-    <?php foreach ($sections as $section):
-        $sectionId = (int)$section['id'];
-        $key       = $section['section_key'];
-        $meta      = $sectionMeta[$key] ?? ['icon' => 'bi-grid', 'label' => $section['title'], 'color' => '#6b7280'];
-        $baseSettings = json_decode($section['settings'] ?? '{}', true) ?: [];
-    ?>
-    <div class="section-card <?= $section['is_active'] ? '' : 'opacity-75' ?>" data-section-id="<?= $sectionId ?>">
-        <div class="section-header" onclick="toggleSection(this)">
-            <div class="d-flex align-items-center gap-2">
-                <div class="section-icon" style="background:<?= e($meta['color']) ?>;">
-                    <i class="bi <?= e($meta['icon']) ?>"></i>
-                </div>
-                <div>
-                    <div class="section-title"><?= e($meta['label']) ?></div>
-                    <div class="section-summary"><?= e($section['section_key']) ?></div>
-                </div>
-            </div>
-            <div class="d-flex align-items-center gap-3">
-                <label class="toggle-switch mb-0" onclick="event.stopPropagation();">
-                    <input type="checkbox" name="sections[<?= $sectionId ?>][is_active]" value="1" <?= $section['is_active'] ? 'checked' : '' ?>>
-                    <span class="toggle-slider"></span>
-                </label>
-                <span class="toggle-label"><?= $section['is_active'] ? 'Görünür' : 'Gizli' ?></span>
-                <i class="bi bi-chevron-down chevron-icon"></i>
-            </div>
-        </div>
+      <div class="hp-sub">Footer</div>
+      <div class="mb-2"><label class="form-label-sm">Hakkımızda metni</label><?= hp_area($n . '[footer_about]', $v['footer_about'] ?? '', 2) ?></div>
+      <label class="form-label-sm">Hızlı bağlantılar</label>
+      <?= hp_repeater($n . '[footer_links]', $v['footer_links'] ?? [], [
+          ['f' => 'l', 'label' => 'Bağlantı adı', 'col' => 'col-md-4'],
+          ['f' => 'u', 'label' => 'Adres', 'col' => 'col-md', 'ph' => '{faq} · {page:kvkk} · /sayfa'],
+      ], 'Bağlantı ekle') ?>
 
-        <div class="section-body">
-            <!-- Dil-bağımsız alanlar (image, video) -->
-            <?php if (in_array($key, ['hero','why_us','cta'])): ?>
-            <div class="row g-3 mb-3 pb-3" style="border-bottom:1px dashed var(--sidebar-border);">
-                <div class="col-12">
-                    <small class="text-muted fw-semibold"><i class="bi bi-image me-1"></i> MEDYALAR (Tüm diller için ortak)</small>
-                </div>
-                <?php if ($key === 'hero'): ?>
-                <div class="col-md-6">
-                    <label class="form-label-sm">Arka Plan Video</label>
-                    <div class="input-group">
-                        <input type="text" name="sections[<?= $sectionId ?>][background_video]" id="bgvid_<?= $sectionId ?>" class="form-control" value="<?= e($section['background_video']) ?>">
-                        <button type="button" class="btn btn-outline-secondary" onclick="openMediaPicker('bgvid_<?= $sectionId ?>', 'video')">
-                            <i class="bi bi-folder2-open"></i>
-                        </button>
-                    </div>
-                </div>
-                <?php endif; ?>
-                <div class="col-md-6">
-                    <label class="form-label-sm">Arka Plan / Ana Görsel</label>
-                    <div class="input-group">
-                        <input type="text" name="sections[<?= $sectionId ?>][background_image]" id="bgimg_<?= $sectionId ?>" class="form-control" value="<?= e($section['background_image']) ?>">
-                        <button type="button" class="btn btn-outline-secondary" onclick="openMediaPicker('bgimg_<?= $sectionId ?>', 'image')">
-                            <i class="bi bi-folder2-open"></i>
-                        </button>
-                    </div>
-                </div>
-            </div>
-            <?php else: ?>
-            <input type="hidden" name="sections[<?= $sectionId ?>][background_image]" value="<?= e($section['background_image']) ?>">
-            <input type="hidden" name="sections[<?= $sectionId ?>][background_video]" value="<?= e($section['background_video']) ?>">
-            <?php endif; ?>
-
-            <!-- Dil-bağımlı alanlar -->
-            <?php foreach ($languages as $i => $lang):
-                $code = $lang['code'];
-                $title    = getSectionValue($sectionTrans, $section, $sectionId, $code, 'title', $section['title'] ?? '');
-                $subtitle = getSectionValue($sectionTrans, $section, $sectionId, $code, 'subtitle', $section['subtitle'] ?? '');
-                $content  = getSectionValue($sectionTrans, $section, $sectionId, $code, 'content', $section['content'] ?? '');
-            ?>
-            <div class="lang-pane <?= $i === 0 ? 'active' : '' ?>" data-lang-pane="<?= e($code) ?>">
-                <?php switch ($key):
-                    case 'hero': ?>
-                <div class="row g-3">
-                    <div class="col-md-6">
-                        <label class="form-label-sm">Ana Başlık</label>
-                        <input type="text" name="sections[<?= $sectionId ?>][translations][<?= e($code) ?>][title]" class="form-control" value="<?= e($title) ?>">
-                    </div>
-                    <div class="col-md-6">
-                        <label class="form-label-sm">Alt Başlık</label>
-                        <input type="text" name="sections[<?= $sectionId ?>][translations][<?= e($code) ?>][subtitle]" class="form-control" value="<?= e($subtitle) ?>">
-                    </div>
-                    <div class="col-md-3">
-                        <label class="form-label-sm">Buton 1 Metni</label>
-                        <input type="text" name="sections[<?= $sectionId ?>][translations][<?= e($code) ?>][settings][button1_text]" class="form-control"
-                               value="<?= e(getSectionSetting($sectionTrans, $section, $sectionId, $code, 'button1_text', 'Start Exploring')) ?>">
-                    </div>
-                    <div class="col-md-3">
-                        <label class="form-label-sm">Buton 1 Linki</label>
-                        <input type="text" name="sections[<?= $sectionId ?>][translations][<?= e($code) ?>][settings][button1_url]" class="form-control"
-                               value="<?= e(getSectionSetting($sectionTrans, $section, $sectionId, $code, 'button1_url', '#')) ?>">
-                    </div>
-                    <div class="col-md-3">
-                        <label class="form-label-sm">Buton 2 Metni</label>
-                        <input type="text" name="sections[<?= $sectionId ?>][translations][<?= e($code) ?>][settings][button2_text]" class="form-control"
-                               value="<?= e(getSectionSetting($sectionTrans, $section, $sectionId, $code, 'button2_text', 'Browse Tours')) ?>">
-                    </div>
-                    <div class="col-md-3">
-                        <label class="form-label-sm">Buton 2 Linki</label>
-                        <input type="text" name="sections[<?= $sectionId ?>][translations][<?= e($code) ?>][settings][button2_url]" class="form-control"
-                               value="<?= e(getSectionSetting($sectionTrans, $section, $sectionId, $code, 'button2_url', '#')) ?>">
-                    </div>
-
-                    <div class="col-12 mt-2">
-                        <div class="form-check">
-                            <input type="checkbox" name="sections[<?= $sectionId ?>][translations][<?= e($code) ?>][settings][show_booking_form]" class="form-check-input" id="show_form_<?= $sectionId ?>_<?= e($code) ?>" value="1"
-                                <?= getSectionSetting($sectionTrans, $section, $sectionId, $code, 'show_booking_form', 1) ? 'checked' : '' ?>>
-                            <label class="form-check-label" for="show_form_<?= $sectionId ?>_<?= e($code) ?>">Rezervasyon Formunu Göster</label>
-                        </div>
-                    </div>
-
-                    <div class="col-12">
-                        <div class="alert alert-info mb-0 mt-2 small"><i class="bi bi-info-circle me-1"></i> Form etiketleri (label/placeholder) ileride <code>translations</code> tablosundan otomatik çekilecek (UI çevirileri). Şuan inline ayarlanabilir:</div>
-                    </div>
-                    <div class="col-md-4">
-                        <label class="form-label-sm">Form Başlığı</label>
-                        <input type="text" name="sections[<?= $sectionId ?>][translations][<?= e($code) ?>][settings][form_title]" class="form-control"
-                               value="<?= e(getSectionSetting($sectionTrans, $section, $sectionId, $code, 'form_title', 'Plan Your Adventure')) ?>">
-                    </div>
-                    <div class="col-md-4">
-                        <label class="form-label-sm">Form Buton Metni</label>
-                        <input type="text" name="sections[<?= $sectionId ?>][translations][<?= e($code) ?>][settings][form_button_text]" class="form-control"
-                               value="<?= e(getSectionSetting($sectionTrans, $section, $sectionId, $code, 'form_button_text', 'Find Your Transfer')) ?>">
-                    </div>
-                    <div class="col-md-4">
-                        <label class="form-label-sm">Destinasyon Etiketi</label>
-                        <input type="text" name="sections[<?= $sectionId ?>][translations][<?= e($code) ?>][settings][label_destination]" class="form-control"
-                               value="<?= e(getSectionSetting($sectionTrans, $section, $sectionId, $code, 'label_destination', 'Destination')) ?>">
-                    </div>
-                    <div class="col-md-4">
-                        <label class="form-label-sm">Destinasyon Placeholder</label>
-                        <input type="text" name="sections[<?= $sectionId ?>][translations][<?= e($code) ?>][settings][placeholder_destination]" class="form-control"
-                               value="<?= e(getSectionSetting($sectionTrans, $section, $sectionId, $code, 'placeholder_destination', 'Choose your destination')) ?>">
-                    </div>
-                    <div class="col-md-4">
-                        <label class="form-label-sm">Transfer Tarihi Etiketi</label>
-                        <input type="text" name="sections[<?= $sectionId ?>][translations][<?= e($code) ?>][settings][label_departure]" class="form-control"
-                               value="<?= e(getSectionSetting($sectionTrans, $section, $sectionId, $code, 'label_departure', 'Transfer Date')) ?>">
-                    </div>
-                    <div class="col-md-3">
-                        <label class="form-label-sm">Yetişkin Etiketi</label>
-                        <input type="text" name="sections[<?= $sectionId ?>][translations][<?= e($code) ?>][settings][label_adults]" class="form-control"
-                               value="<?= e(getSectionSetting($sectionTrans, $section, $sectionId, $code, 'label_adults', 'Adults')) ?>">
-                    </div>
-                    <div class="col-md-3">
-                        <label class="form-label-sm">Çocuk Etiketi</label>
-                        <input type="text" name="sections[<?= $sectionId ?>][translations][<?= e($code) ?>][settings][label_children]" class="form-control"
-                               value="<?= e(getSectionSetting($sectionTrans, $section, $sectionId, $code, 'label_children', 'Children')) ?>">
-                    </div>
-                </div>
-
-                <?php break; case 'why_us': ?>
-                <div class="row g-3">
-                    <div class="col-md-8">
-                        <label class="form-label-sm">Ana Başlık</label>
-                        <input type="text" name="sections[<?= $sectionId ?>][translations][<?= e($code) ?>][title]" class="form-control" value="<?= e($title) ?>">
-                    </div>
-                    <div class="col-md-4">
-                        <label class="form-label-sm">Deneyim Rozeti Metni</label>
-                        <input type="text" name="sections[<?= $sectionId ?>][translations][<?= e($code) ?>][settings][experience_text]" class="form-control"
-                               value="<?= e(getSectionSetting($sectionTrans, $section, $sectionId, $code, 'experience_text', 'Years of Excellence')) ?>">
-                    </div>
-                    <div class="col-12">
-                        <label class="form-label-sm">Açıklama</label>
-                        <textarea name="sections[<?= $sectionId ?>][translations][<?= e($code) ?>][content]" class="form-control" rows="3"><?= e($content) ?></textarea>
-                    </div>
-                    <div class="col-md-3">
-                        <label class="form-label-sm">Deneyim Rozeti (sayı)</label>
-                        <input type="text" name="sections[<?= $sectionId ?>][translations][<?= e($code) ?>][settings][experience_badge]" class="form-control"
-                               value="<?= e(getSectionSetting($sectionTrans, $section, $sectionId, $code, 'experience_badge', '15+')) ?>">
-                    </div>
-
-                    <div class="col-12 mt-2">
-                        <small class="text-muted fw-semibold">İSTATİSTİKLER (3 adet)</small>
-                    </div>
-                    <?php
-                    $stats = getSectionSetting($sectionTrans, $section, $sectionId, $code, 'stats', [
-                        ['number' => 1200, 'label' => 'Happy Travelers'],
-                        ['number' => 85,   'label' => 'Countries Covered'],
-                        ['number' => 15,   'label' => 'Years Experience']
-                    ]);
-                    for ($i2 = 0; $i2 < 3; $i2++):
-                        $st = $stats[$i2] ?? ['number' => '', 'label' => ''];
-                    ?>
-                    <div class="col-md-2">
-                        <input type="number" name="sections[<?= $sectionId ?>][translations][<?= e($code) ?>][settings][stats][<?= $i2 ?>][number]" class="form-control" placeholder="Sayı"
-                               value="<?= e($st['number'] ?? '') ?>">
-                    </div>
-                    <div class="col-md-2">
-                        <input type="text" name="sections[<?= $sectionId ?>][translations][<?= e($code) ?>][settings][stats][<?= $i2 ?>][label]" class="form-control" placeholder="Etiket"
-                               value="<?= e($st['label'] ?? '') ?>">
-                    </div>
-                    <?php endfor; ?>
-                </div>
-
-                <?php break; case 'featured_destinations': ?>
-                <div class="row g-3">
-                    <div class="col-md-8">
-                        <label class="form-label-sm">Başlık</label>
-                        <input type="text" name="sections[<?= $sectionId ?>][translations][<?= e($code) ?>][title]" class="form-control" value="<?= e($title) ?>">
-                    </div>
-                    <div class="col-md-4">
-                        <label class="form-label-sm">Alt Başlık</label>
-                        <input type="text" name="sections[<?= $sectionId ?>][translations][<?= e($code) ?>][subtitle]" class="form-control" value="<?= e($subtitle) ?>">
-                    </div>
-                    <div class="col-md-4">
-                        <label class="form-label-sm">Gösterilecek Sayı</label>
-                        <input type="number" name="sections[<?= $sectionId ?>][translations][<?= e($code) ?>][settings][limit]" class="form-control" min="1" max="12"
-                               value="<?= (int)getSectionSetting($sectionTrans, $section, $sectionId, $code, 'limit', 4) ?>">
-                    </div>
-                    <div class="col-md-4">
-                        <div class="form-check mt-4">
-                            <input type="checkbox" name="sections[<?= $sectionId ?>][translations][<?= e($code) ?>][settings][show_featured_only]" class="form-check-input" id="dest_feat_<?= $sectionId ?>_<?= e($code) ?>" value="1"
-                                <?= getSectionSetting($sectionTrans, $section, $sectionId, $code, 'show_featured_only', 1) ? 'checked' : '' ?>>
-                            <label class="form-check-label" for="dest_feat_<?= $sectionId ?>_<?= e($code) ?>">Sadece Öne Çıkanlar</label>
-                        </div>
-                    </div>
-                    <div class="col-12">
-                        <div class="alert alert-info mb-0 small">
-                            <i class="bi bi-info-circle me-1"></i>
-                            Destinasyonlar <a href="<?= ADMIN_URL ?>/destinations.php" class="alert-link">Destinasyon Yönetimi</a>'nden çekilir. Her destinasyonun çevirisi orada düzenlenir.
-                        </div>
-                    </div>
-                </div>
-
-                <?php break; case 'featured_tours': ?>
-                <div class="row g-3">
-                    <div class="col-md-8">
-                        <label class="form-label-sm">Başlık</label>
-                        <input type="text" name="sections[<?= $sectionId ?>][translations][<?= e($code) ?>][title]" class="form-control" value="<?= e($title) ?>">
-                    </div>
-                    <div class="col-md-4">
-                        <label class="form-label-sm">Alt Başlık</label>
-                        <input type="text" name="sections[<?= $sectionId ?>][translations][<?= e($code) ?>][subtitle]" class="form-control" value="<?= e($subtitle) ?>">
-                    </div>
-                    <div class="col-md-3">
-                        <label class="form-label-sm">Gösterilecek Sayı</label>
-                        <input type="number" name="sections[<?= $sectionId ?>][translations][<?= e($code) ?>][settings][limit]" class="form-control" min="1" max="12"
-                               value="<?= (int)getSectionSetting($sectionTrans, $section, $sectionId, $code, 'limit', 6) ?>">
-                    </div>
-                    <div class="col-md-3">
-                        <div class="form-check mt-4">
-                            <input type="checkbox" name="sections[<?= $sectionId ?>][translations][<?= e($code) ?>][settings][show_featured_only]" class="form-check-input" id="tour_feat_<?= $sectionId ?>_<?= e($code) ?>" value="1"
-                                <?= getSectionSetting($sectionTrans, $section, $sectionId, $code, 'show_featured_only', 1) ? 'checked' : '' ?>>
-                            <label class="form-check-label" for="tour_feat_<?= $sectionId ?>_<?= e($code) ?>">Sadece Öne Çıkanlar</label>
-                        </div>
-                    </div>
-                    <div class="col-md-3">
-                        <div class="form-check mt-4">
-                            <input type="checkbox" name="sections[<?= $sectionId ?>][translations][<?= e($code) ?>][settings][show_view_all]" class="form-check-input" id="tour_va_<?= $sectionId ?>_<?= e($code) ?>" value="1"
-                                <?= getSectionSetting($sectionTrans, $section, $sectionId, $code, 'show_view_all', 1) ? 'checked' : '' ?>>
-                            <label class="form-check-label" for="tour_va_<?= $sectionId ?>_<?= e($code) ?>">Tümünü Gör Butonu</label>
-                        </div>
-                    </div>
-                    <div class="col-md-3">
-                        <label class="form-label-sm">Tümünü Gör Linki</label>
-                        <input type="text" name="sections[<?= $sectionId ?>][translations][<?= e($code) ?>][settings][view_all_url]" class="form-control"
-                               value="<?= e(getSectionSetting($sectionTrans, $section, $sectionId, $code, 'view_all_url', '/turlar')) ?>">
-                    </div>
-                </div>
-
-                <?php break; case 'testimonials': ?>
-                <div class="row g-3">
-                    <div class="col-md-8">
-                        <label class="form-label-sm">Başlık</label>
-                        <input type="text" name="sections[<?= $sectionId ?>][translations][<?= e($code) ?>][title]" class="form-control" value="<?= e($title) ?>">
-                    </div>
-                    <div class="col-md-4">
-                        <label class="form-label-sm">Alt Başlık</label>
-                        <input type="text" name="sections[<?= $sectionId ?>][translations][<?= e($code) ?>][subtitle]" class="form-control" value="<?= e($subtitle) ?>">
-                    </div>
-                    <div class="col-md-4">
-                        <label class="form-label-sm">Gösterilecek Sayı</label>
-                        <input type="number" name="sections[<?= $sectionId ?>][translations][<?= e($code) ?>][settings][limit]" class="form-control" min="1" max="20"
-                               value="<?= (int)getSectionSetting($sectionTrans, $section, $sectionId, $code, 'limit', 5) ?>">
-                    </div>
-                    <div class="col-md-4">
-                        <label class="form-label-sm">Otomatik Geçiş (ms)</label>
-                        <input type="number" name="sections[<?= $sectionId ?>][translations][<?= e($code) ?>][settings][autoplay_delay]" class="form-control" step="500"
-                               value="<?= (int)getSectionSetting($sectionTrans, $section, $sectionId, $code, 'autoplay_delay', 5000) ?>">
-                    </div>
-                </div>
-
-                <?php break; case 'cta': ?>
-                <div class="row g-3">
-                    <div class="col-md-6">
-                        <label class="form-label-sm">Ana Başlık</label>
-                        <input type="text" name="sections[<?= $sectionId ?>][translations][<?= e($code) ?>][title]" class="form-control" value="<?= e($title) ?>">
-                    </div>
-                    <div class="col-md-6">
-                        <label class="form-label-sm">Rozet Metni</label>
-                        <input type="text" name="sections[<?= $sectionId ?>][translations][<?= e($code) ?>][subtitle]" class="form-control" value="<?= e($subtitle) ?>">
-                    </div>
-                    <div class="col-12">
-                        <label class="form-label-sm">Açıklama</label>
-                        <textarea name="sections[<?= $sectionId ?>][translations][<?= e($code) ?>][content]" class="form-control" rows="2"><?= e(strip_tags($content)) ?></textarea>
-                    </div>
-                    <div class="col-md-3">
-                        <label class="form-label-sm">Buton 1 Metni</label>
-                        <input type="text" name="sections[<?= $sectionId ?>][translations][<?= e($code) ?>][settings][button1_text]" class="form-control"
-                               value="<?= e(getSectionSetting($sectionTrans, $section, $sectionId, $code, 'button1_text', 'Explore Now')) ?>">
-                    </div>
-                    <div class="col-md-3">
-                        <label class="form-label-sm">Buton 1 Linki</label>
-                        <input type="text" name="sections[<?= $sectionId ?>][translations][<?= e($code) ?>][settings][button1_url]" class="form-control"
-                               value="<?= e(getSectionSetting($sectionTrans, $section, $sectionId, $code, 'button1_url', '/destinasyonlar')) ?>">
-                    </div>
-                    <div class="col-md-3">
-                        <label class="form-label-sm">Buton 2 Metni</label>
-                        <input type="text" name="sections[<?= $sectionId ?>][translations][<?= e($code) ?>][settings][button2_text]" class="form-control"
-                               value="<?= e(getSectionSetting($sectionTrans, $section, $sectionId, $code, 'button2_text', 'View Deals')) ?>">
-                    </div>
-                    <div class="col-md-3">
-                        <label class="form-label-sm">Buton 2 Linki</label>
-                        <input type="text" name="sections[<?= $sectionId ?>][translations][<?= e($code) ?>][settings][button2_url]" class="form-control"
-                               value="<?= e(getSectionSetting($sectionTrans, $section, $sectionId, $code, 'button2_url', '/turlar')) ?>">
-                    </div>
-                    <div class="col-md-6">
-                        <label class="form-label-sm">İletişim Metni</label>
-                        <input type="text" name="sections[<?= $sectionId ?>][translations][<?= e($code) ?>][settings][contact_label]" class="form-control"
-                               value="<?= e(getSectionSetting($sectionTrans, $section, $sectionId, $code, 'contact_label', 'Need help choosing?')) ?>">
-                    </div>
-                    <div class="col-md-6">
-                        <label class="form-label-sm">Telefon</label>
-                        <input type="text" name="sections[<?= $sectionId ?>][translations][<?= e($code) ?>][settings][phone]" class="form-control"
-                               value="<?= e(getSectionSetting($sectionTrans, $section, $sectionId, $code, 'phone', '')) ?>">
-                    </div>
-                </div>
-
-                <?php break; default: ?>
-                <div class="row g-3">
-                    <div class="col-md-6">
-                        <label class="form-label-sm">Başlık</label>
-                        <input type="text" name="sections[<?= $sectionId ?>][translations][<?= e($code) ?>][title]" class="form-control" value="<?= e($title) ?>">
-                    </div>
-                    <div class="col-md-6">
-                        <label class="form-label-sm">Alt Başlık</label>
-                        <input type="text" name="sections[<?= $sectionId ?>][translations][<?= e($code) ?>][subtitle]" class="form-control" value="<?= e($subtitle) ?>">
-                    </div>
-                    <div class="col-12">
-                        <label class="form-label-sm">İçerik</label>
-                        <textarea name="sections[<?= $sectionId ?>][translations][<?= e($code) ?>][content]" class="form-control" rows="4"><?= e($content) ?></textarea>
-                    </div>
-                </div>
-                <?php endswitch; ?>
-            </div>
-            <?php endforeach; ?>
-        </div>
+      <div class="hp-sub">Alt anahtar kelime şeridi (SEO iç linkleri)</div>
+      <?= hp_area($n . '[keywords]', $v['keywords'] ?? '', 4, "Boş bırakırsanız öne çıkan bölgelerden otomatik oluşturulur.\nHer satıra bir kelime: side transfer | {transfers}\nveya: belek transfer | /transferler/belek-transfer") ?>
     </div>
     <?php endforeach; ?>
+  </div></div>
 
-    <div class="text-end mt-4">
-        <button type="submit" class="btn btn-primary btn-lg">
-            <i class="bi bi-check-lg me-2"></i>Tüm Değişiklikleri Kaydet
-        </button>
+  <?php /* ============================ HERO + HIZLI FORM ============================ */ ?>
+  <?= hp_card_open('hero', 'bi-image', '#6366f1', 'Hero & Hızlı Fiyat Formu', 'Büyük görsel, başlık, alt başlık · form altı not ve güven rozetleri', 'active[hero]', $baseVal['hero']['_active']) ?>
+    <div class="row g-3 mb-2">
+      <div class="col-md-8">
+        <label class="form-label-sm">Hero arka plan görseli (tüm diller)</label>
+        <div class="input-group"><input class="form-control" id="heroImg" name="base[hero][image]" value="<?= e($baseVal['hero']['image'] ?? '') ?>"><button type="button" class="btn btn-outline-secondary" id="heroPick"><i class="bi bi-folder2-open"></i></button></div>
+        <div class="hp-note mt-1">Medya kütüphanesinden seçin veya tam adres yapıştırın. Önerilen: 1800px genişlik, sıkıştırılmış JPG/WebP.</div>
+      </div>
+      <div class="col-md-4"><img src="<?= e(trim((string)($baseVal['hero']['image'] ?? '')) !== '' ? getMediaUrl($baseVal['hero']['image']) : '') ?>" class="img-prev" id="heroImgPrev" alt="" <?= trim((string)($baseVal['hero']['image'] ?? '')) === '' ? 'hidden' : '' ?>></div>
     </div>
+    <?php foreach ($languages as $i => $l): $c = $l['code']; $v = $val[$c]['hero']; $gv = $val[$c]['global']; $n = 'tr[' . $c . ']'; ?>
+    <div class="lang-pane <?= $i === 0 ? 'active' : '' ?>" data-lang-pane="<?= e($c) ?>">
+      <div class="row g-3">
+        <div class="col-md-6"><label class="form-label-sm">Üst küçük yazı</label><?= hp_text($n . '[hero][eyebrow]', $v['eyebrow'] ?? '') ?></div>
+        <div class="col-md-6"><label class="form-label-sm">Başlık (H1) — vurgulanacak kısmı *yıldız* içine alın</label><?= hp_text($n . '[hero][title]', $v['title'] ?? '', 'Antalya *VIP Transfer*') ?></div>
+        <div class="col-12"><label class="form-label-sm">Alt başlık</label><?= hp_area($n . '[hero][subtitle]', $v['subtitle'] ?? '', 2) ?></div>
+        <div class="col-12"><label class="form-label-sm">Formun altındaki not</label><?= hp_text($n . '[global][note]', $gv['note'] ?? '') ?></div>
+      </div>
+      <div class="hp-sub">Güven rozetleri</div>
+      <?= hp_repeater($n . '[global][trust]', $gv['trust'] ?? [], [
+          ['f' => 'i', 'label' => 'İkon', 'col' => 'col-md-3', 'type' => 'icon'],
+          ['f' => 't', 'label' => 'Metin', 'col' => 'col-md'],
+      ], 'Rozet ekle') ?>
+    </div>
+    <?php endforeach; ?>
+  </div></div>
+
+  <?php /* ============================ BÖLGELER ============================ */ ?>
+  <?= hp_card_open('bolgeler', 'bi-geo-alt', '#f59e0b', 'Bölgeler & Fiyatlar', 'Kart başlıkları ve filtre düğmeleri (kartlar Tur Yönetimi › Transferler\'den gelir)', 'active[regions]', $baseVal['regions']['_active']) ?>
+    <div class="form-check form-switch mb-3">
+      <input class="form-check-input" type="checkbox" role="switch" id="onlyFeat" name="base[regions][only_featured]" value="1" <?= !empty($baseVal['regions']['only_featured']) ? 'checked' : '' ?>>
+      <label class="form-check-label" for="onlyFeat">Anasayfada sadece "Öne Çıkan" transferleri göster (kapalıysa tüm transferler)</label>
+    </div>
+    <?php foreach ($languages as $i => $l): $c = $l['code']; $v = $val[$c]['regions']; $n = 'tr[' . $c . '][regions]'; ?>
+    <div class="lang-pane <?= $i === 0 ? 'active' : '' ?>" data-lang-pane="<?= e($c) ?>">
+      <div class="row g-3">
+        <div class="col-md-4"><label class="form-label-sm">Üst küçük yazı</label><?= hp_text($n . '[eyebrow]', $v['eyebrow'] ?? '') ?></div>
+        <div class="col-md-8"><label class="form-label-sm">Başlık</label><?= hp_text($n . '[title]', $v['title'] ?? '') ?></div>
+        <div class="col-12"><label class="form-label-sm">Açıklama</label><?= hp_area($n . '[subtitle]', $v['subtitle'] ?? '', 2) ?></div>
+      </div>
+    </div>
+    <?php endforeach; ?>
+    <div class="hp-sub">Filtre düğmeleri (tüm diller)</div>
+    <div class="hp-note mb-2">Bir transfer, başlığında/konumunda (ör. "Antalya / Manavgat / Side") aşağıdaki kelimelerden biri geçiyorsa o filtreye girer. Kartı olmayan filtre sitede gizlenir.</div>
+    <div class="row g-2 mb-2">
+      <?php foreach ($languages as $l): ?>
+      <div class="col-6 col-md-3"><label class="form-label-sm">"Tümü" — <?= e($l['native_name']) ?></label><input class="form-control form-control-sm" name="base[regions][all_label][<?= e($l['code']) ?>]" value="<?= e($baseVal['regions']['all_label'][$l['code']] ?? ($l['code'] === 'tr' ? 'Tümü' : 'All')) ?>"></div>
+      <?php endforeach; ?>
+    </div>
+    <?php
+    $filterFields = [['f' => 'k', 'label' => 'Kod', 'col' => 'col-md-2', 'ph' => 'kemer']];
+    foreach ($languages as $l) $filterFields[] = ['f' => 'l.' . $l['code'], 'label' => 'Ad (' . strtoupper($l['code']) . ')', 'col' => 'col-6 col-md'];
+    $filterFields[] = ['f' => 'm', 'label' => 'Eşleşen kelimeler (virgülle)', 'col' => 'col-12', 'type' => 'textarea', 'rows' => 2];
+    echo hp_repeater('base[regions][filters]', $baseVal['regions']['filters'] ?? [], $filterFields, 'Filtre ekle');
+    ?>
+  </div></div>
+
+  <?php /* ============================ BİLGİLENDİRME ============================ */ ?>
+  <?= hp_card_open('bilgi', 'bi-patch-check', '#10b981', 'Bilgilendirme', 'Profesyonel hizmet ve karşılama standartları (6 madde)', 'active[info]', $baseVal['info']['_active']) ?>
+    <?php foreach ($languages as $i => $l): $c = $l['code']; $v = $val[$c]['info']; $n = 'tr[' . $c . '][info]'; ?>
+    <div class="lang-pane <?= $i === 0 ? 'active' : '' ?>" data-lang-pane="<?= e($c) ?>">
+      <div class="row g-3">
+        <div class="col-md-4"><label class="form-label-sm">Üst küçük yazı</label><?= hp_text($n . '[eyebrow]', $v['eyebrow'] ?? '') ?></div>
+        <div class="col-md-8"><label class="form-label-sm">Başlık</label><?= hp_text($n . '[title]', $v['title'] ?? '') ?></div>
+        <div class="col-12"><label class="form-label-sm">Açıklama</label><?= hp_area($n . '[subtitle]', $v['subtitle'] ?? '', 3) ?></div>
+        <div class="col-12"><label class="form-label-sm">İmza</label><?= hp_text($n . '[sign]', $v['sign'] ?? '') ?></div>
+      </div>
+      <div class="hp-sub">Maddeler</div>
+      <?= hp_repeater($n . '[items]', $v['items'] ?? [], [
+          ['f' => 'i', 'label' => 'İkon', 'col' => 'col-md-3', 'type' => 'icon'],
+          ['f' => 't', 'label' => 'Başlık', 'col' => 'col-md'],
+          ['f' => 'p', 'label' => 'Metin', 'col' => 'col-12', 'type' => 'textarea', 'rows' => 2],
+      ], 'Madde ekle') ?>
+    </div>
+    <?php endforeach; ?>
+  </div></div>
+
+  <?php /* ============================ MİSAFİRLER ============================ */ ?>
+  <?= hp_card_open('misafir', 'bi-people', '#8b5cf6', 'Misafirlerimiz', 'Misafir fotoğrafları (fotoğraf yoksa bölüm gizlenir)', 'active[guests]', $baseVal['guests']['_active']) ?>
+    <label class="form-label-sm">Fotoğraflar (tüm diller) — dikey (3:4) fotoğraflar en iyi sonucu verir</label>
+    <div class="gst-list" id="gstList">
+      <?php foreach ((array)($baseVal['guests']['photos'] ?? []) as $p): ?>
+      <div class="gst-it"><img src="<?= e(getMediaUrl($p)) ?>" alt=""><input type="hidden" name="base[guests][photos][]" value="<?= e($p) ?>"><button type="button" class="gst-del" title="Kaldır">×</button></div>
+      <?php endforeach; ?>
+      <button type="button" class="gst-add" id="gstAdd"><i class="bi bi-plus-lg"></i>Ekle</button>
+    </div>
+    <input type="hidden" id="gstTmp">
+    <?php foreach ($languages as $i => $l): $c = $l['code']; $v = $val[$c]['guests']; $n = 'tr[' . $c . '][guests]'; ?>
+    <div class="lang-pane <?= $i === 0 ? 'active' : '' ?> mt-3" data-lang-pane="<?= e($c) ?>">
+      <div class="row g-3">
+        <div class="col-md-4"><label class="form-label-sm">Üst küçük yazı</label><?= hp_text($n . '[eyebrow]', $v['eyebrow'] ?? '') ?></div>
+        <div class="col-md-8"><label class="form-label-sm">Başlık</label><?= hp_text($n . '[title]', $v['title'] ?? '') ?></div>
+      </div>
+    </div>
+    <?php endforeach; ?>
+  </div></div>
+
+  <?php /* ============================ BLOG ============================ */ ?>
+  <?= hp_card_open('blogb', 'bi-journal-text', '#ec4899', 'Blog', 'Anasayfada son yazılar (yazılar İçerik › Blog ekranından)', 'active[blog]', $baseVal['blog']['_active']) ?>
+    <div class="row g-3 mb-2"><div class="col-md-3"><label class="form-label-sm">Gösterilecek yazı sayısı</label><input class="form-control" type="number" min="1" max="12" name="base[blog][limit]" value="<?= (int)($baseVal['blog']['limit'] ?? 6) ?>"></div></div>
+    <?php foreach ($languages as $i => $l): $c = $l['code']; $v = $val[$c]['blog']; $n = 'tr[' . $c . '][blog]'; ?>
+    <div class="lang-pane <?= $i === 0 ? 'active' : '' ?>" data-lang-pane="<?= e($c) ?>">
+      <div class="row g-3">
+        <div class="col-md-4"><label class="form-label-sm">Üst küçük yazı</label><?= hp_text($n . '[eyebrow]', $v['eyebrow'] ?? '') ?></div>
+        <div class="col-md-8"><label class="form-label-sm">Başlık</label><?= hp_text($n . '[title]', $v['title'] ?? '') ?></div>
+      </div>
+    </div>
+    <?php endforeach; ?>
+  </div></div>
+
+  <?php /* ============================ SSS ============================ */ ?>
+  <?= hp_card_open('sss', 'bi-question-circle', '#14b8a6', 'Sıkça Sorulan Sorular', 'Anasayfa SSS — Google ve yapay zekâ cevapları için yapısal veri olarak da yayınlanır', 'active[faq]', $baseVal['faq']['_active']) ?>
+    <?php foreach ($languages as $i => $l): $c = $l['code']; $v = $val[$c]['faq']; $n = 'tr[' . $c . '][faq]'; ?>
+    <div class="lang-pane <?= $i === 0 ? 'active' : '' ?>" data-lang-pane="<?= e($c) ?>">
+      <div class="row g-3">
+        <div class="col-md-4"><label class="form-label-sm">Üst küçük yazı</label><?= hp_text($n . '[eyebrow]', $v['eyebrow'] ?? '') ?></div>
+        <div class="col-md-8"><label class="form-label-sm">Başlık</label><?= hp_text($n . '[title]', $v['title'] ?? '') ?></div>
+      </div>
+      <div class="hp-sub">Sorular</div>
+      <?= hp_repeater($n . '[items]', $v['items'] ?? [], [
+          ['f' => 'q', 'label' => 'Soru', 'col' => 'col-12'],
+          ['f' => 'a', 'label' => 'Cevap', 'col' => 'col-12', 'type' => 'textarea', 'rows' => 2],
+      ], 'Soru ekle') ?>
+    </div>
+    <?php endforeach; ?>
+  </div></div>
+
+  <?php /* ============================ SEO ============================ */ ?>
+  <?= hp_card_open('seo', 'bi-search', '#4f46e5', 'Anasayfa SEO', 'Google başlığı ve açıklaması — boş bırakılırsa dile göre hazır SEO metni kullanılır') ?>
+    <?php foreach ($languages as $i => $l): $c = $l['code']; $s = $seoData[$c] ?? []; ?>
+    <div class="lang-pane <?= $i === 0 ? 'active' : '' ?>" data-lang-pane="<?= e($c) ?>">
+      <div class="row g-3">
+        <div class="col-md-6">
+          <label class="form-label-sm">Meta başlık (≈60 karakter)</label>
+          <input class="form-control cc" data-max="60" name="seo[<?= e($c) ?>][meta_title]" value="<?= e($s['meta_title'] ?? '') ?>" placeholder="<?= e(sl_t('seo_home_t', [], $c)) ?>">
+          <div class="char-count"></div>
+        </div>
+        <div class="col-md-6">
+          <label class="form-label-sm">Anahtar kelimeler (virgülle, isteğe bağlı)</label>
+          <input class="form-control" name="seo[<?= e($c) ?>][meta_keywords]" value="<?= e($s['meta_keywords'] ?? '') ?>">
+        </div>
+        <div class="col-12">
+          <label class="form-label-sm">Meta açıklama (≈160 karakter)</label>
+          <textarea class="form-control cc" data-max="160" rows="2" name="seo[<?= e($c) ?>][meta_description]" placeholder="<?= e(sl_t('seo_home_d', [], $c)) ?>"><?= e($s['meta_description'] ?? '') ?></textarea>
+          <div class="char-count"></div>
+        </div>
+      </div>
+    </div>
+    <?php endforeach; ?>
+    <div class="alert alert-secondary small mt-3 mb-0"><i class="bi bi-lightbulb me-1"></i>Transfer (bölge) sayfalarının SEO başlık/açıklaması <b>Tur Yönetimi › Transferler</b> içindeki her transferin <b>Meta Başlık / Meta Açıklama</b> alanlarından gelir; boşsa "<i>Side Transfer | Antalya Havalimanı – Side VIP Transfer</i>" gibi dile göre otomatik üretilir. Otomatik şablonlar <b>Sistem › Çeviriler › sunline</b> grubunda düzenlenebilir.</div>
+  </div></div>
+
+  <div class="d-flex justify-content-end gap-2 mt-3 mb-5">
+    <button type="submit" class="btn btn-primary btn-lg"><i class="bi bi-check-lg me-1"></i>Tümünü Kaydet</button>
+  </div>
 </form>
 
 <script>
-// Section accordion
-function toggleSection(header) {
-    header.closest('.section-card').classList.toggle('expanded');
-}
-// İlk section açık
-document.querySelector('.section-card')?.classList.add('expanded');
+(function () {
+  var form = document.getElementById('hpForm');
 
-// Toggle switch label güncelleme
-document.querySelectorAll('.toggle-switch input').forEach(function(input) {
-    input.addEventListener('change', function() {
-        var label = this.closest('.section-header').querySelector('.toggle-label');
-        if (label) label.textContent = this.checked ? 'Görünür' : 'Gizli';
-        this.closest('.section-card').classList.toggle('opacity-75', !this.checked);
+  // Kartları aç/kapat (açık kart adres çubuğunda hatırlanır)
+  document.querySelectorAll('.hp-card .hp-head').forEach(function (h) {
+    h.addEventListener('click', function () {
+      var card = h.closest('.hp-card');
+      card.classList.toggle('open');
+      if (card.classList.contains('open')) { history.replaceState(null, '', '#' + card.id); document.getElementById('hpTab').value = card.id; }
     });
-});
+    h.addEventListener('keydown', function (e) { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); h.click(); } });
+  });
+  var open = location.hash ? document.getElementById(location.hash.slice(1)) : null;
+  (open && open.classList.contains('hp-card') ? open : document.getElementById('tema')).classList.add('open');
+  if (open) document.getElementById('hpTab').value = open.id;
 
-// Dil tab switch
-document.querySelectorAll('.lang-tab-btn').forEach(function(btn) {
-    btn.addEventListener('click', function() {
-        var lang = this.dataset.lang;
-        // Tüm tab butonları
-        document.querySelectorAll('.lang-tab-btn').forEach(function(b) {
-            b.classList.toggle('active', b.dataset.lang === lang);
-        });
-        // Tüm pane'ler (SEO + section'lar)
-        document.querySelectorAll('.lang-pane').forEach(function(p) {
-            p.classList.toggle('active', p.dataset.langPane === lang);
-        });
+  // Dil sekmeleri
+  document.querySelectorAll('.lang-tab-btn').forEach(function (b) {
+    b.addEventListener('click', function () {
+      var lang = b.dataset.lang;
+      document.querySelectorAll('.lang-tab-btn').forEach(function (x) { x.classList.toggle('active', x === b); });
+      document.querySelectorAll('.lang-pane').forEach(function (p) { p.classList.toggle('active', p.dataset.langPane === lang); });
     });
-});
+  });
 
-// Karakter sayacı
-function updateCharCount(input) {
-    var max = parseInt(input.dataset.max) || 100;
-    var len = input.value.length;
-    var counter = input.parentElement.querySelector('[data-for-input]');
-    if (counter) {
-        counter.textContent = len + '/' + max + ' karakter';
-        counter.style.color = len > max ? '#fca5a5' : '';
+  // Tekrarlanabilir listeler
+  function reindex(rep) {
+    var base = rep.dataset.base;
+    rep.querySelectorAll(':scope > .rep-rows > .rep-row').forEach(function (row, i) {
+      row.querySelectorAll('[data-f]').forEach(function (inp) {
+        inp.name = base + '[' + i + '][' + inp.dataset.f.split('.').join('][') + ']';
+      });
+    });
+  }
+  document.addEventListener('click', function (e) {
+    var add = e.target.closest('.rep-add');
+    if (add) {
+      var rep = add.closest('.rep');
+      var tpl = rep.querySelector(':scope > template.rep-tpl');
+      var wrap = document.createElement('div');
+      wrap.innerHTML = tpl.innerHTML.trim();
+      rep.querySelector(':scope > .rep-rows').appendChild(wrap.firstChild);
+      reindex(rep);
+      return;
     }
-}
-document.querySelectorAll('.char-counter').forEach(function(input) {
-    updateCharCount(input);
-    input.addEventListener('input', function() { updateCharCount(this); });
-});
+    var row = e.target.closest('.rep-row');
+    if (!row) return;
+    var rep2 = row.closest('.rep');
+    if (e.target.closest('.rep-del')) { row.remove(); reindex(rep2); }
+    else if (e.target.closest('.rep-up') && row.previousElementSibling) { row.parentNode.insertBefore(row, row.previousElementSibling); reindex(rep2); }
+    else if (e.target.closest('.rep-down') && row.nextElementSibling) { row.parentNode.insertBefore(row.nextElementSibling, row); reindex(rep2); }
+  });
+  document.addEventListener('input', function (e) {
+    if (e.target.classList.contains('ico-in')) {
+      var p = e.target.parentNode.querySelector('.ico-prev i');
+      if (p) p.className = 'bi ' + (e.target.value || 'bi-question');
+    }
+  });
+  form.addEventListener('submit', function () { document.querySelectorAll('.rep').forEach(reindex); });
+
+  // Karakter sayacı
+  document.querySelectorAll('.cc').forEach(function (inp) {
+    var out = inp.parentNode.querySelector('.char-count');
+    var upd = function () { var n = inp.value.length, m = +inp.dataset.max; out.textContent = n + ' / ' + m + ' karakter'; out.classList.toggle('over', n > m); };
+    inp.addEventListener('input', upd); upd();
+  });
+
+  // Hero görsel önizleme
+  var heroImg = document.getElementById('heroImg'), heroPrev = document.getElementById('heroImgPrev');
+  var uploadsUrl = <?= json_encode(UPLOADS_URL) ?>;
+  var mediaUrl = function (p) { return /^https?:\/\//.test(p) ? p : uploadsUrl + p; };
+  var syncHero = function () { if (heroImg.value) { heroPrev.src = mediaUrl(heroImg.value); heroPrev.hidden = false; } else heroPrev.hidden = true; };
+  heroImg.addEventListener('change', syncHero);
+  document.getElementById('heroPick').addEventListener('click', function () {
+    openMediaPicker('heroImg', 'image');
+    mediaPickerCallback = function (m) { heroImg.value = m.file_path; syncHero(); };
+  });
+
+  // Misafir fotoğrafları
+  var gstList = document.getElementById('gstList'), gstAdd = document.getElementById('gstAdd');
+  gstAdd.addEventListener('click', function () {
+    openMediaPicker('gstTmp', 'image');
+    mediaPickerCallback = function (m) {
+      var d = document.createElement('div');
+      d.className = 'gst-it';
+      d.innerHTML = '<img alt=""><input type="hidden" name="base[guests][photos][]"><button type="button" class="gst-del" title="Kaldır">×</button>';
+      d.querySelector('img').src = m.url;
+      d.querySelector('input').value = m.file_path;
+      gstList.insertBefore(d, gstAdd);
+    };
+  });
+  gstList.addEventListener('click', function (e) { if (e.target.classList.contains('gst-del')) e.target.closest('.gst-it').remove(); });
+
+  // ===== Tema renkleri (Claude Design Tweaks paneli ile aynı hesaplama) =====
+  function rgb(h) { h = h.replace('#', ''); return [0, 2, 4].map(function (i) { return parseInt(h.substr(i, 2), 16); }); }
+  function lum(h) { var c = rgb(h); return .2126 * c[0] / 255 + .7152 * c[1] / 255 + .0722 * c[2] / 255; }
+  function mix(h, amt) { var t = amt > 0 ? 255 : 0, a = Math.abs(amt); return '#' + rgb(h).map(function (v) { return Math.round(v + (t - v) * a).toString(16).padStart(2, '0'); }).join(''); }
+  function rel(h) { return rgb(h).map(function (v) { v /= 255; return v <= .03928 ? v / 12.92 : Math.pow((v + .055) / 1.055, 2.4); }).reduce(function (s, v, i) { return s + v * [.2126, .7152, .0722][i]; }, 0); }
+  function contrast(a, b) { var l1 = rel(a), l2 = rel(b); return (Math.max(l1, l2) + .05) / (Math.min(l1, l2) + .05); }
+  function readable(fg, bg, min) { if (contrast(fg, bg) >= min) return fg; var dark = rel(bg) > .35; for (var s = .05; s <= .9; s += .05) { var c = mix(fg, dark ? -s : s); if (contrast(c, bg) >= min) return c; } return dark ? '#141414' : '#ffffff'; }
+  function vars(bg, card, acc) {
+    var lb = lum(bg) > .5, lc = lum(card) > .5;
+    return { '--bg': bg, '--bg2': mix(bg, lb ? -.04 : .04), '--card': card, '--card2': mix(card, lc ? -.05 : .07), '--accent': acc,
+      '--cta1': mix(acc, -.2), '--cta2': mix(acc, .12), '--text': lb ? '#141414' : '#ffffff', '--line': lb ? 'rgba(0,0,0,.1)' : 'rgba(255,255,255,.09)',
+      '--red': lc ? '#d11a1a' : '#ff4d4d', '--ctext': lc ? '#141414' : '#ffffff', '--cmuted': lc ? '#6b6560' : '#b9b9b9', '--cline': lc ? 'rgba(0,0,0,.12)' : 'rgba(255,255,255,.12)',
+      '--acc-t': readable(acc, bg, 4.5), '--acc-c': readable(acc, card, 3) };
+  }
+  document.querySelectorAll('.tw[data-pal]').forEach(function (tw) {
+    var get = function (k) { return tw.querySelector('input[data-k="' + k + '"]'); };
+    function paint() {
+      var bg = get('bg').value, card = get('card').value, acc = get('accent').value, preset = get('preset').value;
+      var v = vars(bg, card, acc), pv = tw.querySelector('.pv');
+      Object.keys(v).forEach(function (k) { pv.style.setProperty(k, v[k]); });
+      tw.querySelectorAll('.pre button').forEach(function (b) { b.classList.toggle('on', b.dataset.preset === preset); });
+      ['bg', 'card', 'accent'].forEach(function (k) {
+        var cur = get(k).value.toLowerCase();
+        tw.querySelectorAll('.sw[data-sw="' + k + '"] button').forEach(function (b) { b.classList.toggle('on', b.dataset.c === cur); });
+        var ci = tw.querySelector('input[data-custom="' + k + '"]'); if (ci) ci.value = cur;
+      });
+      tw.querySelector('[data-hex]').textContent = bg + ' · ' + card + ' · ' + acc;
+    }
+    tw.querySelectorAll('.pre button').forEach(function (b) {
+      b.addEventListener('click', function () {
+        get('preset').value = b.dataset.preset; get('bg').value = b.dataset.bg.toLowerCase(); get('card').value = b.dataset.card.toLowerCase(); get('accent').value = b.dataset.accent.toLowerCase();
+        paint();
+      });
+    });
+    tw.querySelectorAll('.sw').forEach(function (sw) {
+      var k = sw.dataset.sw;
+      sw.querySelectorAll('button').forEach(function (b) {
+        b.addEventListener('click', function () { get(k).value = b.dataset.c; get('preset').value = ''; paint(); });
+      });
+      var ci = sw.querySelector('input[type=color]');
+      if (ci) ci.addEventListener('input', function () { get(k).value = ci.value.toLowerCase(); get('preset').value = ''; paint(); });
+    });
+    paint();
+  });
+})();
 </script>
 
 <?php require_once __DIR__ . '/includes/footer.php'; ?>

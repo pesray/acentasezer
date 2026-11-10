@@ -1,75 +1,55 @@
-# Anasayfa İçerik Yönetimi — Yapılanlar
+# Sunline Teması — Site & Anasayfa Yönetimi
 
-## Tamamlandı (Faz 1.1)
+Kaynak tasarım: `yeni-tema/index-sunline.html` (Claude Design). Ön yüzün tamamı bu temaya geçirildi (2026-11-10).
 
-### `admin/homepage.php` — Çoklu Dil Desteği
+## Nerede ne yönetilir?
 
-**Önceden:**
-- Form sadece `sections` base table'a yazıyordu
-- Üstteki dil dropdown'u kozmetik (TR/EN hardcoded), hiçbir şey yapmıyordu
-- SEO meta'lar `pages` tablosuna gidiyordu (yanlış — `page_translations` olmalıydı)
+| Ne | Admin ekranı |
+|---|---|
+| Renkler (açık + koyu tema, Tweaks paneli), logo, kampanya %'si, WhatsApp | İçerik › **Anasayfa & Tema** › Tema Renkleri / Genel |
+| Duyuru şeridi, üst menü, footer, anahtar kelime şeridi | Anasayfa & Tema › Genel (dil sekmesine göre) |
+| Hero, hızlı form notu, güven rozetleri | Anasayfa & Tema › Hero & Hızlı Fiyat Formu |
+| Bölge kartları başlıkları + filtre düğmeleri | Anasayfa & Tema › Bölgeler & Fiyatlar |
+| Bilgilendirme (6 madde), Misafir fotoğrafları, Blog, SSS | Anasayfa & Tema › ilgili kart |
+| Anasayfa Google başlığı/açıklaması | Anasayfa & Tema › Anasayfa SEO |
+| **Bölge kartları, fiyatlar, bölge sayfası metinleri ve SEO** | Tur Yönetimi › **Transferler** (Öne Çıkan = anasayfa kartı) |
+| Araçlar (rezervasyon sihirbazı 1. adım) | Tur Yönetimi › Araçlar |
+| Rezervasyon koşulları metni + uyarı mesajı (sihirbaz 4. adım) | Tur Yönetimi › Transferler › Sözleşme / Uyarı |
+| Arayüz metinleri (butonlar, sihirbaz, SEO şablonları) | Sistem › Çeviriler › grup **sunline** |
+| Diller (TR / EN / DE / RU) | Sistem › Diller |
+| Google / Yandex / Bing doğrulama kodları | Sistem › Site Ayarları › SEO |
 
-**Şimdi:**
+## Teknik yapı
 
-#### Dinamik Dil Tab'ları
-- `languages` tablosundan aktif diller çekiliyor (sıralı, default başta)
-- Her dil için ayrı **tab butonu** üst kısımda — bayrak + native_name + Varsayılan badge
-- Yeni dil eklenince/aktifleşince otomatik tab görünüyor — hardcoded yok
-- Tab tıklayınca tüm SEO ve section input'ları o dile geçiyor (`.lang-pane.active`)
+- Çekirdek: `includes/sunline/core.php` (veri, renk, fiyat, URL, SEO yardımcıları), `includes/sunline/defaults.php` (4 dil varsayılan metin + içerik).
+- Anasayfa: `includes/sunline/home.php`; parçalar `includes/sunline/partials/` (kart, hızlı form, SSS, rezervasyon modalı, sayfa başlığı).
+- Stil / betik: `assets/css/sunline.css`, `assets/js/sunline.js` (sürüm: `SL_ASSET_VER`).
+- İçerik kaydı: `sections` tablosunda `section_type` = `sun_global`, `sun_hero`, `sun_regions`, `sun_info`, `sun_guests`, `sun_blog`, `sun_faq`.
+  Dilden bağımsız ayarlar `sections.settings`, dile bağlı içerik `section_translations.settings` (JSON). Kayıtlar admin'de ilk "Kaydet"te oluşur;
+  yoksa kod içindeki varsayılanlar gösterilir.
+- Renkler: açık ve koyu palet; "Otomatik" modda ziyaretçinin cihazına göre (`prefers-color-scheme`), ziyaretçi üst menüdeki düğmeyle değiştirebilir.
+  Kart içindeki yazı/vurgu renkleri okunabilirlik için otomatik ayarlanır (`--acc-t`, `--acc-c`).
+- Üstü çizili fiyat: Anasayfa & Tema › Genel › Kampanya %'si (0 = kapalı). Eski fiyat = fiyat × (1 + %) yuvarlanır.
+- Fiyat dili: bölge fiyatı aktif dilde yoksa EN, sonra varsayılan dil fiyatı kullanılır (RU için ayrıca fiyat girilmesi gerekmez).
 
-#### SEO Bölümü (Çoklu Dil)
-- **Her dil için ayrı SEO**:
-  - URL Slug (`page_translations.slug`)
-  - Meta Başlık (60 karakter sayacı)
-  - Meta Açıklama (160 karakter sayacı)
-  - Anahtar Kelimeler
-- `INSERT ... ON DUPLICATE KEY UPDATE` — yeni dil eklenince auto-insert, mevcut dil güncellenir
-- Default dil için slug "/" (kök), diğer diller için "home-{code}" varsayılan
-- Karakter sayacı renkli geri bildirim (limit aşılırsa kırmızı)
+## Rezervasyon sihirbazı (modal)
 
-#### Section Yönetimi (Çoklu Dil)
+1. **Araç**: transfer tipi (gidiş-dönüş / tek yön + yön), araç seçimi (kapasite kontrolü)
+2. **Transfer**: geliş (uçuş tarihi, iniş saati, uçuş no, otel) / dönüş (uçuş tarihi, kalkış saati, uçuş no, alınış saati, otel)
+3. **Yolcular**: yetişkin / çocuk / çocuk koltuğu + iletişim; yetişkin sayısı arttıkça isim alanları açılır (1. yetişkin = iletişim adı)
+4. **Onay**: özet, uyarı, not, koşullar → `api/booking.php`
 
-**Dil-bağımsız alanlar (her dil için ortak):**
-- Background Image (hero, why_us, cta için)
-- Background Video (hero için)
-- `is_active` (görünürlük toggle)
+API: fiyatı sunucuda hesaplar, müşteriyi (ad + telefon) bulur/oluşturur, geliş/dönüş kayıtlarını `related_booking_id` ile bağlar,
+yolcu isimlerini `booking_passengers`'a yazar, durum `pending`, `admin_notes` = "Web sitesi rezervasyonu (DİL)".
 
-**Dil-bağımlı alanlar:**
-- title, subtitle, content
-- settings JSON (button text/url, form labels, stats, limit, vb.)
+## SEO
 
-**Submit mantığı:**
-1. `sections` base table → default dilin değerleri (fallback için) + dil-bağımsız alanlar
-2. `section_translations` → her dil için ayrı `INSERT ... ON DUPLICATE KEY UPDATE`
-3. Tek formda tüm diller, tek "Kaydet" tuşu
+- Her bölge sayfası: dile özel başlık/açıklama (boşsa şablon: `seo_dest_t`, `seo_dest_d`), H1, fiyat tablosu, bilgi tablosu,
+  "Nasıl rezervasyon yapılır", SSS (FAQPage), diğer bölgeler; JSON-LD: TravelAgency, BreadcrumbList, TaxiService + Offer, FAQPage.
+- hreflang (tr/en/de/ru + x-default), kanonik adres, `sitemap.xml` (dil eşleşmeli), `robots.txt` (yapay zekâ botları açık), `llms.txt` + `llms-full.txt`.
+- Rusça başlık girilmemiş bölgeler otomatik "Трансфер Сиде" gibi Rusça adla gösterilir (`sl_ru_place_map`).
 
-#### 6 Section Tipi Tam Destekli
-- **Hero:** Title, subtitle, video, image, 2 buton (text+url), rezervasyon formu toggle, form başlığı
-- **Why Us:** Title, content, image (ortak), experience badge/text, 3 stat (sayı + label)
-- **Featured Destinations:** Title, subtitle, limit, sadece-öne-çıkanlar toggle
-- **Featured Tours:** Title, subtitle, limit, featured-only, view-all button toggle, view-all url
-- **Testimonials:** Title, subtitle, limit, autoplay delay
-- **CTA:** Title, subtitle (rozet), content, image (ortak), 2 buton, telefon, contact label
+## Veritabanı
 
-### Frontend Düzeltme — `includes/sections.php`
-
-`getPageSections()` fonksiyonuna `settings` için COALESCE eklendi:
-```php
-COALESCE(st.settings, s.settings) as settings
-```
-Artık dile özgü settings (örn: TR'de buton metni "Şimdi Rezervasyon", EN'de "Book Now") doğru çekiliyor.
-
-## Test Edilmesi Gerekenler
-
-- [ ] TR dilinde anasayfa düzenle → frontend TR'de değişti mi?
-- [ ] EN tab'ına geç, başka değer gir → kaydet → EN frontend'de farklı mı?
-- [ ] Boş bırakılan dil alanı default fallback'e mi düşüyor?
-- [ ] Görünürlük toggle çalışıyor mu (her dilde ortak)?
-- [ ] Yeni dil eklendiğinde otomatik tab görünüyor mu?
-- [ ] SEO meta tag'leri her dilde farklı mı? (frontend tarafında)
-
-## Sırada (Faz 1.2 / 1.3)
-
-- Frontend `header.php` SEO tag'lerinin `page_translations`'tan çekildiğini doğrula
-- Open Graph + Twitter Card + hreflang tag'leri eklenmemişse ekle
-- `sections/hero.php` ve diğer template'lerin `$settings`'i doğru okuduğunu test et
+`migrations/026_sunline_tema.sql` — RU dili, SEO ayar alanları, `sunline` çeviri metinleri, KVKK ve Ücretsiz İptal sayfaları.
+Geri uyumlu; önce kod yayınlanmalı, sonra SQL çalıştırılmalı.

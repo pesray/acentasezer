@@ -1,220 +1,120 @@
 <?php
 /**
- * Dynamic XML Sitemap Generator
+ * Dinamik XML site haritası — tüm aktif diller, hreflang + x-default, lastmod
  */
 
-// XML header
-header('Content-Type: application/xml; charset=utf-8');
-
 require_once __DIR__ . '/config/config.php';
+require_once INCLUDES_PATH . 'sunline/core.php';
+
+header('Content-Type: application/xml; charset=utf-8');
+header('X-Robots-Tag: noindex');
 
 $db = getDB();
+$langCodes = array_column(getActiveLanguages(), 'code');
+if (!$langCodes) $langCodes = ['tr'];
+$defLang = sl_default_lang_code();
+$xLang = in_array('en', $langCodes, true) ? 'en' : $defLang;
 
-// Get active languages
-$languages = getActiveLanguages();
-$langCodes = array_column($languages, 'code');
+function smX($s) {
+    return htmlspecialchars((string)$s, ENT_XML1 | ENT_QUOTES, 'UTF-8');
+}
 
-// Helper to output url XML node
-function writeUrlNode($loc, $alternates, $priority = '0.5', $changefreq = 'weekly') {
-    echo "  <url>\n";
-    echo "    <loc>" . htmlspecialchars($loc, ENT_XML1) . "</loc>\n";
-    foreach ($alternates as $lang => $href) {
-        echo "    <xhtml:link rel=\"alternate\" hreflang=\"" . htmlspecialchars($lang, ENT_XML1) . "\" href=\"" . htmlspecialchars($href, ENT_XML1) . "\" />\n";
+/**
+ * $urls: [lang => url]  (yalnızca var olan dil sürümleri)
+ */
+function smNode($urls, $xDefault, $priority, $freq, $lastmod = null) {
+    foreach ($urls as $lang => $loc) {
+        echo "  <url>\n    <loc>" . smX($loc) . "</loc>\n";
+        if ($lastmod) echo "    <lastmod>" . smX(date('Y-m-d', strtotime($lastmod))) . "</lastmod>\n";
+        foreach ($urls as $alt => $href) {
+            echo '    <xhtml:link rel="alternate" hreflang="' . smX($alt) . '" href="' . smX($href) . "\" />\n";
+        }
+        if ($xDefault) echo '    <xhtml:link rel="alternate" hreflang="x-default" href="' . smX($xDefault) . "\" />\n";
+        echo "    <changefreq>" . smX($freq) . "</changefreq>\n    <priority>" . smX($priority) . "</priority>\n  </url>\n";
     }
-    echo "    <changefreq>" . htmlspecialchars($changefreq, ENT_XML1) . "</changefreq>\n";
-    echo "    <priority>" . htmlspecialchars($priority, ENT_XML1) . "</priority>\n";
-    echo "  </url>\n";
 }
 
 echo "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n";
-echo "<urlset xmlns=\"http://www.sitemaps.org/schemas/sitemap/0.9\"\n";
-echo "        xmlns:xhtml=\"http://www.w3.org/1999/xhtml\">\n";
+echo "<urlset xmlns=\"http://www.sitemaps.org/schemas/sitemap/0.9\" xmlns:xhtml=\"http://www.w3.org/1999/xhtml\">\n";
 
 try {
-    // ----------------------------------------------------
-    // 1. Homepage URL Mapping
-    // ----------------------------------------------------
-    foreach ($langCodes as $lang) {
-        $loc = langUrl('', $lang);
-        $alternates = [];
-        foreach ($langCodes as $altLang) {
-            $alternates[$altLang] = langUrl('', $altLang);
-        }
-        writeUrlNode($loc, $alternates, '1.0', 'daily');
+    // 1) Anasayfa
+    $u = [];
+    foreach ($langCodes as $l) $u[$l] = langUrl('', $l);
+    smNode($u, SITE_URL . '/', '1.0', 'daily', date('Y-m-d'));
+
+    // 2) Liste sayfaları
+    $hasTours = (int)$db->query("SELECT COUNT(*) FROM tours WHERE status = 'published'")->fetchColumn() > 0;
+    $hasPosts = (int)$db->query("SELECT COUNT(*) FROM blog_posts WHERE status = 'published'")->fetchColumn() > 0;
+    $lists = ['destinations' => ['0.9', 'daily'], 'faq' => ['0.6', 'monthly'], 'contact' => ['0.5', 'yearly']];
+    if ($hasPosts) $lists['blog'] = ['0.6', 'weekly'];
+    if ($hasTours) $lists['tours'] = ['0.6', 'weekly'];
+    foreach ($lists as $key => $cfg) {
+        $u = [];
+        foreach ($langCodes as $l) $u[$l] = langUrl(getPageSlugByKey($key, $l), $l);
+        smNode($u, $u[$xLang] ?? reset($u), $cfg[0], $cfg[1]);
     }
 
-    // ----------------------------------------------------
-    // 2. Listing Pages URL Mapping (tours, destinations, blog, etc.)
-    // ----------------------------------------------------
-    $corePages = ['tours', 'destinations', 'blog', 'gallery', 'faq', 'contact', 'booking'];
-    
-    // Cache all slugs across all languages
-    $slugMap = [];
-    foreach ($corePages as $pageKey) {
-        foreach ($langCodes as $lang) {
-            $slugMap[$pageKey][$lang] = getPageSlugByKey($pageKey, $lang);
+    // 3) Transfer (bölge) sayfaları — havalimanı kaydı hariç
+    $dests = $db->query("SELECT id, title, slug, updated_at FROM destinations WHERE status = 'published' ORDER BY sort_order, id")->fetchAll();
+    $dt = [];
+    foreach ($db->query("SELECT destination_id, language_code, slug FROM destination_translations")->fetchAll() as $r) {
+        if (trim((string)$r['slug']) !== '') $dt[(int)$r['destination_id']][$r['language_code']] = $r['slug'];
+    }
+    foreach ($dests as $d) {
+        if (sl_is_airport_title($d['title'] . ' ' . $d['slug'])) continue;
+        $u = [];
+        foreach ($langCodes as $l) {
+            $u[$l] = langUrl(getPageSlugByKey('destinations', $l) . '/' . ($dt[(int)$d['id']][$l] ?? $d['slug']), $l);
+        }
+        smNode($u, $u[$xLang] ?? reset($u), '0.9', 'weekly', $d['updated_at']);
+    }
+
+    // 4) Turlar
+    if ($hasTours) {
+        $tt = [];
+        foreach ($db->query("SELECT tour_id, language_code, slug FROM tour_translations")->fetchAll() as $r) {
+            if (trim((string)$r['slug']) !== '') $tt[(int)$r['tour_id']][$r['language_code']] = $r['slug'];
+        }
+        foreach ($db->query("SELECT id, slug, updated_at FROM tours WHERE status = 'published'")->fetchAll() as $t) {
+            $u = [];
+            foreach ($langCodes as $l) $u[$l] = langUrl(getPageSlugByKey('tours', $l) . '/' . ($tt[(int)$t['id']][$l] ?? $t['slug']), $l);
+            smNode($u, $u[$xLang] ?? reset($u), '0.6', 'monthly', $t['updated_at']);
         }
     }
 
-    foreach ($corePages as $pageKey) {
-        foreach ($langCodes as $lang) {
-            $currentSlug = $slugMap[$pageKey][$lang];
-            $loc = langUrl($currentSlug, $lang);
-            
-            $alternates = [];
-            foreach ($langCodes as $altLang) {
-                $alternates[$altLang] = langUrl($slugMap[$pageKey][$altLang], $altLang);
+    // 5) Blog yazıları — yalnızca çevirisi olan diller (+ varsayılan dil)
+    if ($hasPosts) {
+        $bt = [];
+        foreach ($db->query("SELECT post_id, language_code, slug, title FROM blog_post_translations")->fetchAll() as $r) {
+            if (trim((string)$r['title']) !== '') $bt[(int)$r['post_id']][$r['language_code']] = trim((string)$r['slug']);
+        }
+        foreach ($db->query("SELECT id, slug, updated_at FROM blog_posts WHERE status = 'published'")->fetchAll() as $p) {
+            $u = [];
+            foreach ($langCodes as $l) {
+                if (!isset($bt[(int)$p['id']][$l]) && $l !== $defLang) continue;
+                $s = ($bt[(int)$p['id']][$l] ?? '') !== '' ? $bt[(int)$p['id']][$l] : $p['slug'];
+                $u[$l] = langUrl(getPageSlugByKey('blog', $l) . '/' . $s, $l);
             }
-            writeUrlNode($loc, $alternates, '0.8', 'daily');
+            if ($u) smNode($u, $u[$xLang] ?? reset($u), '0.6', 'monthly', $p['updated_at']);
         }
     }
 
-    // ----------------------------------------------------
-    // 3. Destinations Detail Pages URL Mapping
-    // ----------------------------------------------------
-    $stmt = $db->query("SELECT id, slug FROM destinations WHERE status = 'published'");
-    $destinations = $stmt->fetchAll();
-    
-    // Pre-fetch all translations
-    $destTrans = [];
-    if (!empty($destinations)) {
-        $transStmt = $db->query("SELECT destination_id, language_code, slug FROM destination_translations");
-        while ($row = $transStmt->fetch()) {
-            $destTrans[$row['destination_id']][$row['language_code']] = $row['slug'];
-        }
+    // 6) Genel sayfalar (KVKK, iptal koşulları vb.) — çevirisi olan diller (+ varsayılan dil)
+    $pt = [];
+    foreach ($db->query("SELECT page_id, language_code, slug, title FROM page_translations")->fetchAll() as $r) {
+        if (trim((string)$r['slug']) !== '' && trim((string)$r['title']) !== '') $pt[(int)$r['page_id']][$r['language_code']] = $r['slug'];
     }
-
-    foreach ($destinations as $d) {
-        $dId = $d['id'];
-        
-        // Build slug maps for each lang
-        $dSlugs = [];
-        foreach ($langCodes as $lang) {
-            $dSlugs[$lang] = $destTrans[$dId][$lang] ?? $d['slug'];
+    foreach ($db->query("SELECT id, slug, updated_at FROM pages WHERE status = 'published' AND is_homepage = 0")->fetchAll() as $p) {
+        $u = [];
+        foreach ($langCodes as $l) {
+            if (!isset($pt[(int)$p['id']][$l]) && $l !== $defLang) continue;
+            $u[$l] = langUrl($pt[(int)$p['id']][$l] ?? $p['slug'], $l);
         }
-
-        foreach ($langCodes as $lang) {
-            $prefix = $slugMap['destinations'][$lang];
-            $loc = langUrl($prefix . '/' . $dSlugs[$lang], $lang);
-
-            $alternates = [];
-            foreach ($langCodes as $altLang) {
-                $altPrefix = $slugMap['destinations'][$altLang];
-                $alternates[$altLang] = langUrl($altPrefix . '/' . $dSlugs[$altLang], $altLang);
-            }
-            writeUrlNode($loc, $alternates, '0.7', 'weekly');
-        }
+        if ($u) smNode($u, $u[$xLang] ?? reset($u), '0.3', 'yearly', $p['updated_at']);
     }
-
-    // ----------------------------------------------------
-    // 4. Tours Detail Pages URL Mapping
-    // ----------------------------------------------------
-    $stmt = $db->query("SELECT id, slug FROM tours WHERE status = 'published'");
-    $tours = $stmt->fetchAll();
-
-    // Pre-fetch all translations
-    $tourTrans = [];
-    if (!empty($tours)) {
-        $transStmt = $db->query("SELECT tour_id, language_code, slug FROM tour_translations");
-        while ($row = $transStmt->fetch()) {
-            $tourTrans[$row['tour_id']][$row['language_code']] = $row['slug'];
-        }
-    }
-
-    foreach ($tours as $t) {
-        $tId = $t['id'];
-
-        $tSlugs = [];
-        foreach ($langCodes as $lang) {
-            $tSlugs[$lang] = $tourTrans[$tId][$lang] ?? $t['slug'];
-        }
-
-        foreach ($langCodes as $lang) {
-            $prefix = $slugMap['tours'][$lang];
-            $loc = langUrl($prefix . '/' . $tSlugs[$lang], $lang);
-
-            $alternates = [];
-            foreach ($langCodes as $altLang) {
-                $altPrefix = $slugMap['tours'][$altLang];
-                $alternates[$altLang] = langUrl($altPrefix . '/' . $tSlugs[$altLang], $altLang);
-            }
-            writeUrlNode($loc, $alternates, '0.7', 'weekly');
-        }
-    }
-
-    // ----------------------------------------------------
-    // 5. Blog Posts Detail Pages URL Mapping
-    // ----------------------------------------------------
-    $stmt = $db->query("SELECT id, slug FROM blog_posts WHERE status = 'published'");
-    $blogPosts = $stmt->fetchAll();
-
-    // Pre-fetch all translations
-    $blogTrans = [];
-    if (!empty($blogPosts)) {
-        $transStmt = $db->query("SELECT post_id, language_code, slug FROM blog_post_translations");
-        while ($row = $transStmt->fetch()) {
-            $blogTrans[$row['post_id']][$row['language_code']] = $row['slug'];
-        }
-    }
-
-    foreach ($blogPosts as $bp) {
-        $bpId = $bp['id'];
-
-        $bpSlugs = [];
-        foreach ($langCodes as $lang) {
-            $bpSlugs[$lang] = $blogTrans[$bpId][$lang] ?? $bp['slug'];
-        }
-
-        foreach ($langCodes as $lang) {
-            $prefix = $slugMap['blog'][$lang];
-            $loc = langUrl($prefix . '/' . $bpSlugs[$lang], $lang);
-
-            $alternates = [];
-            foreach ($langCodes as $altLang) {
-                $altPrefix = $slugMap['blog'][$altLang];
-                $alternates[$altLang] = langUrl($altPrefix . '/' . $bpSlugs[$altLang], $altLang);
-            }
-            writeUrlNode($loc, $alternates, '0.6', 'weekly');
-        }
-    }
-
-    // ----------------------------------------------------
-    // 6. General Pages URL Mapping (excluding homepage)
-    // ----------------------------------------------------
-    $stmt = $db->query("SELECT id, slug FROM pages WHERE status = 'published' AND is_homepage = 0");
-    $pages = $stmt->fetchAll();
-
-    // Pre-fetch all translations
-    $pageTrans = [];
-    if (!empty($pages)) {
-        $transStmt = $db->query("SELECT page_id, language_code, slug FROM page_translations");
-        while ($row = $transStmt->fetch()) {
-            $pageTrans[$row['page_id']][$row['language_code']] = $row['slug'];
-        }
-    }
-
-    foreach ($pages as $p) {
-        $pId = $p['id'];
-
-        $pSlugs = [];
-        foreach ($langCodes as $lang) {
-            $pSlugs[$lang] = $pageTrans[$pId][$lang] ?? $p['slug'];
-        }
-
-        foreach ($langCodes as $lang) {
-            $loc = langUrl($pSlugs[$lang], $lang);
-
-            $alternates = [];
-            foreach ($langCodes as $altLang) {
-                $alternates[$altLang] = langUrl($pSlugs[$altLang], $altLang);
-            }
-            writeUrlNode($loc, $alternates, '0.6', 'monthly');
-        }
-    }
-
 } catch (Exception $e) {
-    // Handle error gracefully inside XML comment if needed
-    echo "  <!-- Error generating full sitemap: " . htmlspecialchars($e->getMessage(), ENT_XML1) . " -->\n";
+    echo "  <!-- sitemap error -->\n";
 }
 
 echo "</urlset>\n";

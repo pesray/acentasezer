@@ -77,6 +77,10 @@ $friendlyLabels = [
     'twitter_username' => 'Twitter Kullanıcı Adı (@)',
     'facebook_app_id' => 'Facebook App ID',
     'google_tag_manager' => 'Google Tag Manager ID (GTM-XXXXXXX)',
+    'google_site_verification' => 'Google Search Console doğrulama kodu (content değeri)',
+    'yandex_verification' => 'Yandex Webmaster doğrulama kodu (Rusça arama için)',
+    'bing_verification' => 'Bing Webmaster doğrulama kodu (ChatGPT/Copilot araması Bing kullanır)',
+    'contact_whatsapp' => 'WhatsApp Numarası (boşsa telefon kullanılır)',
 ];
 
 $pageTitle = 'Site Ayarları';

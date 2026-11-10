@@ -53,6 +53,13 @@ if ($fullPath === 'robots.txt') {
     exit;
 }
 
+// llms.txt - yapay zekâ asistanları için site özeti (dil ön eki olmadan)
+if ($fullPath === 'llms.txt' || $fullPath === 'llms-full.txt') {
+    $_GET['full'] = $fullPath === 'llms-full.txt' ? 1 : 0;
+    require_once ROOT_PATH . 'llms.php';
+    exit;
+}
+
 // Dil ön eki yoksa ve admin değilse
 $urlLang = extractLangFromUrl();
 if ($urlLang === null && !empty($fullPath)) {
@@ -99,7 +106,14 @@ function getPageSlugs($lang) {
             $slugs[$row['page_key']] = $row['slug'];
         }
     } catch (Exception $e) {}
-    
+
+    // Yönetim panelinde adres girilmemiş sayfalar/diller için varsayılanlar
+    foreach (defaultPageSlugs() as $key => $byLang) {
+        if (empty($slugs[$key]) && !empty($byLang[$lang])) {
+            $slugs[$key] = $byLang[$lang];
+        }
+    }
+
     $cache[$lang] = $slugs;
     return $slugs;
 }
@@ -153,11 +167,12 @@ if (preg_match('#^' . preg_quote($blogSlug, '#') . '/([a-z0-9-]+)$#i', $path, $m
     exit;
 }
 
-// Ana sayfa (boş path - sadece dil kodu)
+// Ana sayfa (boş path - sadece dil kodu) — Sunline teması
 if (empty($path)) {
-    require_once INCLUDES_PATH . 'sections.php';
-    
-    // Anasayfa SEO bilgilerini page_translations'tan çek
+    require_once INCLUDES_PATH . 'sunline/home.php';
+    $GLOBALS['sl_is_home'] = true;
+
+    // Anasayfa SEO bilgileri (Admin > Anasayfa & Tema > SEO), boşsa dile göre varsayılan
     $homepageSeo = null;
     try {
         $hpStmt = $db->prepare("
@@ -170,28 +185,23 @@ if (empty($path)) {
         $hpStmt->execute([$lang]);
         $homepageSeo = $hpStmt->fetch();
     } catch (Exception $e) {}
-    
-    $pageTitle = !empty($homepageSeo['meta_title']) ? $homepageSeo['meta_title'] : getSetting('site_name', 'Tour');
-    $metaDescription = !empty($homepageSeo['meta_description']) ? $homepageSeo['meta_description'] : getSetting('site_description', '');
-    $metaKeywords = !empty($homepageSeo['meta_keywords']) ? $homepageSeo['meta_keywords'] : getSetting('site_keywords', '');
-    $bodyClass = 'index-page';
-    
-    // Anasayfa page_id'sini dinamik al
-    $homepageId = 1;
-    try {
-        $hpIdStmt = $db->query("SELECT id FROM pages WHERE is_homepage = 1 LIMIT 1");
-        $hpIdRow = $hpIdStmt->fetch();
-        if ($hpIdRow) $homepageId = (int)$hpIdRow['id'];
-    } catch (Exception $e) {}
-    
-    $sections = getPageSections($homepageId);
-    
+
+    $seoTitle = !empty($homepageSeo['meta_title']) ? $homepageSeo['meta_title'] : sl_t('seo_home_t');
+    $metaDescription = !empty($homepageSeo['meta_description']) ? $homepageSeo['meta_description'] : sl_t('seo_home_d');
+    $metaKeywords = !empty($homepageSeo['meta_keywords']) ? $homepageSeo['meta_keywords'] : '';
+    $canonicalUrl = langUrl('');
+    $bodyClass = 'sl-home';
+    $slHeroCfg = sl_section('hero');
+    $preloadImage = trim((string)($slHeroCfg['image'] ?? '')) !== '' ? getMediaUrl($slHeroCfg['image']) : '';
+
     require_once INCLUDES_PATH . 'header.php';
-    
-    foreach ($sections as $section) {
-        renderSection($section);
-    }
-    
+    $slHome = sl_render_home();
+
+    require_once INCLUDES_PATH . 'schema.php';
+    $pageSchema = [
+        getFaqSchema($slHome['faq']),
+        getDestinationListSchema($slHome['cards']),
+    ];
     require_once INCLUDES_PATH . 'footer.php';
     exit;
 }
