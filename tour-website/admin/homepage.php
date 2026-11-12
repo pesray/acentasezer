@@ -104,6 +104,24 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $homepage) {
                         'accent' => sl_hex($p['accent'] ?? '', $fb['accent']),
                     ];
                 };
+                // Para birimi & ekstralar: sitede tek listelenen para birimi + araçta nakit ödeme seçenekleri
+                $cur = strtoupper(trim((string)($b['currency'] ?? 'EUR')));
+                if (!preg_match('/^[A-Z]{3}$/', $cur)) $cur = 'EUR';
+                $payC = [];
+                foreach ((array)($b['pay_currencies'] ?? []) as $pc) {
+                    $pc = strtoupper(trim((string)$pc));
+                    if (preg_match('/^[A-Z]{3}$/', $pc)) $payC[] = $pc;
+                }
+                if (!in_array($cur, $payC, true)) array_unshift($payC, $cur);
+                $feeMap = function ($m) {
+                    $o = [];
+                    foreach ((array)$m as $fc => $fv) {
+                        $fc = strtoupper(trim((string)$fc));
+                        $fv = str_replace(',', '.', trim((string)$fv));
+                        if (preg_match('/^[A-Z]{3}$/', $fc) && $fv !== '' && is_numeric($fv) && (float)$fv >= 0) $o[$fc] = round((float)$fv, 2);
+                    }
+                    return $o;
+                };
                 $base = [
                     'mode' => in_array($b['mode'] ?? '', ['auto', 'light', 'dark'], true) ? $b['mode'] : 'auto',
                     'toggle' => !empty($b['toggle']) ? 1 : 0,
@@ -113,6 +131,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $homepage) {
                     'logo_dark' => hp_str($b['logo_dark'] ?? '', 255),
                     'discount' => max(0, min(90, (float)str_replace(',', '.', (string)($b['discount'] ?? 0)))),
                     'whatsapp' => preg_replace('/[^\d+]/', '', (string)($b['whatsapp'] ?? '')),
+                    'currency' => $cur,
+                    'pay_currencies' => array_values(array_unique($payC)),
+                    'free_seats' => !empty($b['free_seats']) ? 1 : 0,
+                    'fee_per_leg' => (string)($b['fee_per_leg'] ?? '1') === '0' ? 0 : 1,
+                    'seat_fee' => $feeMap($b['seat_fee'] ?? []),
+                    'booster_fee' => $feeMap($b['booster_fee'] ?? []),
                 ];
             } elseif ($type === 'hero') {
                 $base = ['image' => hp_str($b['image'] ?? '', 500)];
@@ -249,6 +273,22 @@ $presets = sl_theme_presets();
 $swatches = sl_theme_swatches();
 $featuredCount = count(sl_bookable_destinations(true));
 
+// Para birimi & ekstralar: Transferler ekranında hangi para biriminde kaç transferin fiyatı var
+$curList = sl_known_currencies();
+$curStats = [];
+try {
+    $cst = $db->query("SELECT UPPER(TRIM(currency)) AS c, COUNT(DISTINCT destination_id) AS n FROM destination_vehicles WHERE price > 0 GROUP BY UPPER(TRIM(currency))");
+    foreach ($cst->fetchAll() as $r) {
+        if (!preg_match('/^[A-Z]{3}$/', (string)$r['c'])) continue;
+        $curStats[$r['c']] = (int)$r['n'];
+        if (!in_array($r['c'], $curList, true)) $curList[] = $r['c'];
+    }
+} catch (Exception $e) {}
+$defCur = sl_currency();
+if (!in_array($defCur, $curList, true)) $curList[] = $defCur;
+$payList = sl_pay_currencies();
+$feeCfg = sl_fees();
+
 /** Tekrarlanabilir satır listesi */
 function hp_repeater($base, $rows, $fields, $addLabel, $minRows = 0) {
     $render = function ($row, $i) use ($base, $fields) {
@@ -367,6 +407,14 @@ input:checked+.toggle-slider:before{transform:translateX(20px)}
 .img-prev{max-height:70px;border-radius:8px;margin-top:6px;border:1px solid var(--sidebar-border)}
 .char-count{font-size:11px;color:var(--text-muted)}
 .char-count.over{color:#dc2626;font-weight:700}
+.cur-chk{border:1px solid var(--sidebar-border);border-radius:10px;padding:8px 12px;cursor:pointer;font-weight:600;font-size:.88rem;display:inline-flex;align-items:center;gap:8px;margin:0}
+.cur-chk small{color:var(--text-muted);font-weight:500}
+.fee-tbl{width:100%;border-collapse:separate;border-spacing:0;border:1px solid var(--sidebar-border);border-radius:12px;overflow:hidden}
+.fee-tbl th,.fee-tbl td{padding:8px 10px;border-bottom:1px solid var(--sidebar-border);vertical-align:middle}
+.fee-tbl tr:last-child td{border-bottom:0}
+.fee-tbl th{font-size:11.5px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:.3px;background:var(--hover-bg)}
+.fee-tbl td:first-child{font-weight:700;white-space:nowrap}
+.fee-tbl .form-control{max-width:140px}
 </style>
 
 <datalist id="biIcons">
@@ -515,6 +563,64 @@ input:checked+.toggle-slider:before{transform:translateX(20px)}
       <?= hp_area($n . '[keywords]', $v['keywords'] ?? '', 4, "Boş bırakırsanız öne çıkan bölgelerden otomatik oluşturulur.\nHer satıra bir kelime: side transfer | {transfers}\nveya: belek transfer | /transferler/belek-transfer") ?>
     </div>
     <?php endforeach; ?>
+  </div></div>
+
+  <?php /* ============================ PARA BİRİMİ & EKSTRALAR ============================ */ ?>
+  <?= hp_card_open('odeme', 'bi-cash-coin', '#16a34a', 'Para Birimi & Ekstralar', 'Sitede listelenen fiyat (' . $defCur . ') · araçta nakit ödeme seçenekleri · çocuk koltuğu / yükseltici ücreti') ?>
+    <div class="row g-3">
+      <div class="col-lg-5">
+        <label class="form-label-sm" for="curSel">Sitede listelenen para birimi (tüm dillerde)</label>
+        <select class="form-select" id="curSel" name="base[global][currency]">
+          <?php foreach ($curList as $c): ?>
+          <option value="<?= e($c) ?>" <?= $c === $defCur ? 'selected' : '' ?>><?= e($c . ' ' . sl_currency_symbol($c)) ?> — <?= isset($curStats[$c]) ? (int)$curStats[$c] . ' transferde fiyat var' : 'fiyat girilmemiş' ?></option>
+          <?php endforeach; ?>
+        </select>
+        <div class="hp-note mt-1">Kartlar, bölge sayfaları ve rezervasyon her dilde bu para biriminde gösterilir. Fiyatlar <b>Tur Yönetimi › Transferler</b> ekranında (hangi dil sekmesinde olursa olsun) bu para birimi seçilerek girilen fiyatlardır. Bir transferde bu para biriminde fiyat yoksa sırasıyla EUR, USD, GBP, TRY fiyatı gösterilir.</div>
+      </div>
+      <div class="col-lg-7">
+        <span class="form-label-sm">Onay adımında "araçta nakit" ödeme seçenekleri</span>
+        <div class="d-flex flex-wrap gap-2">
+          <?php foreach ($curList as $c): ?>
+          <label class="cur-chk"><input class="form-check-input m-0" type="checkbox" name="base[global][pay_currencies][]" value="<?= e($c) ?>" <?= in_array($c, $payList, true) ? 'checked' : '' ?>><?= e($c . ' ' . sl_currency_symbol($c)) ?><?php if ($c === $defCur): ?><small>varsayılan</small><?php endif; ?></label>
+          <?php endforeach; ?>
+        </div>
+        <div class="hp-note mt-1">Müşterinin karşısına son adımda varsayılan para birimi <b>seçili</b> gelir; işaretli diğerleri seçenek olarak çıkar (yalnız o araç için Transferler ekranında fiyatı girilmiş olanlar). Rezervasyon, seçilen para birimi ve o para birimindeki fiyatla kaydedilir. Varsayılan para birimi her zaman seçenektir.</div>
+      </div>
+    </div>
+
+    <div class="hp-sub">Çocuk koltuğu & yükseltici ek ücreti</div>
+    <div class="row g-3 align-items-start">
+      <div class="col-lg-5">
+        <div class="form-check form-switch mb-3">
+          <input type="hidden" name="base[global][free_seats]" value="0">
+          <input class="form-check-input" type="checkbox" role="switch" id="feeFree" name="base[global][free_seats]" value="1" <?= $feeCfg['free'] > 0 ? 'checked' : '' ?>>
+          <label class="form-check-label" for="feeFree"><b>1 adet</b> çocuk koltuğu <b>veya</b> yükseltici ücretsiz (toplamda bir tanesi)</label>
+        </div>
+        <span class="form-label-sm">Ücret nasıl uygulanır?</span>
+        <div class="mode-opt">
+          <label><input type="radio" name="base[global][fee_per_leg]" value="1" <?= $feeCfg['perLeg'] ? 'checked' : '' ?>>Transfer başına (gidiş-dönüşte 2 kez)</label>
+          <label><input type="radio" name="base[global][fee_per_leg]" value="0" <?= !$feeCfg['perLeg'] ? 'checked' : '' ?>>Rezervasyon başına (1 kez)</label>
+        </div>
+        <div class="hp-note mt-2">Ücretsiz hak önce pahalı olana uygulanır. Ücret, rezervasyonun toplam fiyatına eklenir ve yönetim notunda dökümü yazılır. Yükseltici adedi müşteri notunun başına <code>YÜKSELTİCİ: N</code> olarak eklenir (WhatsApp şablonlarındaki <code>{NOTES}</code> ile sürücüye de gider).</div>
+      </div>
+      <div class="col-lg-7">
+        <div class="table-responsive">
+          <table class="fee-tbl">
+            <thead><tr><th>Para birimi</th><th>Çocuk koltuğu (adet başı)</th><th>Yükseltici (adet başı)</th></tr></thead>
+            <tbody>
+              <?php foreach ($curList as $c): ?>
+              <tr>
+                <td><?= e($c . ' ' . sl_currency_symbol($c)) ?></td>
+                <td><input class="form-control form-control-sm" type="number" step="0.01" min="0" inputmode="decimal" name="base[global][seat_fee][<?= e($c) ?>]" value="<?= isset($feeCfg['seat'][$c]) ? e(rtrim(rtrim(number_format($feeCfg['seat'][$c], 2, '.', ''), '0'), '.')) : '' ?>" placeholder="otomatik"></td>
+                <td><input class="form-control form-control-sm" type="number" step="0.01" min="0" inputmode="decimal" name="base[global][booster_fee][<?= e($c) ?>]" value="<?= isset($feeCfg['booster'][$c]) ? e(rtrim(rtrim(number_format($feeCfg['booster'][$c], 2, '.', ''), '0'), '.')) : '' ?>" placeholder="otomatik"></td>
+              </tr>
+              <?php endforeach; ?>
+            </tbody>
+          </table>
+        </div>
+        <div class="hp-note mt-1">Ücreti en azından varsayılan para biriminde (<?= e($defCur) ?>) girin. Boş bırakılan para biriminde ücret, girilen ücretten aracın fiyat oranıyla otomatik çevrilir (ör. araç 50 EUR / 2.000 TRY ise 5 EUR → 200 TRY). <b>0</b> = ücretsiz. Hiç ücret girilmezse tüm koltuklar ücretsizdir.</div>
+      </div>
+    </div>
   </div></div>
 
   <?php /* ============================ HERO + HIZLI FORM ============================ */ ?>

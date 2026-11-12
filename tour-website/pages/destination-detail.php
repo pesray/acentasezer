@@ -215,7 +215,7 @@ require_once INCLUDES_PATH . 'header.php';
         </dl>
         <h3 class="sub-t"><?= sl_e('how_t') ?></h3>
         <ol class="howto">
-          <?php for ($hi = 1; $hi <= 4; $hi++): ?><li><?= sl_e('how' . $hi) ?></li><?php endfor; ?>
+          <?php for ($hi = 1; $hi <= 4; $hi++): ?><li><?= sl_e('hw' . $hi) ?></li><?php endfor; ?>
         </ol>
         <?php if ($d['from'] !== '' && $d['to'] !== ''): ?>
         <div class="chip-links"><a href="<?= e($d['url']) ?>#fiyatlar" data-book="<?= (int)$d['id'] ?>"><i class="bi bi-geo-alt me-1"></i><?= e($d['from'] . ' → ' . $d['to']) ?></a></div>

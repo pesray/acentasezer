@@ -38,8 +38,10 @@ function sl_api_time($s) {
 }
 
 function sl_api_str($s, $max) {
-    $s = trim(preg_replace('/\s+/u', ' ', strip_tags((string)$s)));
-    return mb_substr($s, 0, $max);
+    $s = strip_tags((string)$s);
+    if (!mb_check_encoding($s, 'UTF-8')) $s = mb_convert_encoding($s, 'UTF-8', 'UTF-8'); // bozuk baytları temizle
+    $r = preg_replace('/\s+/u', ' ', $s);
+    return mb_substr(trim($r === null ? $s : $r), 0, $max);
 }
 
 function sl_api_booking_number($db) {
@@ -110,19 +112,40 @@ if ($bookingType === 'transfer' && isset($_POST['trip'])) {
         $veh = $st->fetch();
         if (!$dest || !$veh) sl_api_out(false, $t('err_vehicle'));
 
-        // Fiyat: sitedeki gösterimle aynı dil sırası (dil → EN → varsayılan dil → herhangi biri)
-        $st = $db->prepare("SELECT language_code, price, currency FROM destination_vehicles WHERE destination_id = ? AND vehicle_id = ? AND price > 0");
-        $st->execute([$destId, $vehicleId]);
-        $byLang = [];
-        foreach ($st->fetchAll() as $r) $byLang[$r['language_code']] = $r;
-        $priceRow = null;
-        foreach (array_unique([$lang, 'en', sl_default_lang_code()]) as $lc) {
-            if (isset($byLang[$lc])) { $priceRow = $byLang[$lc]; break; }
+        // Fiyat: dile göre değil para birimine göre. Sitede tek (varsayılan) para birimi listelenir;
+        // müşteri onay adımında "araçta nakit" ödeme para birimini seçer (Transferler ekranında girilen fiyatlardan).
+        $matrix = sl_dest_price_matrix($destId);
+        $dispCur = sl_pick_currency($matrix);
+        $allowed = sl_pay_currencies();
+        if ($dispCur !== '' && !in_array($dispCur, $allowed, true)) $allowed[] = $dispCur;
+        $currency = strtoupper(trim((string)($_POST['pay_currency'] ?? '')));
+        if (!in_array($currency, $allowed, true) || empty($matrix[$currency][$vehicleId])) $currency = '';
+        if ($currency === '') {
+            foreach ([sl_currency(), $dispCur] as $c) {
+                if ($c !== '' && !empty($matrix[$c][$vehicleId])) { $currency = $c; break; }
+            }
         }
-        if (!$priceRow && $byLang) $priceRow = reset($byLang);
-        if (!$priceRow) sl_api_out(false, $t('err_vehicle'));
-        $legPrice = (float)$priceRow['price'];
-        $currency = strtoupper(trim((string)$priceRow['currency'])) ?: 'EUR';
+        if ($currency === '') {
+            foreach ($matrix as $c => $list) {
+                if (!empty($list[$vehicleId])) { $currency = $c; break; }
+            }
+        }
+        if ($currency === '') sl_api_out(false, $t('err_vehicle'));
+        $legPrice = (float)$matrix[$currency][$vehicleId];
+
+        // Uçuş numarası: zorunlu, büyük harf (ör. TK 2412)
+        $flightNorm = function ($s) {
+            $s = preg_replace('/[^A-Z0-9 \-]/', '', strtoupper(trim((string)$s)));
+            return trim(preg_replace('/\s+/', ' ', $s));
+        };
+        $flightOk = function ($s) {
+            return (bool)preg_match('/^(?=.*\d)[A-Z0-9]{3,8}$/', preg_replace('/[\s\-]+/', '', $s));
+        };
+        // Yolcu isimleri büyük harf (Türkçede i → İ)
+        $upper = function ($s) use ($lang) {
+            if ($lang === 'tr') $s = str_replace(['i', 'ı'], ['İ', 'I'], $s);
+            return mb_strtoupper($s, 'UTF-8');
+        };
 
         // Transfer bilgileri
         $needA = $trip !== 'departure';
@@ -133,19 +156,21 @@ if ($bookingType === 'transfer' && isset($_POST['trip'])) {
         if ($needA) {
             $aDate = sl_api_date($_POST['arr_date'] ?? '');
             $aTime = sl_api_time($_POST['arr_time'] ?? '');
-            $aFlight = sl_api_str($_POST['arr_flight'] ?? '', 20) ?: null;
+            $aFlight = $flightNorm(sl_api_str($_POST['arr_flight'] ?? '', 20));
             $aHotel = sl_api_str($_POST['arr_hotel'] ?? '', 250);
-            if (!$aDate || !$aTime || $aHotel === '') sl_api_out(false, $t('err_required'));
+            if (!$aDate || !$aTime || $aHotel === '' || $aFlight === '') sl_api_out(false, $t('err_required'));
+            if (!$flightOk($aFlight)) sl_api_out(false, $t('err_flight'));
             if ($aDate < $today) sl_api_out(false, $t('err_date'));
         }
         $dDate = $dTime = $dFlight = $dHotel = $dPick = null;
         if ($needD) {
             $dDate = sl_api_date($_POST['dep_date'] ?? '');
             $dTime = sl_api_time($_POST['dep_time'] ?? '');
-            $dFlight = sl_api_str($_POST['dep_flight'] ?? '', 20) ?: null;
+            $dFlight = $flightNorm(sl_api_str($_POST['dep_flight'] ?? '', 20));
             $dHotel = sl_api_str($_POST['dep_hotel'] ?? '', 250);
             $dPick = sl_api_time($_POST['dep_pickup'] ?? '');
-            if (!$dDate || !$dTime || $dHotel === '') sl_api_out(false, $t('err_required'));
+            if (!$dDate || !$dTime || $dHotel === '' || $dFlight === '') sl_api_out(false, $t('err_required'));
+            if (!$flightOk($dFlight)) sl_api_out(false, $t('err_flight'));
             if ($dDate < $today) sl_api_out(false, $t('err_date'));
             if ($needA && $dDate < $aDate) sl_api_out(false, $t('err_order'));
         }
@@ -157,6 +182,14 @@ if ($bookingType === 'transfer' && isset($_POST['trip'])) {
         $childSeat = max(0, (int)($_POST['child_seat'] ?? 0));
         if ($adults < 1 || $adults + $children > $cap) sl_api_out(false, $t('err_capacity'));
         $childSeat = min($childSeat, $children, max(0, (int)$veh['child_seat_capacity']));
+        $booster = min(20, max(0, (int)($_POST['booster'] ?? 0))); // yükseltici: araç kapasitesiyle sınırlı değil
+
+        // Çocuk koltuğu / yükseltici ek ücreti (toplam 1 adedi ücretsiz; Anasayfa & Tema > Genel > Fiyat & Ödeme)
+        $fees = sl_fees();
+        $feeSeat = sl_fee_in('seat', $currency, $matrix, $vehicleId, $fees);
+        $feeBooster = sl_fee_in('booster', $currency, $matrix, $vehicleId, $fees);
+        $ex = sl_extras_amount($childSeat, $booster, $feeSeat, $feeBooster, $fees['free']);
+        $extraAmt = (float)$ex['amt'];
 
         // İletişim
         $name = sl_api_str($_POST['full_name'] ?? '', 120);
@@ -172,18 +205,31 @@ if ($bookingType === 'transfer' && isset($_POST['trip'])) {
             $n = sl_api_str($postedAdults[$i] ?? '', 120);
             if ($i === 0 && $n === '') $n = $name;
             if (mb_strlen($n) < 2) sl_api_out(false, $t('err_names'));
-            $adultNames[] = $n;
+            $adultNames[] = $upper($n);
         }
         $childNames = [];
         $postedChildren = isset($_POST['pax_child']) && is_array($_POST['pax_child']) ? array_values($_POST['pax_child']) : [];
         for ($i = 0; $i < $children; $i++) {
             $n = sl_api_str($postedChildren[$i] ?? '', 120);
-            if ($n !== '') $childNames[] = $n;
+            if ($n !== '') $childNames[] = $upper($n);
         }
 
+        // Müşteri notu; yükseltici bilgisi başa eklenir (sürücü / WhatsApp şablonlarındaki {NOTES} ile görünür)
         $notes = trim(mb_substr(strip_tags((string)($_POST['notes'] ?? '')), 0, 1000));
+        if ($booster > 0) $notes = 'YÜKSELTİCİ: ' . $booster . ($notes !== '' ? "\n" . $notes : '');
         $notes = $notes !== '' ? $notes : null;
-        $adminNote = 'Web sitesi rezervasyonu (' . strtoupper($lang) . ')';
+
+        $money = function ($v) { return rtrim(rtrim(number_format((float)$v, 2, '.', ''), '0'), '.'); };
+        $adminNote = 'Web sitesi rezervasyonu (' . strtoupper($lang) . ') · Ödeme: araçta nakit ' . $currency;
+        if ($childSeat + $booster > 0) {
+            $parts = [];
+            if ($childSeat) $parts[] = $childSeat . ' çocuk koltuğu';
+            if ($booster) $parts[] = $booster . ' yükseltici';
+            $adminNote .= ' · Ekstra: ' . implode(' + ', $parts) . ' = '
+                . ($extraAmt > 0
+                    ? $money($extraAmt) . ' ' . $currency . ($fees['perLeg'] ? ' (transfer başına)' : ' (rezervasyon başına)')
+                    : 'ücretsiz');
+        }
 
         // Varsayılan havalimanı (Tur Yönetimi > Havalimanları)
         $airportId = null;
@@ -238,15 +284,19 @@ if ($bookingType === 'transfer' && isset($_POST['trip'])) {
         if ($needA) $legs[] = ['outbound', $aDate, $aTime, $aFlight, $aHotel, null];
         if ($needD) $legs[] = ['return', $dDate, $dTime, $dFlight, $dHotel, $dPick];
 
-        foreach ($legs as $leg) {
+        $grandTotal = 0.0;
+        foreach ($legs as $li => $leg) {
             $num = sl_api_booking_number($db);
+            // Ek koltuk ücreti: transfer başına her kayda, rezervasyon başına yalnız ilk kayda eklenir
+            $rowTotal = $legPrice + ($fees['perLeg'] || $li === 0 ? $extraAmt : 0);
+            $grandTotal += $rowTotal;
             $ins->execute([
                 $num, $leg[0],
                 $airportId, $destId, $vehicleId,
                 $name, $email, $phone,
                 $leg[1], $leg[2], $leg[3], $leg[4], $leg[5],
                 $adults, $children, $childSeat,
-                $legPrice, $currency,
+                $rowTotal, $currency,
                 $notes, $adminNote, $customerId ?: null,
             ]);
             $bid = (int)$db->lastInsertId();
@@ -270,7 +320,7 @@ if ($bookingType === 'transfer' && isset($_POST['trip'])) {
         $wa = sl_wa_link($t('wa_msg', ['no' => implode(', ', $numbers)]));
         sl_api_out(true, $t('ok2'), [
             'booking_numbers' => $numbers,
-            'total' => $legPrice * count($created),
+            'total' => round($grandTotal, 2),
             'currency' => $currency,
             'wa_url' => $wa,
         ]);

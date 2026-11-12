@@ -12,7 +12,7 @@
  */
 
 // Not: Bu dosya her zaman require_once ile yüklenmelidir.
-if (!defined('SL_ASSET_VER')) define('SL_ASSET_VER', '1.0.8');
+if (!defined('SL_ASSET_VER')) define('SL_ASSET_VER', '1.2.1');
 
 require_once __DIR__ . '/defaults.php';
 
@@ -561,6 +561,160 @@ function sl_old_price($price) {
 }
 
 /* ------------------------------------------------------------------ */
+/*  Para birimi & ödeme (Admin > Anasayfa & Tema > Fiyat & Ödeme)      */
+/*  Sitede tek para birimi listelenir; diğerleri ödeme adımında seçilir */
+/* ------------------------------------------------------------------ */
+
+/** Panelde fiyat girilebilen para birimleri (Transferler ekranıyla aynı) */
+function sl_known_currencies() {
+    return ['EUR', 'USD', 'GBP', 'TRY'];
+}
+
+/** Sitede listelenen varsayılan para birimi */
+function sl_currency() {
+    $g = sl_section('global');
+    $c = strtoupper(trim((string)($g['currency'] ?? 'EUR')));
+    return preg_match('/^[A-Z]{3}$/', $c) ? $c : 'EUR';
+}
+
+/** Ödeme adımında sunulan para birimleri (varsayılan her zaman dahil ve ilk sırada) */
+function sl_pay_currencies() {
+    $g = sl_section('global');
+    $list = $g['pay_currencies'] ?? null;
+    if (!is_array($list) || !$list) $list = sl_known_currencies();
+    $def = sl_currency();
+    $out = [$def];
+    foreach ($list as $c) {
+        $c = strtoupper(trim((string)$c));
+        if (preg_match('/^[A-Z]{3}$/', $c) && $c !== $def) $out[] = $c;
+    }
+    return array_values(array_unique($out));
+}
+
+/** Çocuk koltuğu / yükseltici ücret ayarları */
+function sl_fees() {
+    $g = sl_section('global');
+    $norm = function ($m) {
+        $o = [];
+        if (is_array($m)) {
+            foreach ($m as $c => $v) {
+                $v = str_replace(',', '.', trim((string)$v));
+                if ($v !== '' && is_numeric($v) && (float)$v >= 0) $o[strtoupper((string)$c)] = (float)$v;
+            }
+        }
+        return $o;
+    };
+    return [
+        'free' => max(0, (int)($g['free_seats'] ?? 1)),
+        'perLeg' => !isset($g['fee_per_leg']) || (int)$g['fee_per_leg'] === 1,
+        'seat' => $norm($g['seat_fee'] ?? []),
+        'booster' => $norm($g['booster_fee'] ?? []),
+    ];
+}
+
+/**
+ * Bir bölgenin fiyat satırlarından para birimine göre fiyat tablosu.
+ * $rows: [['lang' => 'de', 'vid' => 3, 'p' => 50.0, 'c' => 'EUR'], ...]  (destination_vehicles)
+ * Aynı para birimi birden çok dil sekmesinde girildiyse en çok aracı fiyatlı olan sekme,
+ * eşitlikte DE, EN, TR, RU sırası kullanılır.  Dönüş: ['EUR' => [vid => fiyat], 'TRY' => [...]]
+ */
+function sl_currency_matrix($rows) {
+    $byCur = [];
+    foreach ($rows as $r) {
+        $byCur[$r['c']][$r['lang']][(int)$r['vid']] = (float)$r['p'];
+    }
+    $order = ['de' => 1, 'en' => 2, 'tr' => 3, 'ru' => 4];
+    $out = [];
+    foreach ($byCur as $cur => $langs) {
+        $best = null;
+        foreach ($langs as $lc => $list) {
+            if ($best === null) { $best = $lc; continue; }
+            $a = count($list);
+            $b = count($langs[$best]);
+            if ($a > $b || ($a === $b && ($order[$lc] ?? 9) < ($order[$best] ?? 9))) $best = $lc;
+        }
+        $out[$cur] = $langs[$best];
+    }
+    return $out;
+}
+
+/** Tek bölge için para birimi fiyat tablosu (rezervasyon API'si; sl_destinations ile aynı kural) */
+function sl_dest_price_matrix($destId) {
+    $vehicles = sl_vehicles();
+    $rows = [];
+    $st = getDB()->prepare("SELECT vehicle_id, language_code, price, currency FROM destination_vehicles WHERE destination_id = ? AND price > 0");
+    $st->execute([(int)$destId]);
+    foreach ($st->fetchAll() as $p) {
+        $vid = (int)$p['vehicle_id'];
+        if (!isset($vehicles[$vid])) continue;
+        $rows[] = [
+            'lang' => $p['language_code'],
+            'vid' => $vid,
+            'p' => (float)$p['price'],
+            'c' => strtoupper(trim((string)$p['currency'])) ?: 'EUR',
+        ];
+    }
+    return $rows ? sl_currency_matrix($rows) : [];
+}
+
+/** Bölgede gösterilecek para birimi: varsayılan varsa o, yoksa EUR / USD / GBP / TRY sırası */
+function sl_pick_currency($matrix) {
+    if (!$matrix) return '';
+    $def = sl_currency();
+    if (!empty($matrix[$def])) return $def;
+    foreach (sl_known_currencies() as $c) {
+        if (!empty($matrix[$c])) return $c;
+    }
+    return (string)sl_first_key($matrix);
+}
+
+function sl_first_key($arr) {
+    foreach ($arr as $k => $v) return $k;
+    return null;
+}
+
+/** 100 altı tam sayı, üstü 10'a yuvarlanır (JS ile aynı) */
+function sl_round_nice($x) {
+    return $x < 100 ? round($x) : round($x / 10) * 10;
+}
+
+/**
+ * Koltuk ücreti ($kind = seat | booster) verilen para biriminde.
+ * O para birimi için ücret girilmemişse, ücret girilmiş bir para biriminden aracın fiyat oranıyla çevrilir.
+ */
+function sl_fee_in($kind, $cur, $matrix, $vid, $fees = null) {
+    $fees = $fees ?: sl_fees();
+    $map = $fees[$kind] ?? [];
+    if (isset($map[$cur])) return (float)$map[$cur];
+    if (!$map) return 0.0;
+    $from = isset($map[sl_currency()]) ? sl_currency() : sl_first_key($map);
+    $pTo = $matrix[$cur][$vid] ?? 0;
+    $pFrom = $matrix[$from][$vid] ?? 0;
+    if ($pTo <= 0 || $pFrom <= 0) return 0.0;
+    return (float)sl_round_nice($map[$from] * $pTo / $pFrom);
+}
+
+/**
+ * Bir transfer (yön) için çocuk koltuğu + yükseltici ek ücreti.
+ * Toplam "free" adet ücretsiz; ücretsiz hak önce pahalı olana uygulanır.
+ */
+function sl_extras_amount($seats, $boosters, $feeSeat, $feeBooster, $free) {
+    $seats = max(0, (int)$seats);
+    $boosters = max(0, (int)$boosters);
+    $free = max(0, (int)$free);
+    if ($feeSeat >= $feeBooster) {
+        $freeS = min($seats, $free);
+        $freeB = min($boosters, $free - $freeS);
+    } else {
+        $freeB = min($boosters, $free);
+        $freeS = min($seats, $free - $freeB);
+    }
+    $paidS = $seats - $freeS;
+    $paidB = $boosters - $freeB;
+    return ['amt' => $paidS * $feeSeat + $paidB * $feeBooster, 'paidS' => $paidS, 'paidB' => $paidB];
+}
+
+/* ------------------------------------------------------------------ */
 /*  Araçlar                                                            */
 /* ------------------------------------------------------------------ */
 
@@ -679,19 +833,20 @@ function sl_destinations() {
         $st->execute([$lang]);
         $rows = $st->fetchAll();
 
-        // Fiyatlar (dil bazlı) — aktif dilde fiyat yoksa EN, sonra varsayılan dil, sonra herhangi biri
+        // Fiyatlar: dile göre değil para birimine göre (Transferler ekranındaki dil sekmelerinde seçilen para birimi)
         $vehicles = sl_vehicles();
-        $prices = [];
+        $priceRows = [];
         $pst = $db->query("SELECT destination_id, vehicle_id, language_code, price, currency FROM destination_vehicles WHERE price > 0");
         foreach ($pst->fetchAll() as $p) {
             $vid = (int)$p['vehicle_id'];
             if (!isset($vehicles[$vid])) continue;
-            $prices[(int)$p['destination_id']][$p['language_code']][$vid] = [
+            $priceRows[(int)$p['destination_id']][] = [
+                'lang' => $p['language_code'],
+                'vid' => $vid,
                 'p' => (float)$p['price'],
                 'c' => strtoupper(trim((string)$p['currency'])) ?: 'EUR',
             ];
         }
-        $order = array_values(array_unique([$lang, 'en', sl_default_lang_code()]));
         $defLang = sl_default_lang_code();
         $listSlug = getPageSlugByKey('destinations', $lang);
         $fallbackImg = 'https://images.unsplash.com/photo-1507525428034-b723cf961d3e?w=800&h=600&fit=crop';
@@ -718,13 +873,12 @@ function sl_destinations() {
             $mt = $hasT ? (string)$r['t_mt'] : ($isDefault ? (string)$r['meta_title'] : '');
             $md = $hasT ? (string)$r['t_md'] : ($isDefault ? (string)$r['meta_description'] : '');
 
-            // Fiyatlar
+            // Fiyatlar: sitede tek para birimi (varsayılan), diğerleri ödeme için matriste
+            $matrix = !empty($priceRows[$id]) ? sl_currency_matrix($priceRows[$id]) : [];
+            $cur = sl_pick_currency($matrix);
             $pp = [];
-            if (!empty($prices[$id])) {
-                foreach ($order as $lc) {
-                    if (!empty($prices[$id][$lc])) { $pp = $prices[$id][$lc]; break; }
-                }
-                if (!$pp) $pp = reset($prices[$id]);
+            if ($cur !== '') {
+                foreach ($matrix[$cur] as $vid => $pv) $pp[$vid] = ['p' => $pv, 'c' => $cur];
             }
             $min = null;
             foreach ($pp as $vid => $pr) {
@@ -757,6 +911,8 @@ function sl_destinations() {
                 'meta_desc' => trim($md),
                 'prices' => $pp,
                 'min' => $min,
+                'cur' => $cur,
+                'pc' => $matrix,
                 'updated' => $r['updated_at'] ?? null,
             ];
         }
@@ -863,7 +1019,12 @@ function sl_booking_payload() {
     foreach (sl_bookable_destinations(false) as $d) {
         $p = [];
         foreach ($d['prices'] as $vid => $pr) $p[$vid] = [$pr['p'], $pr['c']];
-        $dests[$d['id']] = ['n' => $d['place'], 't' => $d['title'], 'u' => $d['url'], 'p' => $p];
+        // pc: para birimine göre tüm fiyatlar (ödeme adımındaki para birimi seçimi için)
+        $pc = [];
+        foreach ($d['pc'] as $c => $list) {
+            foreach ($list as $vid => $pv) $pc[$c][(string)$vid] = $pv;
+        }
+        $dests[$d['id']] = ['n' => $d['place'], 't' => $d['title'], 'u' => $d['url'], 'p' => $p, 'cur' => $d['cur'], 'pc' => (object)$pc];
     }
     $veh = [];
     foreach (sl_vehicles() as $v) {
@@ -889,15 +1050,18 @@ function sl_booking_payload() {
     } catch (Exception $e) {}
 
     $keys = ['airport', 'airport_short', 'rt', 'ow', 'step1', 'step2', 'step3', 'step4', 'trip', 'direction', 'dir_arr', 'dir_dep',
-        'choose_vehicle', 'cap_pax', 'cap_lug', 'cap_seat', 'too_small', 'select', 'selected', 'next', 'back',
+        'choose_vehicle', 'cap_pax', 'cap_lug', 'cap_seat', 'too_small', 'too_few_seats', 'vh_for', 'select', 'selected', 'next', 'back',
         'arrival_title', 'departure_title', 'flight_date', 'arr_time', 'dep_time', 'flight', 'flight_ph', 'hotel', 'hotel_ph',
         'pickup_time', 'pickup_hint', 'adults', 'children', 'child_seat', 'child_seat_note', 'contact_title', 'name', 'phone',
         'phone_ph', 'email', 'optional', 'pax_title', 'pax_hint', 'adult_n', 'child_n', 'notes', 'notes_ph', 'summary', 'route',
         'vehicle', 'passengers', 'total', 'cash', 'send', 'sending', 'ok', 'ok2', 'booking_no', 'wa_write', 'wa_msg',
         'err_required', 'err_vehicle', 'err_terms', 'err_generic', 'err_date', 'err_order', 'err_phone', 'err_email',
-        'err_capacity', 'err_names', 'pick', 'pick_airport', 'close', 'no_price', 'person'];
+        'err_capacity', 'err_names', 'pick', 'pick_airport', 'close', 'no_price', 'person',
+        'booster', 'seat_free_note', 'seat_fee_note', 'per_leg', 'per_booking', 'extras', 'free', 'pay_cur', 'pay_cur_note',
+        'info', 'flight_info', 'flight_info_dep', 'err_flight'];
     $i18n = [];
     foreach ($keys as $k) $i18n[$k] = sl_t($k);
+    $fees = sl_fees();
 
     $cfg = sl_theme_config();
     return [
@@ -907,6 +1071,9 @@ function sl_booking_payload() {
         'wa' => sl_whatsapp_number(),
         'disc' => sl_discount_pct(),
         'today' => date('Y-m-d'),
+        'cur' => sl_currency(),
+        'payCurs' => sl_pay_currencies(),
+        'fees' => ['free' => $fees['free'], 'perLeg' => $fees['perLeg'], 'seat' => (object)$fees['seat'], 'booster' => (object)$fees['booster']],
         'dests' => $dests,
         'veh' => $veh,
         'terms' => $terms,

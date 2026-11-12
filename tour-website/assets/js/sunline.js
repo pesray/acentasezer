@@ -1,7 +1,8 @@
 /*!
  * Sunline VIP Transfer — site betiği
  * - Açık/koyu tema düğmesi, duyuru şeridi, bölge filtreleri, hızlı fiyat formu
- * - Adım adım rezervasyon sihirbazı (Araç → Transfer → Yolcular → Onay)
+ * - Adım adım rezervasyon sihirbazı (Transfer → Yolcular → Araç → Onay)
+ *   Fiyatlar sitenin para biriminde; onay adımında "araçta nakit" ödeme para birimi seçilir
  * Veri: window.SL (sayfaya PHP tarafından gömülür)
  */
 (function () {
@@ -141,6 +142,7 @@
    * Rezervasyon sihirbazı
    * ------------------------------------------------------------------ */
   var modalEl = $('#bm'), modal = null, S = null;
+  var BOOST_MAX = 20; // yükseltici için teknik üst sınır (sunucuyla aynı)
 
   function vehiclesFor(d) {
     var ids = Object.keys(d.p || {}).filter(function (v) { return SL.veh && SL.veh[v]; });
@@ -150,9 +152,133 @@
   function legPrice(vid) { return S && S.d.p[vid] ? +S.d.p[vid][0] : 0; }
   function curOf(vid) { return S && S.d.p[vid] ? S.d.p[vid][1] : 'EUR'; }
   function mult() { return S.trip === 'rt' ? 2 : 1; }
-  function minLeg() {
+  // Bu bölge için fiyatı olan araçların en büyük kapasitesi (yolcu adımındaki sınır)
+  function capMax() { var m = 1; vehiclesFor(S.d).forEach(function (v) { m = Math.max(m, SL.veh[v].cap); }); return m; }
+  function seatMax() { var m = 0; vehiclesFor(S.d).forEach(function (v) { m = Math.max(m, SL.veh[v].cs); }); return m; }
+  // Araç, girilen yolcu ve çocuk koltuğu sayısına uygun mu?
+  function fits(vid) { var v = SL.veh[vid]; return !!v && v.cap >= S.a + S.c && v.cs >= S.s; }
+  // Seçili araç yoksa: yolcu sayısına uyan en ucuz aracın fiyatı
+  function cheapestFit() {
     var ids = vehiclesFor(S.d);
-    return ids.length ? { p: legPrice(ids[0]), c: curOf(ids[0]) } : null;
+    for (var i = 0; i < ids.length; i++) if (fits(ids[i])) return { p: legPrice(ids[i]), c: curOf(ids[i]), v: ids[i] };
+    return ids.length ? { p: legPrice(ids[0]), c: curOf(ids[0]), v: ids[0] } : null;
+  }
+  function paxText() {
+    return S.a + ' ' + T('adults') + (S.c ? ', ' + S.c + ' ' + T('children') : '') +
+      (S.s ? ', ' + S.s + ' ' + T('child_seat') : '') + (S.b ? ', ' + S.b + ' ' + T('booster') : '');
+  }
+
+  /* --- Para birimi ve koltuk ücretleri (sitede tek para birimi, ödemede seçim) --- */
+  function curDisp() { return (S && S.d.cur) || SL.cur || 'EUR'; }
+  function priceIn(cur, vid) {
+    var m = S.d.pc && S.d.pc[cur];
+    if (m && m[vid] != null) return +m[vid];
+    var p = S.d.p && S.d.p[vid];
+    return p && p[1] === cur ? +p[0] : 0;
+  }
+  function curVid() { var c; return S.v || ((c = cheapestFit()) ? c.v : ''); }
+  function niceRound(x) { return x < 100 ? Math.round(x) : Math.round(x / 10) * 10; }
+  // Ücret o para biriminde girilmemişse, girilmiş olandan aracın fiyat oranıyla çevrilir (sunucuyla aynı)
+  function feeIn(kind, cur, vid) {
+    var map = (SL.fees && SL.fees[kind]) || {};
+    if (map[cur] != null) return +map[cur];
+    var keys = Object.keys(map);
+    if (!keys.length) return 0;
+    var from = map[SL.cur] != null ? SL.cur : keys[0];
+    var pTo = priceIn(cur, vid), pFrom = priceIn(from, vid);
+    if (pTo <= 0 || pFrom <= 0) return 0;
+    return niceRound(map[from] * pTo / pFrom);
+  }
+  // Bir yön için ek koltuk ücreti; toplam "free" adet ücretsiz (önce pahalı olana)
+  function extrasIn(cur, vid) {
+    var fs = feeIn('seat', cur, vid), fb = feeIn('booster', cur, vid), free = +((SL.fees && SL.fees.free) || 0);
+    var s = S.s, b = S.b, freeS, freeB;
+    if (fs >= fb) { freeS = Math.min(s, free); freeB = Math.min(b, free - freeS); }
+    else { freeB = Math.min(b, free); freeS = Math.min(s, free - freeB); }
+    return { amt: (s - freeS) * fs + (b - freeB) * fb, paidS: s - freeS, paidB: b - freeB, fs: fs, fb: fb };
+  }
+  function perLeg() { return !(SL.fees && SL.fees.perLeg === false); }
+  function extrasTotal(cur, vid) {
+    var ex = extrasIn(cur, vid).amt;
+    return perLeg() ? ex * mult() : ex;
+  }
+  function totalIn(cur, vid) {
+    var p = priceIn(cur, vid);
+    return p ? p * mult() + extrasTotal(cur, vid) : 0;
+  }
+  // Ödemede sunulacak para birimleri: ayarlarda açık olanlardan bu araç için fiyatı girilmiş olanlar
+  function payCurs(vid) {
+    var list = (SL.payCurs || []).filter(function (c) { return priceIn(c, vid) > 0; });
+    var d = curDisp();
+    if (priceIn(d, vid) > 0 && list.indexOf(d) < 0) list.unshift(d);
+    return list;
+  }
+  // Seçili ödeme para birimi (varsayılan: sitenin para birimi, yoksa bölgenin gösterim para birimi)
+  function ensurePay() {
+    if (!S.v) return curDisp();
+    var list = payCurs(S.v);
+    if (list.indexOf(S.pay) < 0) {
+      S.pay = list.indexOf(SL.cur) >= 0 ? SL.cur : (list.indexOf(curDisp()) >= 0 ? curDisp() : (list[0] || curDisp()));
+    }
+    return S.pay;
+  }
+  function upper(s) {
+    try { return String(s).toLocaleUpperCase(SL.lang === 'tr' ? 'tr-TR' : undefined); } catch (e) { return String(s).toUpperCase(); }
+  }
+  // Yazarken büyük harfe çevir (imleç yerinde kalsın)
+  function upInput(inp) {
+    var v = inp.value, u = upper(v);
+    if (v === u) return;
+    var s = inp.selectionStart, e = inp.selectionEnd;
+    inp.value = u;
+    if (u.length === v.length && s != null) { try { inp.setSelectionRange(s, e); } catch (x) {} }
+  }
+  // Uçuş no: büyük harf, yalnız harf/rakam/boşluk/tire
+  function flightInput(inp) {
+    var v = inp.value, u = v.toUpperCase().replace(/[^A-Z0-9 -]/g, '');
+    if (v === u) return;
+    var s = inp.selectionStart, d = v.length - u.length;
+    inp.value = u;
+    if (s != null) { var p = Math.max(0, s - d); try { inp.setSelectionRange(p, p); } catch (x) {} }
+  }
+  function flightOk(s) {
+    var c = String(s || '').toUpperCase().replace(/[\s-]+/g, '');
+    return /^(?=.*\d)[A-Z0-9]{3,8}$/.test(c);
+  }
+
+  /* --- (i) bilgi balonu --- */
+  function placeTip(col, t) {
+    var body = $('#bmBody'), b = $('.ib', col);
+    if (!body) return;
+    t.style.left = '0px';
+    var br = body.getBoundingClientRect(), cr = col.getBoundingClientRect();
+    var w = Math.max(160, Math.min(300, br.width - 32)), left = 0;
+    t.style.width = w + 'px';
+    if (cr.left + w > br.right - 16) left = br.right - 16 - w - cr.left;
+    if (cr.left + left < br.left + 16) left = br.left + 16 - cr.left;
+    t.style.left = left + 'px';
+    if (b) { var bx = b.getBoundingClientRect(); t.style.setProperty('--ax', Math.round(bx.left + bx.width / 2 - cr.left - left) + 'px'); }
+  }
+  function tipShow(col, on, pin) {
+    var t = $('.ib-tip', col), b = $('.ib', col);
+    if (!t || !b) return;
+    if (on) {
+      $$('.has-tip.tip-on').forEach(function (o) { if (o !== col) tipShow(o, false); });
+      col.classList.add('tip-on');
+      if (pin) col.classList.add('tip-pin');
+      placeTip(col, t);
+    } else {
+      col.classList.remove('tip-on');
+      col.classList.remove('tip-pin');
+    }
+    b.setAttribute('aria-expanded', on ? 'true' : 'false');
+  }
+  doc.addEventListener('click', function (e) {
+    if (e.target.closest && (e.target.closest('.ib') || e.target.closest('.ib-tip'))) return;
+    $$('.has-tip.tip-on').forEach(function (c) { tipShow(c, false); });
+  });
+  function tripText() {
+    return S.trip === 'rt' ? T('rt') : (T('ow') + ' · ' + (S.dir === 'arr' ? T('dir_arr') : T('dir_dep')));
   }
 
   function openBooking(destId, o) {
@@ -162,7 +288,7 @@
     o = o || {};
     S = {
       id: String(destId), d: d, v: '', trip: o.trip === 'ow' ? 'ow' : 'rt', dir: o.dir === 'dep' ? 'dep' : 'arr',
-      step: 1, a: Math.max(1, parseInt(o.pax, 10) || 1), c: 0, s: 0, an: [], cn: [], a1auto: true, busy: false, done: false,
+      step: 1, a: Math.max(1, parseInt(o.pax, 10) || 1), c: 0, s: 0, b: 0, pay: '', an: [], cn: [], a1auto: true, busy: false, done: false,
       t0: Date.now()
     };
     if (o.vehicle && d.p[o.vehicle] && SL.veh[o.vehicle]) S.v = String(o.vehicle);
@@ -172,9 +298,12 @@
   }
   window.slOpenBooking = openBooking;
 
+  // Adım sırası: 1 Transfer · 2 Yolcular · 3 Araç · 4 Onay
+  // (çeviri anahtarları anlamına göre: step2 = Transfer, step3 = Yolcular, step1 = Araç, step4 = Onay)
   function stepsHtml() {
+    var keys = ['step2', 'step3', 'step1', 'step4'];
     var h = '<ol class="wz-steps" aria-label="steps">';
-    for (var i = 1; i <= 4; i++) h += '<li data-s="' + i + '"><span>' + i + '</span>' + esc(T('step' + i)) + '</li>';
+    for (var i = 1; i <= 4; i++) h += '<li data-s="' + i + '"><span>' + i + '</span>' + esc(T(keys[i - 1])) + '</li>';
     return h + '</ol>';
   }
 
@@ -188,12 +317,19 @@
     return '<button type="button" class="vh" data-v="' + esc(vid) + '" aria-pressed="false">' +
       '<span class="vh-img">' + img + '</span>' +
       '<span class="vh-i d-block"><span class="vh-n d-block">' + esc(v.n) + '</span><span class="vh-s">' + spec + '</span>' + sv +
-      '<span class="vh-warn" hidden>' + esc(T('too_small')) + '</span></span>' +
+      '<span class="vh-warn" hidden></span></span>' +
       '<span class="vh-p"><small class="vh-tl"></small><b class="vh-now"></b><del class="vh-old"></del></span></button>';
   }
 
-  function field(id, label, input, col, req, hint) {
-    return '<div class="' + col + '"><label class="d-block" for="' + id + '">' + esc(label) + (req ? '<span class="req">*</span>' : ' <small class="opacity-75">' + esc(T('optional')) + '</small>') + '</label>' + input + (hint ? '<div class="hint">' + esc(hint) + '</div>' : '') + '</div>';
+  // tip: etiketin yanında (i) bilgi balonu (kredi kartı CVV bilgisindeki gibi)
+  function field(id, label, input, col, req, hint, tip) {
+    var lbl = '<label class="' + (tip ? 'd-inline-block' : 'd-block') + '" for="' + id + '">' + esc(label) +
+      (req ? '<span class="req">*</span>' : ' <small class="opacity-75">' + esc(T('optional')) + '</small>') + '</label>';
+    if (tip) {
+      lbl += '<button type="button" class="ib" aria-label="' + esc(T('info') + ': ' + label) + '" aria-expanded="false" aria-controls="' + id + 'Tip">i</button>' +
+        '<span class="ib-tip" id="' + id + 'Tip" role="tooltip">' + esc(tip) + '</span>';
+    }
+    return '<div class="' + col + (tip ? ' has-tip' : '') + '">' + lbl + input + (hint ? '<div class="hint">' + esc(hint) + '</div>' : '') + '</div>';
   }
 
   function build() {
@@ -214,8 +350,8 @@
     var today = SL.today || '';
     var place = esc(d.n), ap = esc(T('airport_short'));
 
-    var p1 = '<div class="wz-pane" data-p="1">' +
-      '<div class="wz-h">' + esc(T('trip')) + '</div>' +
+    // 1. adım: transfer tipi + yön (en üstte) ve uçuş/otel bilgileri
+    var tripHtml = '<div class="wz-h">' + esc(T('trip')) + '</div>' +
       '<div class="trip">' +
       '<input type="radio" name="tt" id="tt1" value="rt"><label for="tt1">' + esc(T('rt')) + '<b id="ttRt"></b><small id="ttRtO"></small></label>' +
       '<input type="radio" name="tt" id="tt2" value="ow"><label for="tt2">' + esc(T('ow')) + '<b id="ttOw"></b><small id="ttOwO"></small></label>' +
@@ -223,33 +359,39 @@
       '<div class="seg" id="dirSeg" role="radiogroup" aria-label="' + esc(T('direction')) + '">' +
       '<input type="radio" name="dir" id="dr1" value="arr"><label for="dr1"><i class="bi bi-airplane-engines me-1"></i>' + esc(T('dir_arr')) + '</label>' +
       '<input type="radio" name="dir" id="dr2" value="dep"><label for="dr2"><i class="bi bi-building me-1"></i>' + esc(T('dir_dep')) + '</label>' +
-      '</div>' +
-      '<div class="wz-h mt-4">' + esc(T('choose_vehicle')) + '</div>' +
+      '</div>';
+
+    // 3. adım: yolcu sayısına göre araç seçimi
+    var p3 = '<div class="wz-pane" data-p="3">' +
+      '<div class="wz-h">' + esc(T('choose_vehicle')) + '</div>' +
+      '<div class="vh-info" id="vhInfo"></div>' +
       '<div class="vh-list" id="vhList">' + ids.map(vehicleHtml).join('') + '</div>' +
       '</div>';
 
     var legA = '<div class="leg" id="legA"><div class="wz-sub"><i class="bi bi-airplane-engines"></i>' + esc(T('arrival_title')) + ' · ' + ap + ' → ' + place + '</div><div class="row g-3">' +
       field('aDate', T('flight_date'), '<input class="form-control" type="date" id="aDate" min="' + esc(today) + '" data-req="1">', 'col-12 col-sm-6 col-lg-4', true) +
       field('aTime', T('arr_time'), '<input class="form-control" type="time" id="aTime" data-req="1">', 'col-6 col-lg-4', true) +
-      field('aFl', T('flight'), '<input class="form-control" id="aFl" placeholder="' + esc(T('flight_ph')) + '" autocomplete="off" autocapitalize="characters" maxlength="20">', 'col-6 col-lg-4', false) +
+      field('aFl', T('flight'), '<input class="form-control upc" id="aFl" placeholder="' + esc(T('flight_ph')) + '" autocomplete="off" autocapitalize="characters" spellcheck="false" maxlength="12" data-req="1" data-flight="1" aria-describedby="aFlTip">', 'col-6 col-lg-4', true, '', T('flight_info')) +
       field('aHotel', T('hotel'), '<input class="form-control" id="aHotel" placeholder="' + esc(T('hotel_ph')) + '" data-req="1" maxlength="250">', 'col-12', true) +
       '</div></div>';
     var legD = '<div class="leg" id="legD"><div class="wz-sub"><i class="bi bi-airplane"></i>' + esc(T('departure_title')) + ' · ' + place + ' → ' + ap + '</div><div class="row g-3">' +
       field('dDate', T('flight_date'), '<input class="form-control" type="date" id="dDate" min="' + esc(today) + '" data-req="1">', 'col-12 col-sm-6 col-lg-4', true) +
       field('dTime', T('dep_time'), '<input class="form-control" type="time" id="dTime" data-req="1">', 'col-6 col-lg-4', true) +
-      field('dFl', T('flight'), '<input class="form-control" id="dFl" placeholder="' + esc(T('flight_ph')) + '" autocomplete="off" autocapitalize="characters" maxlength="20">', 'col-6 col-lg-4', false) +
+      field('dFl', T('flight'), '<input class="form-control upc" id="dFl" placeholder="' + esc(T('flight_ph')) + '" autocomplete="off" autocapitalize="characters" spellcheck="false" maxlength="12" data-req="1" data-flight="1" aria-describedby="dFlTip">', 'col-6 col-lg-4', true, '', T('flight_info_dep')) +
       field('dPick', T('pickup_time'), '<input class="form-control" type="time" id="dPick">', 'col-12 col-sm-6 col-lg-4', false, T('pickup_hint')) +
       field('dHotel', T('hotel'), '<input class="form-control" id="dHotel" placeholder="' + esc(T('hotel_ph')) + '" data-req="1" maxlength="250">', 'col-12 col-lg-8', true) +
       '</div></div>';
-    var p2 = '<div class="wz-pane" data-p="2">' + legA + legD + '</div>';
+    var p1 = '<div class="wz-pane" data-p="1">' + tripHtml + '<div class="mt-4">' + legA + legD + '</div></div>';
 
     var stepper = function (key, label, sub) {
       return '<div class="stp" data-k="' + key + '"><span>' + esc(label) + (sub ? '<small>' + esc(sub) + '</small>' : '') + '</span>' +
         '<span class="stp-c"><button type="button" data-op="-" aria-label="-">−</button><output aria-live="polite">0</output><button type="button" data-op="+" aria-label="+">+</button></span></div>';
     };
-    var p3 = '<div class="wz-pane" data-p="3">' +
+    // 2. adım: yolcu sayıları, iletişim, yolcu isimleri
+    var p2 = '<div class="wz-pane" data-p="2">' +
       '<div class="wz-h">' + esc(T('passengers')) + '</div>' +
-      '<div class="stp-row">' + stepper('a', T('adults')) + stepper('c', T('children')) + stepper('s', T('child_seat'), T('child_seat_note')) + '</div>' +
+      '<div class="stp-row">' + stepper('a', T('adults')) + stepper('c', T('children')) + stepper('s', T('child_seat')) + stepper('b', T('booster')) + '</div>' +
+      '<div class="seat-note" id="seatNote" hidden></div>' +
       '<div class="wz-h mt-4">' + esc(T('contact_title')) + '</div>' +
       '<div class="row g-3">' +
       field('wName', T('name'), '<input class="form-control" id="wName" autocomplete="name" data-req="1" maxlength="120">', 'col-12 col-md-6', true) +
@@ -265,6 +407,7 @@
     var p4 = '<div class="wz-pane" data-p="4">' +
       '<div class="wz-h">' + esc(T('summary')) + '</div>' +
       '<dl class="sum" id="sumBox"></dl>' +
+      '<div class="pay" id="payBox"></div>' +
       (SL.alert ? '<div class="wz-alert"><i class="bi bi-info-circle-fill"></i><span>' + esc(SL.alert) + '</span></div>' : '') +
       '<div class="mt-3"><label class="d-block" for="wNotes">' + esc(T('notes')) + ' <small class="opacity-75">' + esc(T('optional')) + '</small></label>' +
       '<textarea class="form-control" id="wNotes" rows="2" maxlength="1000" placeholder="' + esc(T('notes_ph')) + '"></textarea></div>' +
@@ -278,6 +421,7 @@
     foot.innerHTML = '<div class="wz-tot"><small>' + esc(T('total')) + ' · ' + esc(T('cash')) + '</small><b id="wTot">—</b></div>' +
       '<div class="wz-btns"><button type="button" class="btn btn-ghost" id="wBack">' + esc(T('back')) + '</button><button type="button" class="btn btn-cta" id="wNext">' + esc(T('next')) + '</button></div>';
 
+    clampPax();
     bind();
     go(1);
   }
@@ -294,7 +438,6 @@
       var b = e.target.closest('.vh');
       if (!b || b.classList.contains('off')) return;
       S.v = b.getAttribute('data-v');
-      clampPax();
       refresh();
       clearErr();
     });
@@ -311,17 +454,50 @@
       });
     });
 
+    // 1. yetişkin = iletişim adı (büyük harfle)
     var name = $('#wName');
     name.addEventListener('input', function () {
       if (S.a1auto) {
-        var f = $('#paxList input[data-t="a"][data-i="0"]');
-        if (f) f.value = name.value;
-        S.an[0] = name.value;
+        var f = $('#paxList input[data-t="a"][data-i="0"]'), u = upper(name.value);
+        if (f) f.value = u;
+        S.an[0] = u;
       }
     });
-    $('#paxList').addEventListener('input', function (e) {
+    // Yolcu isimleri yazarken büyük harfe çevrilir
+    var pl = $('#paxList');
+    var onName = function (e) {
       var inp = e.target;
-      if (inp.getAttribute('data-t') === 'a' && inp.getAttribute('data-i') === '0') S.a1auto = inp.value === $('#wName').value;
+      if (!inp.matches || !inp.matches('input[data-t]')) return;
+      if (!e.isComposing) upInput(inp);
+      if (inp.getAttribute('data-t') === 'a' && inp.getAttribute('data-i') === '0') S.a1auto = inp.value === upper($('#wName').value);
+    };
+    pl.addEventListener('input', onName);
+    pl.addEventListener('compositionend', onName);
+
+    // Uçuş numarası: büyük harf
+    $$('[data-flight]', body).forEach(function (inp) {
+      inp.addEventListener('input', function (e) { if (!e.isComposing) flightInput(inp); });
+      inp.addEventListener('compositionend', function () { flightInput(inp); });
+      inp.addEventListener('blur', function () { inp.value = inp.value.trim().replace(/\s{2,}/g, ' '); });
+    });
+
+    // (i) bilgi balonları: üzerine gelince / dokununca
+    $$('.has-tip', body).forEach(function (col) {
+      var b = $('.ib', col);
+      if (!b) return;
+      b.addEventListener('click', function (e) { e.preventDefault(); tipShow(col, !col.classList.contains('tip-pin'), true); });
+      b.addEventListener('mouseenter', function () { if (!col.classList.contains('tip-on')) tipShow(col, true); });
+      b.addEventListener('mouseleave', function () { if (!col.classList.contains('tip-pin')) tipShow(col, false); });
+      b.addEventListener('keydown', function (e) {
+        if ((e.key === 'Escape' || e.key === 'Esc') && col.classList.contains('tip-on')) { e.stopPropagation(); tipShow(col, false); }
+      });
+    });
+
+    // Ödeme para birimi (4. adım)
+    $('#payBox').addEventListener('change', function (e) {
+      if (e.target.name !== 'pc') return;
+      S.pay = e.target.value;
+      refresh();
     });
 
     var aHotel = $('#aHotel'), dHotel = $('#dHotel');
@@ -336,14 +512,13 @@
     body.addEventListener('input', function (e) { if (e.target.classList.contains('is-invalid')) e.target.classList.remove('is-invalid'); });
   }
 
-  function capOf() { return S.v && SL.veh[S.v] ? SL.veh[S.v].cap : 99; }
-  function seatCapOf() { return S.v && SL.veh[S.v] ? SL.veh[S.v].cs : 0; }
-
+  // Yolcu adımı araç seçiminden önce: sınır, bu bölgedeki en büyük aracın kapasitesi
   function clampPax() {
-    var cap = capOf();
+    var cap = capMax();
     S.a = Math.min(Math.max(1, S.a), cap);
     S.c = Math.min(Math.max(0, S.c), Math.max(0, cap - S.a));
-    S.s = Math.min(Math.max(0, S.s), Math.min(S.c, seatCapOf()));
+    S.s = Math.min(Math.max(0, S.s), Math.min(S.c, seatMax()));
+    S.b = Math.min(Math.max(0, S.b), BOOST_MAX); // yükseltici: araç/çocuk sayısıyla sınırlı değil
   }
 
   function collectNames() {
@@ -355,15 +530,15 @@
     var list = $('#paxList');
     if (!list) return;
     var nm = $('#wName') ? $('#wName').value : '';
-    if (S.a1auto) S.an[0] = nm;
-    var h = '';
+    if (S.a1auto) S.an[0] = upper(nm);
+    var h = '', attrs = ' autocomplete="off" autocapitalize="characters" spellcheck="false" maxlength="120"';
     for (var i = 0; i < S.a; i++) {
       h += '<div class="pax-row"><span class="badge-n"><i class="bi bi-person-fill"></i>' + esc(T('adult_n', { n: i + 1 })) + '</span>' +
-        '<input class="form-control" data-t="a" data-i="' + i + '" value="' + esc(S.an[i] || '') + '" placeholder="' + esc(T('name')) + '" autocomplete="off" maxlength="120" aria-label="' + esc(T('adult_n', { n: i + 1 })) + '"></div>';
+        '<input class="form-control upc" data-t="a" data-i="' + i + '" value="' + esc(upper(S.an[i] || '')) + '" placeholder="' + esc(T('name')) + '"' + attrs + ' aria-label="' + esc(T('adult_n', { n: i + 1 })) + '"></div>';
     }
     for (var j = 0; j < S.c; j++) {
       h += '<div class="pax-row"><span class="badge-n"><i class="bi bi-person-arms-up"></i>' + esc(T('child_n', { n: j + 1 })) + '</span>' +
-        '<input class="form-control" data-t="c" data-i="' + j + '" value="' + esc(S.cn[j] || '') + '" placeholder="' + esc(T('name')) + ' ' + esc(T('optional')) + '" autocomplete="off" maxlength="120" aria-label="' + esc(T('child_n', { n: j + 1 })) + '"></div>';
+        '<input class="form-control upc" data-t="c" data-i="' + j + '" value="' + esc(upper(S.cn[j] || '')) + '" placeholder="' + esc(T('name')) + ' ' + esc(T('optional')) + '"' + attrs + ' aria-label="' + esc(T('child_n', { n: j + 1 })) + '"></div>';
     }
     list.innerHTML = h;
   }
@@ -372,9 +547,11 @@
     var body = $('#bmBody');
     if (!body || !S) return;
     if ($('#paxList')) collectNames();
+    // Yolcu sayısı değiştiyse ve seçili araç artık yetmiyorsa seçimi kaldır
+    if (S.v && !fits(S.v)) S.v = '';
     var m = mult();
-    // Trip cards: seçili aracın (yoksa en uygun aracın) fiyatı
-    var base = S.v ? { p: legPrice(S.v), c: curOf(S.v) } : minLeg();
+    // Transfer tipi kartları: seçili aracın (yoksa yolcu sayısına uyan en ucuz aracın) fiyatı
+    var base = S.v ? { p: legPrice(S.v), c: curOf(S.v) } : cheapestFit();
     if (base) {
       var rt = base.p * 2, ow = base.p, oRt = oldPrice(rt), oOw = oldPrice(ow);
       $('#ttRt').innerHTML = esc(fmt(rt, base.c)) + (oRt ? '<del>' + esc(fmt(oRt, base.c)) + '</del>' : '');
@@ -382,15 +559,21 @@
     }
     $('#dirSeg').hidden = S.trip !== 'ow';
 
-    // Araç listesi
+    // Araç listesi (3. adım): yolcu / çocuk koltuğu sayısına uymayanlar pasif
     var paxNeed = S.a + S.c;
+    var info = $('#vhInfo');
+    if (info) info.innerHTML = '<i class="bi bi-people-fill"></i>' + esc(T('vh_for', { pax: paxText(), trip: tripText() }));
     $$('.vh', body).forEach(function (b) {
       var vid = b.getAttribute('data-v'), v = SL.veh[vid], p = legPrice(vid) * m, c = curOf(vid), o = oldPrice(p);
-      var on = vid === S.v, small = v.cap < paxNeed;
+      var small = v.cap < paxNeed, fewSeats = !small && v.cs < S.s, off = small || fewSeats;
+      var on = vid === S.v && !off;
       b.classList.toggle('on', on);
-      b.classList.toggle('off', small && !on);
+      b.classList.toggle('off', off);
       b.setAttribute('aria-pressed', on ? 'true' : 'false');
-      $('.vh-warn', b).hidden = !small;
+      b.setAttribute('aria-disabled', off ? 'true' : 'false');
+      var warn = $('.vh-warn', b);
+      warn.textContent = small ? T('too_small') : (fewSeats ? T('too_few_seats', { n: v.cs }) : '');
+      warn.hidden = !off;
       $('.vh-tl', b).textContent = S.trip === 'rt' ? T('rt') : T('ow');
       $('.vh-now', b).textContent = fmt(p, c);
       var od = $('.vh-old', b);
@@ -403,26 +586,41 @@
     $('#legA').hidden = !needA;
     $('#legD').hidden = !needD;
 
-    // Stepper'lar
-    var cap = capOf(), scap = Math.min(S.c, seatCapOf());
+    // Stepper'lar (sınır: bu bölgedeki en büyük araç; yükseltici sınırsız)
+    var cap = capMax(), scap = Math.min(S.c, seatMax()), shown = 0;
     $$('.stp', body).forEach(function (st) {
       var k = st.getAttribute('data-k'), val = S[k];
       $('output', st).textContent = val;
       var min = k === 'a' ? 1 : 0;
-      var max = k === 'a' ? cap - S.c : (k === 'c' ? cap - S.a : scap);
+      var max = k === 'a' ? cap - S.c : (k === 'c' ? cap - S.a : (k === 's' ? scap : BOOST_MAX));
       $('[data-op="-"]', st).disabled = val <= min;
       $('[data-op="+"]', st).disabled = val >= max;
-      if (k === 's') st.hidden = seatCapOf() < 1;
+      if (k === 's') st.hidden = seatMax() < 1;
+      if (!st.hidden) shown++;
     });
+    var sr = $('.stp-row', body);
+    if (sr) sr.style.setProperty('--n', shown);
+    // Çocuk koltuğu / yükseltici ücret bilgisi (gösterim para biriminde)
+    var sn = $('#seatNote');
+    if (sn) {
+      var cv = curVid(), cd = curDisp();
+      var fsd = cv ? feeIn('seat', cd, cv) : 0, fbd = cv ? feeIn('booster', cd, cv) : 0;
+      var note = '';
+      if (fsd > 0 || fbd > 0) {
+        note = (+((SL.fees && SL.fees.free) || 0) > 0 ? T('seat_free_note') + ' ' : '') +
+          T('seat_fee_note', { cs: fsd > 0 ? fmt(fsd, cd) : T('free'), b: fbd > 0 ? fmt(fbd, cd) : T('free'), per: perLeg() ? T('per_leg') : T('per_booking') });
+      }
+      sn.innerHTML = note ? '<i class="bi bi-info-circle"></i><span>' + esc(note) + '</span>' : '';
+      sn.hidden = !note;
+    }
     renderNames();
 
-    // Toplam
-    var tot = $('#wTot');
-    if (S.v) {
-      var tp = legPrice(S.v) * m, to = oldPrice(tp);
-      tot.innerHTML = esc(fmt(tp, curOf(S.v))) + (to ? '<del>' + esc(fmt(to, curOf(S.v))) + '</del>' : '');
-    } else if (base) {
-      tot.textContent = fmt(base.p * m, base.c);
+    // Toplam (araç + ek koltuk); 4. adımda seçilen ödeme para biriminde
+    var tot = $('#wTot'), tv = curVid();
+    if (tv) {
+      var tc = S.step >= 4 ? ensurePay() : curDisp();
+      var vp = priceIn(tc, tv) * m, ex = extrasTotal(tc, tv), to = S.v ? oldPrice(vp) : 0;
+      tot.innerHTML = esc(fmt(vp + ex, tc)) + (to ? '<del>' + esc(fmt(to + ex, tc)) + '</del>' : '');
     }
     if (S.step === 4) summary();
   }
@@ -468,11 +666,6 @@
     clearErr();
     $$('.is-invalid', $('#bmBody')).forEach(function (x) { x.classList.remove('is-invalid'); });
     if (step === 1) {
-      if (!S.v) { showErr(T('err_vehicle')); return false; }
-      if (capOf() < S.a + S.c) { showErr(T('err_capacity')); return false; }
-      return true;
-    }
-    if (step === 2) {
       var legs = [];
       if (!$('#legA').hidden) legs.push('#legA');
       if (!$('#legD').hidden) legs.push('#legD');
@@ -481,6 +674,8 @@
         for (var j = 0; j < req.length; j++) {
           if (!req[j].value.trim()) { showErr(T('err_required'), req[j]); return false; }
         }
+        var fl = $(legs[i] + ' [data-flight]');
+        if (fl && !flightOk(fl.value)) { showErr(T('err_flight'), fl); return false; }
       }
       var today = SL.today || '';
       if (!$('#legA').hidden && today && val('aDate') < today) { showErr(T('err_date'), $('#aDate')); return false; }
@@ -488,7 +683,7 @@
       if (S.trip === 'rt' && val('dDate') < val('aDate')) { showErr(T('err_order'), $('#dDate')); return false; }
       return true;
     }
-    if (step === 3) {
+    if (step === 2) {
       var nm = $('#wName'), ph = $('#wPhone'), em = $('#wEmail');
       if (nm.value.trim().length < 2) { showErr(T('err_required'), nm); return false; }
       if (ph.value.replace(/\D/g, '').length < 7) { showErr(T('err_phone'), ph); return false; }
@@ -498,6 +693,11 @@
       for (var k = 0; k < ins.length; k++) {
         if (ins[k].value.trim().length < 2) { showErr(T('err_names'), ins[k]); return false; }
       }
+      return true;
+    }
+    if (step === 3) {
+      if (!S.v) { showErr(T('err_vehicle')); return false; }
+      if (!fits(S.v)) { showErr(T('err_capacity')); return false; }
       return true;
     }
     if (step === 4) {
@@ -512,11 +712,11 @@
     if (!box) return;
     collectNames();
     var v = SL.veh[S.v] || { n: '-' };
+    var cur = ensurePay(), m = mult();
     var rows = [];
-    var tripTxt = S.trip === 'rt' ? T('rt') : (T('ow') + ' · ' + (S.dir === 'arr' ? T('dir_arr') : T('dir_dep')));
     rows.push([T('route'), T('airport_short') + ' ⇄ ' + S.d.n]);
-    rows.push([T('trip'), tripTxt]);
-    rows.push([T('vehicle'), v.n]);
+    rows.push([T('trip'), tripText()]);
+    rows.push([T('vehicle'), v.n + (S.v ? ' · ' + fmt(priceIn(cur, S.v) * m, cur) : '')]);
     if (!$('#legA').hidden) {
       rows.push([T('arrival_title'), esc([fdate(val('aDate')), val('aTime'), val('aFl').toUpperCase()].filter(Boolean).join(' · ')) + '<br>' + esc(val('aHotel')), true]);
     }
@@ -524,15 +724,48 @@
       var dp = val('dPick') ? ' · ' + T('pickup_time') + ': ' + val('dPick') : '';
       rows.push([T('departure_title'), esc([fdate(val('dDate')), val('dTime'), val('dFl').toUpperCase()].filter(Boolean).join(' · ') + dp) + '<br>' + esc(val('dHotel')), true]);
     }
-    var pax = S.a + ' ' + T('adults') + (S.c ? ', ' + S.c + ' ' + T('children') : '') + (S.s ? ', ' + S.s + ' ' + T('child_seat') : '');
-    var names = S.an.slice(0, S.a).concat(S.cn.slice(0, S.c)).filter(function (x) { return x && x.trim(); });
+    var pax = S.a + ' ' + T('adults') + (S.c ? ', ' + S.c + ' ' + T('children') : '');
+    var names = S.an.slice(0, S.a).concat(S.cn.slice(0, S.c)).filter(function (x) { return x && x.trim(); }).map(upper);
     rows.push([T('passengers'), esc(pax) + (names.length ? '<br><small>' + esc(names.join(', ')) + '</small>' : ''), true]);
+    // Ekstralar: çocuk koltuğu / yükseltici (1 adedi ücretsiz)
+    if (S.s + S.b > 0) {
+      var it = [];
+      if (S.s) it.push(S.s + ' ' + T('child_seat'));
+      if (S.b) it.push(S.b + ' ' + T('booster'));
+      var ex = S.v ? extrasIn(cur, S.v) : { amt: 0 }, exT = S.v ? extrasTotal(cur, S.v) : 0;
+      var exTxt = exT > 0 ? '+' + fmt(exT, cur) + (perLeg() && m > 1 ? ' (' + fmt(ex.amt, cur) + ' × ' + m + ')' : '') : T('free');
+      rows.push([T('extras'), it.join(', ') + ' · ' + exTxt]);
+    }
     rows.push([T('name'), val('wName') + ' · ' + val('wPhone') + (val('wEmail') ? ' · ' + val('wEmail') : '')]);
-    var tp = legPrice(S.v) * mult();
-    rows.push([T('total'), '<b style="color:var(--accent)">' + esc(fmt(tp, curOf(S.v))) + '</b> · ' + esc(T('cash')), true]);
+    rows.push([T('total'), '<b style="color:var(--accent)">' + esc(fmt(S.v ? totalIn(cur, S.v) : 0, cur)) + '</b> · ' + esc(T('cash')), true]);
     box.innerHTML = rows.map(function (r) {
       return '<div><dt>' + esc(r[0]) + '</dt><dd>' + (r[2] ? r[1] : esc(r[1])) + '</dd></div>';
     }).join('');
+    renderPay();
+  }
+
+  // "Araçta nakit" ödeme para birimi seçimi: varsayılan seçili, diğerleri seçenek
+  function renderPay() {
+    var pb = $('#payBox');
+    if (!pb) return;
+    if (!S.v) { pb.innerHTML = ''; pb.removeAttribute('data-k'); return; }
+    var list = payCurs(S.v), cur = ensurePay(), key = list.join(',');
+    if (!list.length) { pb.innerHTML = ''; pb.removeAttribute('data-k'); return; }
+    if (pb.getAttribute('data-k') !== key) {
+      var h = '<div class="wz-sub"><i class="bi bi-cash-coin"></i>' + esc(T('pay_cur')) + '</div>' +
+        '<div class="pay-c" role="radiogroup" aria-label="' + esc(T('pay_cur')) + '" data-n="' + list.length + '" style="--pc:' + Math.min(list.length, 4) + '">';
+      list.forEach(function (c) {
+        h += '<input type="radio" name="pc" id="pc' + esc(c) + '" value="' + esc(c) + '"><label for="pc' + esc(c) + '"><b></b><small>' + esc(c) + '</small></label>';
+      });
+      pb.innerHTML = h + '</div><div class="hint">' + esc(T('pay_cur_note')) + '</div>';
+      pb.setAttribute('data-k', key);
+    }
+    list.forEach(function (c) {
+      var r = $('#pc' + c, pb);
+      if (!r) return;
+      r.checked = c === cur;
+      $('b', r.nextElementSibling).textContent = fmt(totalIn(c, S.v), c);
+    });
   }
 
   function next() {
@@ -557,16 +790,18 @@
     add('destination_id', S.id);
     add('vehicle_id', S.v);
     add('trip', tripVal);
-    add('arr_date', val('aDate')); add('arr_time', val('aTime')); add('arr_flight', val('aFl')); add('arr_hotel', val('aHotel'));
-    add('dep_date', val('dDate')); add('dep_time', val('dTime')); add('dep_flight', val('dFl')); add('dep_pickup', val('dPick')); add('dep_hotel', val('dHotel'));
-    add('adults', S.a); add('children', S.c); add('child_seat', S.s);
+    add('arr_date', val('aDate')); add('arr_time', val('aTime')); add('arr_flight', val('aFl').toUpperCase()); add('arr_hotel', val('aHotel'));
+    add('dep_date', val('dDate')); add('dep_time', val('dTime')); add('dep_flight', val('dFl').toUpperCase()); add('dep_pickup', val('dPick')); add('dep_hotel', val('dHotel'));
+    add('adults', S.a); add('children', S.c); add('child_seat', S.s); add('booster', S.b);
     add('full_name', val('wName')); add('phone', val('wPhone')); add('email', val('wEmail'));
-    S.an.slice(0, S.a).forEach(function (n) { add('pax_adult[]', n || ''); });
-    S.cn.slice(0, S.c).forEach(function (n) { add('pax_child[]', n || ''); });
+    S.an.slice(0, S.a).forEach(function (n) { add('pax_adult[]', upper(n || '')); });
+    S.cn.slice(0, S.c).forEach(function (n) { add('pax_child[]', upper(n || '')); });
     add('notes', val('wNotes'));
     add('website', val('wWeb'));
     add('elapsed', Math.round((Date.now() - S.t0) / 1000));
-    add('client_total', legPrice(S.v) * mult());
+    var pc = ensurePay();
+    add('pay_currency', pc);
+    add('client_total', totalIn(pc, S.v));
 
     fetch(SL.api, { method: 'POST', body: fd, headers: { 'Accept': 'application/json' }, credentials: 'same-origin' })
       .then(function (r) { return r.json().catch(function () { return { success: false }; }); })

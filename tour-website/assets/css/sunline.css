@@ -297,9 +297,12 @@ a{color:var(--acc-t,var(--accent));text-decoration:none}a:hover{color:var(--acc-
 .fm .hint{font-size:.74rem;color:var(--cmuted);margin-top:5px}
 .fm .req{color:var(--red);margin-left:2px}
 .fm .is-invalid{border-color:var(--red)!important;box-shadow:0 0 0 3px color-mix(in oklab,var(--red) 20%,transparent)!important}
-.stp-row{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
-@media(max-width:575.98px){.stp-row{grid-template-columns:1fr}}
-.stp{border:1px solid var(--cline);border-radius:14px;padding:10px 12px;display:flex;align-items:center;justify-content:space-between;gap:8px;background:color-mix(in oklab,var(--ctext) 2%,transparent)}
+.stp-row{display:grid;grid-template-columns:repeat(var(--n,4),minmax(0,1fr));gap:10px}
+@media(max-width:767.98px){.stp-row{grid-template-columns:repeat(2,minmax(0,1fr))}}
+.stp{border:1px solid var(--cline);border-radius:14px;padding:10px 12px;display:flex;flex-direction:column;align-items:stretch;justify-content:space-between;gap:8px;text-align:center;background:color-mix(in oklab,var(--ctext) 2%,transparent)}
+.stp[hidden]{display:none}
+.stp>span:first-child{min-height:2.5em;display:flex;flex-direction:column;align-items:center;justify-content:center;line-height:1.2}
+.stp .stp-c{justify-content:center}
 .stp>span{font-weight:700;font-size:.88rem}
 .stp>span small{display:block;color:var(--cmuted);font-size:.7rem;font-weight:600}
 .stp-c{display:flex;align-items:center;gap:6px}
@@ -444,3 +447,37 @@ section[id],header[id],footer[id],.sec[id]{scroll-margin-top:90px}
 .blog-c h2 a{display:inline;padding:0;font-size:inherit;font-weight:inherit}
 .blog-c h2 a:hover{color:var(--accent)}
 .qf .fm label{color:var(--accent);letter-spacing:.04em}
+.vh-info{font-size:.82rem;font-weight:600;color:var(--cmuted);margin:-4px 0 12px;display:flex;gap:6px;align-items:center}
+.vh-info i{color:var(--accent)}
+.vh.off .vh-p{opacity:.6}
+/* Sihirbaz: çocuk koltuğu / yükseltici ücret notu */
+.seat-note{display:flex;gap:8px;align-items:flex-start;margin-top:10px;font-size:.8rem;font-weight:600;color:var(--cmuted);line-height:1.45}
+.seat-note[hidden]{display:none}
+.seat-note i{color:var(--accent);margin-top:1px}
+/* Büyük harf alanları (uçuş no, yolcu isimleri) */
+.upc{text-transform:uppercase}
+.upc::placeholder{text-transform:none}
+/* (i) bilgi balonu — kart formlarındaki CVV bilgisi gibi */
+.has-tip{position:relative}
+.ib{position:relative;display:inline-flex;align-items:center;justify-content:center;width:18px;height:18px;margin:0 0 0 6px;padding:0;border-radius:50%;border:1.5px solid currentColor;background:transparent;color:var(--cmuted);font:italic 800 11px/1 Georgia,'Times New Roman',serif;vertical-align:1px;cursor:pointer;transition:color .15s,border-color .15s}
+.ib::after{content:'';position:absolute;inset:-12px}
+.ib:hover,.ib:focus-visible,.tip-on .ib{color:var(--accent)}
+.ib:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.ib-tip{display:none;position:absolute;z-index:6;top:24px;left:0;width:280px;padding:10px 12px;border-radius:12px;background:var(--card2,#2a2a2a);color:var(--ctext);border:1px solid color-mix(in oklab,var(--accent) 45%,transparent);box-shadow:0 12px 30px rgba(0,0,0,.35);font-size:.78rem;font-weight:600;line-height:1.5;text-transform:none;letter-spacing:0}
+.ib-tip::before{content:'';position:absolute;top:-6px;left:calc(var(--ax,20px) - 6px);width:12px;height:12px;background:inherit;border-left:1px solid color-mix(in oklab,var(--accent) 45%,transparent);border-top:1px solid color-mix(in oklab,var(--accent) 45%,transparent);transform:rotate(45deg)}
+.tip-on .ib-tip{display:block;animation:wzIn .15s ease}
+/* Onay: araçta nakit ödeme para birimi */
+.pay{margin-top:16px}
+.pay:empty{display:none}
+.pay .wz-sub{margin-bottom:10px}
+.pay-c{display:grid;grid-template-columns:repeat(var(--pc,3),minmax(0,170px));gap:8px}
+.pay-c input{position:absolute;opacity:0;width:1px;height:1px;pointer-events:none}
+.pay-c label{margin:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;min-height:58px;padding:8px 10px;border:1px solid var(--cline);border-radius:14px;cursor:pointer;text-align:center;background:color-mix(in oklab,var(--ctext) 2%,transparent);transition:border-color .2s,background .2s}
+.pay-c label b{font-size:1.05rem;font-weight:800;line-height:1.1;color:var(--ctext)}
+.pay-c label small{font-size:.7rem;font-weight:800;letter-spacing:.1em;color:var(--cmuted)}
+.pay-c label:hover{border-color:color-mix(in oklab,var(--accent) 55%,transparent)}
+.pay-c input:checked+label{border-color:var(--accent);background:color-mix(in oklab,var(--accent) 10%,transparent);box-shadow:0 0 0 1px var(--accent) inset}
+.pay-c input:checked+label b{color:var(--accent)}
+.pay-c input:focus-visible+label{outline:2px solid var(--accent);outline-offset:2px}
+.pay .hint{margin-top:8px}
+@media(max-width:575.98px){.pay-c{grid-template-columns:repeat(var(--pc,3),minmax(0,1fr))}.pay-c[data-n="4"]{grid-template-columns:repeat(2,minmax(0,1fr))}}
