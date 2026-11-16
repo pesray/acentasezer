@@ -17,6 +17,26 @@ if (!$page || !empty($page['is_homepage'])) {
     exit;
 }
 
+// Başka dilde temel (varsayılan dil) adresle gelindiyse kopya içerik olmasın:
+// o dilin çevirisi varsa çeviri adresine, yoksa varsayılan dildeki adrese kalıcı yönlendir.
+$pgLang = getCurrentLang();
+$pgDef = sl_default_lang_code();
+if ($pgLang !== $pgDef) {
+    try {
+        $st = getDB()->prepare("SELECT slug FROM page_translations WHERE page_id = ? AND language_code = ? AND slug <> '' AND title <> '' LIMIT 1");
+        $st->execute([(int)$page['id'], $pgLang]);
+        $pgSlug = $st->fetchColumn();
+        if ($pgSlug === false) {
+            header('Location: ' . langUrl($page['slug'], $pgDef), true, 301);
+            exit;
+        }
+        if ($pgSlug !== $slug) {
+            header('Location: ' . langUrl($pgSlug, $pgLang), true, 301);
+            exit;
+        }
+    } catch (Exception $e) {}
+}
+
 $title = $page['title'];
 $url = langUrl($page['slug'] ?? $slug);
 $seoTitle = (!empty($page['meta_title']) ? $page['meta_title'] : $title) . (empty($page['meta_title']) ? ' · ' . getSetting('site_name', 'Sunline VIP Transfer') : '');

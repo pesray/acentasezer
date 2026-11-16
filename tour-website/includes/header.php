@@ -118,8 +118,12 @@ $slFont .= '&display=swap';
 <?php endif; ?>
 <?= sl_theme_meta_tags() ?>
 <?= sl_theme_boot_script() ?>
-<link rel="icon" href="<?= ASSETS_URL ?>img/favicon.png">
-<link rel="apple-touch-icon" href="<?= ASSETS_URL ?>img/apple-touch-icon.png">
+<link rel="icon" href="<?= SITE_URL ?>/favicon.ico" sizes="any">
+<link rel="icon" type="image/png" sizes="32x32" href="<?= SITE_URL ?>/favicon-32x32.png">
+<link rel="icon" type="image/png" sizes="16x16" href="<?= SITE_URL ?>/favicon-16x16.png">
+<link rel="icon" type="image/png" sizes="192x192" href="<?= SITE_URL ?>/android-chrome-192x192.png">
+<link rel="apple-touch-icon" sizes="180x180" href="<?= SITE_URL ?>/apple-touch-icon.png">
+<link rel="manifest" href="<?= SITE_URL ?>/site.webmanifest">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>

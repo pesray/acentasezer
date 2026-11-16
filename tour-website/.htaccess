@@ -56,6 +56,12 @@ RewriteRule ^(config|migrations)/ - [F,L]
     </If>
 </FilesMatch>
 
+# Web uygulama manifesti (favicon paketi)
+<IfModule mod_mime.c>
+    AddType application/manifest+json .webmanifest
+    AddType image/x-icon .ico
+</IfModule>
+
 # Cache static files
 <IfModule mod_expires.c>
     ExpiresActive On
