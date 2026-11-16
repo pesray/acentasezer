@@ -28,7 +28,10 @@ htdocsxamppicin.bat
 # cPanel'e otomatik deploy (.cpanel.yml ile):
 git push origin main
 # → /home/ahmetkes/sunlineviptransfer.com/app klasörüne kopyalanır
-# → .env dosyası korunur (üzerine yazılmaz)
+# → app/ içi temizlenip repodan yeniden kopyalanır; KORUNANLAR: .env, uploads/ (admin'den yüklenen görseller),
+#   .well-known, .user.ini, php.ini (cPanel dosyaları)
+# → Sunucuda çalışırken dosya yazan YENİ bir klasör eklenirse .cpanel.yml'deki find satırına `! -name "klasor"` ekle,
+#   yoksa her deploy'da silinir (2026-11-12'de uploads/ bu yüzden silindi)
 ```
 
 ## Architecture

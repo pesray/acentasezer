@@ -3,7 +3,10 @@ deployment:
   tasks:
     - export DEPLOYPATH=/home/ahmetkes/sunlineviptransfer.com/app
     - /bin/mkdir -p $DEPLOYPATH
-    # app içini komple temizle (senkron için)
-    - /usr/bin/find $DEPLOYPATH -mindepth 1 -maxdepth 1 ! -name ".env" -exec /bin/rm -rf {} +
-    # tour-website içeriğini birebir bas (gizli dosyalar dahil)
+    # app içini temizle (senkron için). ŞUNLAR SİLİNMEZ (sunucuda oluşur, git'te yok; silinirse geri gelmez):
+    #   .env                         -> veritabanı / site ayarları
+    #   uploads                      -> admin'den yüklenen görseller ve dosyalar (Medya Kütüphanesi, logo)
+    #   .well-known .user.ini php.ini -> cPanel'in oluşturduğu SSL doğrulama ve PHP ayar dosyaları
+    - /usr/bin/find $DEPLOYPATH -mindepth 1 -maxdepth 1 ! -name ".env" ! -name "uploads" ! -name ".well-known" ! -name ".user.ini" ! -name "php.ini" -exec /bin/rm -rf {} +
+    # tour-website içeriğini bas (gizli dosyalar dahil); uploads/ içindeki mevcut dosyalar silinmez, repodakiler eklenir
     - /bin/cp -a tour-website/. $DEPLOYPATH/
