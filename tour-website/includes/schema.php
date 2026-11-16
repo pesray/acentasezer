@@ -30,8 +30,10 @@ function getOrganizationSchema() {
     $email = trim((string)getSetting('contact_email', ''));
     $address = trim((string)getSetting('contact_address', ''));
 
+    $legalName = trim((string)getSetting('company_legal_name', ''));
+
     $sameAs = [];
-    foreach (['facebook', 'twitter', 'instagram', 'youtube', 'linkedin'] as $social) {
+    foreach (['google_business', 'facebook', 'instagram', 'twitter', 'youtube', 'linkedin'] as $social) {
         $val = trim((string)getSetting('social_' . $social, ''));
         if ($val !== '') $sameAs[] = $val;
     }
@@ -76,13 +78,22 @@ function getOrganizationSchema() {
         if ($email !== '') $cp['email'] = $email;
         $schema['contactPoint'] = $cp;
     }
+    if ($legalName !== '') $schema['legalName'] = $legalName;
     $schema['address'] = [
         '@type' => 'PostalAddress',
         'addressLocality' => 'Antalya',
         'addressRegion' => 'Antalya',
         'addressCountry' => 'TR',
     ];
-    if ($address !== '') $schema['address']['streetAddress'] = $address;
+    // Türkiye adres biçimi "Semt/Sokak, 07600 İlçe/İl" → alanlara ayrılır (Google İşletme Profili ile aynı adres)
+    if ($address !== '' && preg_match('#^(.+?),\s*(\d{5})\s+([^/,]+)/\s*([^/,]+)$#u', $address, $am)) {
+        $schema['address']['streetAddress'] = trim($am[1]);
+        $schema['address']['postalCode'] = $am[2];
+        $schema['address']['addressLocality'] = trim($am[3]);
+        $schema['address']['addressRegion'] = trim($am[4]);
+    } elseif ($address !== '') {
+        $schema['address']['streetAddress'] = $address;
+    }
     if ($sameAs) $schema['sameAs'] = $sameAs;
     return $schema;
 }

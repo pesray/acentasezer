@@ -70,7 +70,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             }
             
             $db->commit();
-            setFlashMessage('success', $id ? 'Yazı güncellendi.' : 'Yazı eklendi.');
+            require_once INCLUDES_PATH . 'indexnow.php';
+            setFlashMessage('success', ($id ? 'Yazı güncellendi.' : 'Yazı eklendi.') . indexnow_ping('blog', $postId));
             header('Location: ' . ADMIN_URL . '/blog.php');
             exit;
         } catch (Exception $e) {

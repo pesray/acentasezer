@@ -137,7 +137,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && !isset($_POST['save_page_settings']
             }
             
             $db->commit();
-            setFlashMessage('success', $id ? 'Tur güncellendi.' : 'Tur eklendi.');
+            require_once INCLUDES_PATH . 'indexnow.php';
+            setFlashMessage('success', ($id ? 'Tur güncellendi.' : 'Tur eklendi.') . indexnow_ping('tour', $tourId));
             header('Location: ' . ADMIN_URL . '/tours.php');
             exit;
         } catch (Exception $e) {

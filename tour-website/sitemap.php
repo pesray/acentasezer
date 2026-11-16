@@ -23,6 +23,14 @@ function smX($s) {
  * $urls: [lang => url]  (yalnızca var olan dil sürümleri)
  */
 function smNode($urls, $xDefault, $priority, $freq, $lastmod = null) {
+    // Aynı adres iki kez yazılmasın (ör. "iletisim" hem liste sayfası hem Sayfalar'da var; ilk yazılan geçerli)
+    static $seen = [];
+    foreach ($urls as $lang => $loc) {
+        if (isset($seen[$loc])) unset($urls[$lang]);
+    }
+    if (!$urls) return;
+    foreach ($urls as $loc) $seen[$loc] = true;
+
     foreach ($urls as $lang => $loc) {
         echo "  <url>\n    <loc>" . smX($loc) . "</loc>\n";
         if ($lastmod) echo "    <lastmod>" . smX(date('Y-m-d', strtotime($lastmod))) . "</lastmod>\n";

@@ -100,7 +100,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             }
             
             $db->commit();
-            setFlashMessage('success', $id ? 'Sayfa güncellendi.' : 'Sayfa eklendi.');
+            require_once INCLUDES_PATH . 'indexnow.php';
+            setFlashMessage('success', ($id ? 'Sayfa güncellendi.' : 'Sayfa eklendi.') . indexnow_ping('page', $pageId));
             header('Location: ' . ADMIN_URL . '/pages.php');
             exit;
         } catch (Exception $e) {

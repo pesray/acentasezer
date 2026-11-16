@@ -231,7 +231,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $homepage) {
         }
 
         $db->commit();
-        setFlashMessage('success', 'Anasayfa ve tema ayarları kaydedildi.');
+        require_once INCLUDES_PATH . 'indexnow.php';
+        setFlashMessage('success', 'Anasayfa ve tema ayarları kaydedildi.' . indexnow_ping('home'));
     } catch (Exception $e) {
         if ($db->inTransaction()) $db->rollBack();
         setFlashMessage('error', 'Kaydedilemedi: ' . $e->getMessage());

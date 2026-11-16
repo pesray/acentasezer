@@ -351,7 +351,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             }
             
             $db->commit();
-            setFlashMessage('success', $id ? 'Transfer güncellendi.' : 'Transfer eklendi.');
+            require_once INCLUDES_PATH . 'indexnow.php';
+            setFlashMessage('success', ($id ? 'Transfer güncellendi.' : 'Transfer eklendi.') . indexnow_ping('destination', $destId));
             header('Location: ' . ADMIN_URL . '/destinations.php');
             exit;
         } catch (Exception $e) {

@@ -17,9 +17,9 @@ $slKw = sl_keywords();
 $slPop = array_slice(sl_bookable_destinations(true), 0, 8);
 if (!$slPop) $slPop = array_slice(sl_bookable_destinations(false), 0, 8);
 $slSocial = [];
-foreach (['instagram' => 'bi-instagram', 'facebook' => 'bi-facebook', 'youtube' => 'bi-youtube', 'twitter' => 'bi-twitter-x', 'linkedin' => 'bi-linkedin'] as $slNet => $slIco) {
+foreach (['google_business' => 'bi-google', 'instagram' => 'bi-instagram', 'facebook' => 'bi-facebook', 'youtube' => 'bi-youtube', 'twitter' => 'bi-twitter-x', 'linkedin' => 'bi-linkedin'] as $slNet => $slIco) {
     $slUrl = trim((string)getSetting('social_' . $slNet, ''));
-    if ($slUrl !== '') $slSocial[] = [$slUrl, $slIco, ucfirst($slNet)];
+    if ($slUrl !== '') $slSocial[] = [$slUrl, $slIco, $slNet === 'google_business' ? 'Google' : ucfirst($slNet)];
 }
 ?>
 </main>

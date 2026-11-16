@@ -31,15 +31,19 @@ if ($action === 'save_services' && $_SERVER['REQUEST_METHOD'] === 'POST') {
         $db->beginTransaction();
         
         $services = $_POST['services'] ?? [];
-        
-        // Mevcut hizmetleri sil ve yeniden oluştur
-        $db->query("DELETE FROM vehicle_services");
-        
+        if (!is_array($services)) $services = [];
+
+        // Araçlar hizmetleri ID ile tutuyor (vehicles.services JSON) → mevcut hizmetlerin ID'si korunur.
+        // (Eskiden hepsi silinip yeni ID ile ekleniyordu, araç–hizmet bağlantıları kopuyordu.)
+        $existingIds = array_map('intval', $db->query("SELECT id FROM vehicle_services WHERE is_active = 1")->fetchAll(PDO::FETCH_COLUMN));
+        $keepIds = [];
+
         foreach ($services as $index => $service) {
+            if (!is_array($service)) continue;
             $icon = trim($service['icon'] ?? 'bi-check-circle');
-            $names = $service['names'] ?? [];
-            
-            // En az bir isim girilmiş olmalı
+            $names = (isset($service['names']) && is_array($service['names'])) ? $service['names'] : [];
+
+            // En az bir isim girilmiş olmalı (tüm isimleri boş bırakılan hizmet silinir)
             $hasName = false;
             foreach ($names as $name) {
                 if (!empty(trim($name))) {
@@ -47,25 +51,50 @@ if ($action === 'save_services' && $_SERVER['REQUEST_METHOD'] === 'POST') {
                     break;
                 }
             }
-            
-            if ($hasName) {
-                $stmt = $db->prepare("INSERT INTO vehicle_services (icon, sort_order) VALUES (?, ?)");
-                $stmt->execute([$icon, $index]);
-                $serviceId = $db->lastInsertId();
-                
-                foreach ($names as $langCode => $name) {
-                    $name = trim($name);
-                    if (!empty($name)) {
-                        $stmt = $db->prepare("
-                            INSERT INTO vehicle_service_translations (service_id, language_code, name)
-                            VALUES (?, ?, ?)
-                        ");
-                        $stmt->execute([$serviceId, $langCode, $name]);
-                    }
+            if (!$hasName) continue;
+
+            $serviceId = (int)($service['id'] ?? 0);
+            if ($serviceId > 0 && in_array($serviceId, $existingIds, true) && !in_array($serviceId, $keepIds, true)) {
+                // Mevcut hizmet: aynı ID ile güncelle
+                $db->prepare("UPDATE vehicle_services SET icon = ?, sort_order = ? WHERE id = ?")->execute([$icon, (int)$index, $serviceId]);
+                $db->prepare("DELETE FROM vehicle_service_translations WHERE service_id = ?")->execute([$serviceId]);
+            } else {
+                // Yeni hizmet
+                $db->prepare("INSERT INTO vehicle_services (icon, sort_order) VALUES (?, ?)")->execute([$icon, (int)$index]);
+                $serviceId = (int)$db->lastInsertId();
+            }
+            $keepIds[] = $serviceId;
+
+            foreach ($names as $langCode => $name) {
+                $name = trim($name);
+                if (!empty($name)) {
+                    $stmt = $db->prepare("
+                        INSERT INTO vehicle_service_translations (service_id, language_code, name)
+                        VALUES (?, ?, ?)
+                    ");
+                    $stmt->execute([$serviceId, $langCode, $name]);
                 }
             }
         }
-        
+
+        // Formdan kaldırılan hizmetleri sil ve araçların hizmet listesinden çıkar
+        $removedIds = array_values(array_diff($existingIds, $keepIds));
+        if ($removedIds) {
+            $in = implode(',', array_fill(0, count($removedIds), '?'));
+            $db->prepare("DELETE FROM vehicle_service_translations WHERE service_id IN ($in)")->execute($removedIds);
+            $db->prepare("DELETE FROM vehicle_services WHERE id IN ($in)")->execute($removedIds);
+            foreach ($db->query("SELECT id, services FROM vehicles")->fetchAll() as $veh) {
+                $vIds = json_decode((string)$veh['services'], true);
+                if (!is_array($vIds)) continue;
+                $left = array_values(array_filter($vIds, function ($x) use ($removedIds) {
+                    return !in_array((int)$x, $removedIds, true);
+                }));
+                if (count($left) !== count($vIds)) {
+                    $db->prepare("UPDATE vehicles SET services = ? WHERE id = ?")->execute([json_encode($left), (int)$veh['id']]);
+                }
+            }
+        }
+
         $db->commit();
         setFlashMessage('success', 'Araç hizmetleri kaydedildi.');
     } catch (Exception $e) {
@@ -464,6 +493,7 @@ if (empty($availableServices)) {
                         foreach ($availableServices as $serviceId => $service): 
                         ?>
                         <div class="service-item card mb-3" data-index="<?= $serviceIndex ?>">
+                            <input type="hidden" name="services[<?= $serviceIndex ?>][id]" value="<?= (int)$serviceId ?>">
                             <div class="card-header bg-light d-flex justify-content-between align-items-center py-2">
                                 <span class="fw-bold"><i class="bi bi-grip-vertical me-2 text-muted"></i>Hizmet #<?= $serviceIndex + 1 ?></span>
                                 <button type="button" class="btn btn-sm btn-outline-danger remove-service-btn">
