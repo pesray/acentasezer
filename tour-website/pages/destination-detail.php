@@ -203,7 +203,9 @@ require_once INCLUDES_PATH . 'header.php';
       <div class="col-lg-8">
         <div class="eyebrow"><?= e($d['place']) ?></div>
         <h2 class="sec-t"><?= e(sl_t('dest_about', $vars)) ?></h2>
-        <p class="lead-in"><?= e($intro) ?></p>
+        <?php foreach (preg_split('/\n[ \t]*\n/', str_replace(["\r\n", "\r"], "\n", e($intro))) as $para): if (trim($para) === '') continue; ?>
+        <p class="lead-in"><?= nl2br(trim($para), false) ?></p>
+        <?php endforeach; ?>
         <?php if ($d['content'] !== ''): ?>
         <div class="prose mt-4"><?= $d['content'] ?></div>
         <?php elseif ($d['desc'] !== ''): ?>
