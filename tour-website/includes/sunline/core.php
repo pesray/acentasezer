@@ -12,7 +12,7 @@
  */
 
 // Not: Bu dosya her zaman require_once ile yüklenmelidir.
-if (!defined('SL_ASSET_VER')) define('SL_ASSET_VER', '1.2.1');
+if (!defined('SL_ASSET_VER')) define('SL_ASSET_VER', '1.2.3');
 
 require_once __DIR__ . '/defaults.php';
 
@@ -516,6 +516,35 @@ function sl_wa_link($text = '') {
     $n = sl_whatsapp_number();
     if ($n === '') return '';
     return 'https://wa.me/' . $n . ($text !== '' ? '?text=' . rawurlencode($text) : '');
+}
+
+/* ------------------------------------------------------------------ */
+/*  Ölçüm (Site Ayarları > SEO)                                        */
+/* ------------------------------------------------------------------ */
+
+/**
+ * Ölçüm kimlikleri. Ayara tam kod yapıştırılsa bile kimlik ayıklanır; geçersizse ''.
+ * Hepsi boşsa sitede ölçüm kodu ve çerez onayı kutusu çıkmaz.
+ * Çerez onayı: header.php (Consent Mode v2 varsayılanı) + footer.php (kutu) + assets/js/sl-olcum.js
+ */
+function sl_olcum() {
+    static $o = null;
+    if ($o !== null) return $o;
+    $pick = function ($key, $rx) {
+        return preg_match($rx, (string)getSetting($key, ''), $m) ? strtoupper($m[1]) : '';
+    };
+    $o = [
+        'gtm' => $pick('google_tag_manager', '/\b(GTM-[A-Z0-9]{4,12})\b/i'),
+        'ga'  => $pick('google_analytics', '/\b(G-[A-Z0-9]{4,15})\b/i'),
+        'aw'  => $pick('google_ads_id', '/\b(AW-\d{5,15})\b/i'),
+        'ym'  => '',
+    ];
+    $ym = trim((string)getSetting('yandex_metrika', ''));
+    if (preg_match('/^(\d{5,12})$/', $ym, $m) || preg_match('/\bym\(\s*(\d{5,12})/', $ym, $m) || preg_match('#metrika/watch/(\d{5,12})#', $ym, $m)) {
+        $o['ym'] = $m[1];
+    }
+    $o['any'] = ($o['gtm'] . $o['ga'] . $o['aw'] . $o['ym']) !== '';
+    return $o;
 }
 
 /* ------------------------------------------------------------------ */

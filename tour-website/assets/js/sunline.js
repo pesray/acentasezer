@@ -835,6 +835,8 @@
     try {
       window.dataLayer = window.dataLayer || [];
       window.dataLayer.push({ event: 'sl_booking', booking_numbers: res.booking_numbers || [], value: res.total || 0, currency: res.currency || '', destination: S.d.n });
+      /* Ölçüm (yalnız haber verir; Google/Yandex'e gönderimi assets/js/sl-olcum.js yapar — rezervasyon akışını etkilemez) */
+      document.dispatchEvent(new CustomEvent('sl:booking', { detail: { numbers: res.booking_numbers || [], value: res.total || 0, currency: res.currency || '', destination: S.d.n } }));
     } catch (e) {}
   }
 

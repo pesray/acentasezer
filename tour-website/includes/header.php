@@ -65,8 +65,9 @@ $slOgLoc = ['tr' => 'tr_TR', 'en' => 'en_US', 'de' => 'de_DE', 'ru' => 'ru_RU', 
 $slNav = is_array($slGlobal['nav'] ?? null) ? $slGlobal['nav'] : [];
 $slReqUrl = strtok(SITE_URL . (BASE_PATH && strpos($_SERVER['REQUEST_URI'] ?? '', BASE_PATH) === 0 ? substr($_SERVER['REQUEST_URI'], strlen(BASE_PATH)) : ($_SERVER['REQUEST_URI'] ?? '')), '?');
 
-$slGtm = trim((string)getSetting('google_tag_manager', ''));
-$slGa = trim((string)getSetting('google_analytics', ''));
+$slOl = sl_olcum();
+$slGtm = $slOl['gtm'];
+$slGid = $slOl['ga'] !== '' ? $slOl['ga'] : $slOl['aw'];
 $slFont = 'https://fonts.googleapis.com/css2?family=Zilla+Slab:wght@600;700&family=Hanken+Grotesk:wght@400;500;600;700;800';
 if ($currentLang === 'ru') $slFont .= '&family=Roboto+Slab:wght@600;700&family=Manrope:wght@400;500;600;700;800';
 $slFont .= '&display=swap';
@@ -135,11 +136,14 @@ $slFont .= '&display=swap';
 <?php if (!empty($preloadImage)): ?>
 <link rel="preload" as="image" href="<?= e($preloadImage) ?>" fetchpriority="high">
 <?php endif; ?>
+<?php if ($slOl['any']): /* Google Consent Mode v2: ziyaretçi "Kabul et" demeden çerez yok (KVKK/GDPR) — tercih: assets/js/sl-olcum.js */ ?>
+<script>window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments);}(function(){var g='denied';try{var p=(localStorage.getItem('sl-consent')||'').split('.');if(p[0]==='granted'&&Date.now()-(+p[1]||0)<31536e6)g='granted';}catch(e){}gtag('consent','default',{ad_storage:g,ad_user_data:g,ad_personalization:g,analytics_storage:g});gtag('set','ads_data_redaction',true);})();</script>
+<?php endif; ?>
 <?php if ($slGtm !== ''): ?>
 <script>(function(w,d,s,l,i){w[l]=w[l]||[];w[l].push({'gtm.start':new Date().getTime(),event:'gtm.js'});var f=d.getElementsByTagName(s)[0],j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src='https://www.googletagmanager.com/gtm.js?id='+i+dl;f.parentNode.insertBefore(j,f);})(window,document,'script','dataLayer','<?= e($slGtm) ?>');</script>
-<?php elseif ($slGa !== ''): ?>
-<script async src="https://www.googletagmanager.com/gtag/js?id=<?= e($slGa) ?>"></script>
-<script>window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments);}gtag('js',new Date());gtag('config','<?= e($slGa) ?>');</script>
+<?php elseif ($slGid !== ''): ?>
+<script async src="https://www.googletagmanager.com/gtag/js?id=<?= e($slGid) ?>"></script>
+<script>gtag('js',new Date());<?php if ($slOl['ga'] !== ''): ?>gtag('config','<?= e($slOl['ga']) ?>');<?php endif; ?><?php if ($slOl['aw'] !== ''): ?>gtag('config','<?= e($slOl['aw']) ?>');<?php endif; ?></script>
 <?php endif; ?>
 <?php if (isset($extraCss)) echo $extraCss; ?>
 </head>

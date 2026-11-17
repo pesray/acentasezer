@@ -21,6 +21,7 @@ foreach (['google_business' => 'bi-google', 'instagram' => 'bi-instagram', 'face
     $slUrl = trim((string)getSetting('social_' . $slNet, ''));
     if ($slUrl !== '') $slSocial[] = [$slUrl, $slIco, $slNet === 'google_business' ? 'Google' : ucfirst($slNet)];
 }
+$slOlF = sl_olcum();
 ?>
 </main>
 
@@ -80,7 +81,7 @@ foreach (['google_business' => 'bi-google', 'instagram' => 'bi-instagram', 'face
         </ul>
       </div>
     </div>
-    <div class="copy">© <?= date('Y') ?> <?= e(mb_strtoupper($slSiteName, 'UTF-8')) ?> — <?= sl_e('rights') ?></div>
+    <div class="copy">© <?= date('Y') ?> <?= e(mb_strtoupper($slSiteName, 'UTF-8')) ?> — <?= sl_e('rights') ?><?php if ($slOlF['any']): ?> · <button type="button" class="ck-open" data-ck-open><?= sl_e('ck_set') ?></button><?php endif; ?></div>
   </div>
 </footer>
 
@@ -90,9 +91,22 @@ foreach (['google_business' => 'bi-google', 'instagram' => 'bi-instagram', 'face
 
 <?php sl_partial('booking-modal'); ?>
 
+<?php if ($slOlF['any']): $slKv = sl_page_url_by_base('kvkk'); ?>
+<div class="ck" id="slCk" role="dialog" aria-label="<?= sl_e('ck_title') ?>" data-ym="<?= e($slOlF['ym']) ?>" hidden>
+  <p><?= sl_e('ck_text') ?><?php if ($slKv !== ''): ?> <a href="<?= e($slKv) ?>"><?= sl_e('ck_more') ?></a><?php endif; ?></p>
+  <div class="ck-b">
+    <button type="button" class="btn btn-ghost btn-sm" data-ck="denied"><?= sl_e('ck_no') ?></button>
+    <button type="button" class="btn btn-cta btn-sm" data-ck="granted"><?= sl_e('ck_ok') ?></button>
+  </div>
+</div>
+<?php endif; ?>
+
 <script>window.SL=<?= sl_json(sl_booking_payload()) ?>;</script>
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js" defer></script>
 <script src="<?= ASSETS_URL ?>js/sunline.js?v=<?= SL_ASSET_VER ?>" defer></script>
+<?php if ($slOlF['any']): ?>
+<script src="<?= ASSETS_URL ?>js/sl-olcum.js?v=<?= SL_ASSET_VER ?>" defer></script>
+<?php endif; ?>
 <?php if (isset($extraJs)) echo $extraJs; ?>
 <?php
 require_once INCLUDES_PATH . 'schema.php';

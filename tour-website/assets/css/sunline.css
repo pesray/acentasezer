@@ -481,3 +481,14 @@ section[id],header[id],footer[id],.sec[id]{scroll-margin-top:90px}
 .pay-c input:focus-visible+label{outline:2px solid var(--accent);outline-offset:2px}
 .pay .hint{margin-top:8px}
 @media(max-width:575.98px){.pay-c{grid-template-columns:repeat(var(--pc,3),minmax(0,1fr))}.pay-c[data-n="4"]{grid-template-columns:repeat(2,minmax(0,1fr))}}
+
+/* ===== Çerez onayı (assets/js/sl-olcum.js) ===== */
+.ck{position:fixed;right:16px;bottom:16px;z-index:1045;width:420px;max-width:calc(100vw - 32px);background:var(--card);color:var(--ctext);border:1px solid var(--cline);border-radius:16px;padding:16px 18px;box-shadow:0 12px 40px rgba(0,0,0,.35);font-size:.88rem;line-height:1.5}
+.ck p{margin:0 0 12px}.ck p a{color:var(--ctext);text-decoration:underline}
+.ck .btn-ghost{color:var(--ctext);border-color:color-mix(in oklab,var(--ctext) 45%,transparent)}.ck .btn-ghost:hover{color:var(--ctext);background:color-mix(in oklab,var(--ctext) 10%,transparent)}
+.ck-b{display:flex;gap:10px}.ck-b .btn{flex:1}
+.ck-open{background:none;border:0;padding:0;color:inherit;font:inherit;text-decoration:underline;cursor:pointer}
+@media(max-width:991.98px){
+  .ck{left:12px;right:12px;width:auto;max-width:none;bottom:calc(12px + env(safe-area-inset-bottom,0px))}
+  .has-mbar .ck{bottom:calc(84px + env(safe-area-inset-bottom,0px))}
+}
