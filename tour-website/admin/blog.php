@@ -24,8 +24,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $authorId = $_SESSION['admin_id'];
     
     $translations = $_POST['translations'] ?? [];
-    $defaultTitle = $translations[$defaultLang['code']]['title'] ?? '';
-    $defaultSlug = $translations[$defaultLang['code']]['slug'] ?? '';
+    $defaultTitle = trim($translations[$defaultLang['code']]['title'] ?? '');
+    // Adres yalnız a-z 0-9 - olabilir (site bu kalıbı tanıyor); boşsa başlıktan üretilir
+    $defaultSlug = createSlug(trim($translations[$defaultLang['code']]['slug'] ?? '') ?: $defaultTitle);
     
     if (empty($defaultTitle) || empty($defaultSlug)) {
         setFlashMessage('error', 'Başlık ve slug gereklidir.');
@@ -63,8 +64,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             
             foreach ($translations as $langCode => $trans) {
                 if ($langCode === $defaultLang['code']) continue;
-                if (empty($trans['title'])) continue;
-                
+                if (trim($trans['title'] ?? '') === '') continue;
+                // Adres: girilen ya da başlıktan; Kiril vb. başlıkta boş kalırsa varsayılan dilin adresi
+                $trans['slug'] = createSlug(trim($trans['slug'] ?? '') ?: $trans['title']) ?: $defaultSlug;
+
                 $stmt = $db->prepare("INSERT INTO blog_post_translations (post_id, language_code, title, slug, excerpt, content, meta_title, meta_description) VALUES (?, ?, ?, ?, ?, ?, ?, ?) ON DUPLICATE KEY UPDATE title = VALUES(title), slug = VALUES(slug), excerpt = VALUES(excerpt), content = VALUES(content), meta_title = VALUES(meta_title), meta_description = VALUES(meta_description)");
                 $stmt->execute([$postId, $langCode, $trans['title'], $trans['slug'] ?? '', $trans['excerpt'] ?? '', $trans['content'] ?? '', $trans['meta_title'] ?? '', $trans['meta_description'] ?? '']);
             }

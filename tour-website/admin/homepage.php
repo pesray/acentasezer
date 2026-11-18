@@ -550,7 +550,7 @@ input:checked+.toggle-slider:before{transform:translateX(20px)}
         <div class="col-md-4"><label class="form-label-sm">Sağdaki buton metni</label><?= hp_text($n . '[cta_label]', $v['cta_label'] ?? '', '', 60) ?></div>
         <div class="col-md-8"><label class="form-label-sm">Buton bağlantısı</label><?= hp_text($n . '[cta_url]', $v['cta_url'] ?? '', '#bolgeler') ?></div>
       </div>
-      <div class="hp-note mt-2">Kısaltmalar: <code>{home}</code> anasayfa, <code>{transfers}</code> tüm transferler, <code>{blog}</code>, <code>{contact}</code>, <code>{faq}</code>, <code>{page:kvkk}</code> (Sayfalar'daki bir sayfa), <code>#bolgeler</code> <code>#bilgi</code> <code>#misafir</code> <code>#sss</code> (anasayfa bölümleri).</div>
+      <div class="hp-note mt-2">Kısaltmalar: <code>{home}</code> anasayfa, <code>{transfers}</code> tüm transferler, <code>{tours}</code> turlar, <code>{blog}</code>, <code>{contact}</code>, <code>{faq}</code>, <code>{page:kvkk}</code> (Sayfalar'daki bir sayfa), <code>#bolgeler</code> <code>#bilgi</code> <code>#misafir</code> <code>#sss</code> (anasayfa bölümleri).</div>
 
       <div class="hp-sub">Footer</div>
       <div class="mb-2"><label class="form-label-sm">Hakkımızda metni</label><?= hp_area($n . '[footer_about]', $v['footer_about'] ?? '', 2) ?></div>

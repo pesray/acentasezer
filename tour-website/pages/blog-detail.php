@@ -59,6 +59,8 @@ $canonicalUrl = $postUrl;
 $ogType = 'article';
 if ($img !== '') $ogImage = $img;
 $bodyClass = 'sl-post';
+// Yazıdaki geniş tablolar telefonda sayfayı yana taşırmasın: tablo kendi içinde kayar
+$extraCss = '<style>@media(max-width:767.98px){.sl-post .prose table{display:block;overflow-x:auto;-webkit-overflow-scrolling:touch}}</style>';
 $date = $post['published_at'] ?: $post['created_at'];
 // Bu dilde çevirisi olmayan yazı: kopya içerik olmasın diye dizine eklenmez
 if (!$hasT && $lang !== sl_default_lang_code()) $metaRobots = 'noindex, follow';

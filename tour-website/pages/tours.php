@@ -1,10 +1,11 @@
 <?php
 /**
  * Turlar listesi (veriler Tur Yönetimi > Turlar ekranından gelir)
+ * Fiyat / araç yok: transfer kartı görünümünde kart, "Rezervasyon" → WhatsApp.
  */
 
 require_once dirname(__DIR__) . '/config/config.php';
-require_once INCLUDES_PATH . 'sunline/core.php';
+require_once INCLUDES_PATH . 'sunline/tours.php';
 require_once INCLUDES_PATH . 'schema.php';
 
 $lang = sl_lang();
@@ -25,36 +26,16 @@ try {
 $title = !empty($ps['page_title']) ? $ps['page_title'] : sl_t('tours_t');
 $sub = !empty($ps['page_subtitle']) ? $ps['page_subtitle'] : '';
 $bg = !empty($ps['background_image']) ? getMediaUrl($ps['background_image']) : '';
-$prefix = getPageSlugByKey('tours');
-$url = langUrl($prefix);
+$url = sl_page_url('tours');
 
-$tours = [];
-try {
-    $stmt = $db->prepare("
-        SELECT t.*, COALESCE(tt.title, t.title) AS title, COALESCE(tt.slug, t.slug) AS slug,
-               COALESCE(tt.description, t.description) AS description
-        FROM tours t
-        LEFT JOIN tour_translations tt ON t.id = tt.tour_id AND tt.language_code = ?
-        WHERE t.status = 'published'
-        ORDER BY t.is_featured DESC, t.sort_order
-    ");
-    $stmt->execute([$lang]);
-    $tours = $stmt->fetchAll();
-} catch (Exception $e) {}
-
-// En düşük araç fiyatı (önce bu dil, yoksa herhangi bir dil)
-$minPrices = [];
-try {
-    foreach ($db->query("SELECT tour_id, language_code, MIN(price) AS p, MAX(currency) AS c FROM tour_vehicles WHERE price > 0 GROUP BY tour_id, language_code")->fetchAll() as $r) {
-        $tid = (int)$r['tour_id'];
-        if ($r['language_code'] === $lang || !isset($minPrices[$tid])) $minPrices[$tid] = ['p' => (float)$r['p'], 'c' => $r['c']];
-    }
-} catch (Exception $e) {}
+$tours = sl_tours();
 
 $seoTitle = $title . ' · ' . getSetting('site_name', 'Sunline VIP Transfer');
 $metaDescription = $sub !== '' ? $sub : sl_t('seo_home_d');
 $canonicalUrl = $url;
+if ($bg !== '') $ogImage = $bg;
 $bodyClass = 'sl-tours';
+$extraCss = sl_tour_css();
 $pageSchema = [getBreadcrumbSchema([['name' => $title, 'url' => $url]])];
 
 require_once INCLUDES_PATH . 'header.php';
@@ -62,28 +43,16 @@ sl_partial('page-hero', ['h1' => $title, 'sub' => $sub, 'crumbs' => [[$title, $u
 ?>
 <section class="sec">
   <div class="container">
+    <?php if ($tours): ?>
     <div class="rc-grid">
-      <?php foreach ($tours as $tour):
-        $img = !empty($tour['image']) ? getMediaUrl($tour['image']) : sl_default_base()['hero']['image'];
-        $tUrl = langUrl($prefix . '/' . $tour['slug']);
-        $mp = $minPrices[(int)$tour['id']] ?? ((float)$tour['price'] > 0 ? ['p' => (float)$tour['price'], 'c' => $tour['currency']] : null);
-      ?>
-      <article class="rc">
-        <a class="rc-media" href="<?= e($tUrl) ?>">
-          <img src="<?= e($img) ?>" alt="<?= e($tour['title']) ?>" loading="lazy" decoding="async" width="640" height="420">
-          <div class="rc-ov"><h2 class="h3 m-0" style="color:#fff;font-size:1.7rem;font-weight:700"><?= e($tour['title']) ?></h2></div>
-        </a>
-        <div class="rc-body">
-          <?php if (!empty($tour['description'])): ?><p style="color:var(--cmuted);font-size:.92rem;line-height:1.6"><?= e(mb_strimwidth(strip_tags($tour['description']), 0, 140, '…')) ?></p><?php endif; ?>
-          <div class="tour-meta">
-            <?php if (!empty($tour['duration_days'])): ?><span><i class="bi bi-clock"></i><?= (int)$tour['duration_days'] ?> <?= $lang === 'tr' ? 'gün' : ($lang === 'de' ? 'Tag(e)' : ($lang === 'ru' ? 'дн.' : 'day(s)')) ?></span><?php endif; ?>
-            <?php if ($mp): ?><span><i class="bi bi-tag"></i><?= e(sl_money($mp['p'], $mp['c'])) ?></span><?php endif; ?>
-          </div>
-          <a class="btn btn-cta rc-book" href="<?= e($tUrl) ?>"><?= sl_e('details') ?></a>
-        </div>
-      </article>
-      <?php endforeach; ?>
+      <?php foreach ($tours as $t) sl_tour_card($t); ?>
     </div>
+    <?php else: ?>
+    <div class="tour-empty">
+      <p class="lead-in"><?= e(sl_tour_t('empty')) ?></p>
+      <?php if ($wa = sl_wa_link(sl_tour_t('wa_info'))): ?><a class="btn btn-wa mt-2" href="<?= e($wa) ?>" target="_blank" rel="noopener"><i class="bi bi-whatsapp me-2" aria-hidden="true"></i>WhatsApp</a><?php endif; ?>
+    </div>
+    <?php endif; ?>
   </div>
 </section>
 <?php require_once INCLUDES_PATH . 'footer.php'; ?>
