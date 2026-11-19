@@ -317,7 +317,7 @@
       '<span class="vh-img">' + img + '</span>' +
       '<span class="vh-i d-block"><span class="vh-n d-block">' + esc(v.n) + '</span><span class="vh-s">' + spec + '</span>' + sv +
       '<span class="vh-warn" hidden></span></span>' +
-      '<span class="vh-p"><small class="vh-tl"></small><b class="vh-now"></b><del class="vh-old"></del></span></button>';
+      '<span class="vh-p"><small class="vh-tl"></small><b class="vh-now"></b><del class="vh-old"></del><small class="vh-ex" hidden></small></span></button>';
   }
 
   // tip: etiketin yanında (i) bilgi balonu (kredi kartı CVV bilgisindeki gibi)
@@ -550,11 +550,15 @@
     if (S.v && !fits(S.v)) S.v = '';
     var m = mult();
     // Transfer tipi kartları: seçili aracın (yoksa yolcu sayısına uyan en ucuz aracın) fiyatı
-    var base = S.v ? { p: legPrice(S.v), c: curOf(S.v) } : cheapestFit();
+    // + seçilen ek koltuk ücreti (alttaki toplamla aynı)
+    var base = S.v ? { p: legPrice(S.v), c: curOf(S.v), v: S.v } : cheapestFit();
     if (base) {
+      var exOw = extrasIn(base.c, base.v).amt, exRt = perLeg() ? exOw * 2 : exOw;
       var rt = base.p * 2, ow = base.p, oRt = oldPrice(rt), oOw = oldPrice(ow);
-      $('#ttRt').innerHTML = esc(fmt(rt, base.c)) + (oRt ? '<del>' + esc(fmt(oRt, base.c)) + '</del>' : '');
-      $('#ttOw').innerHTML = esc(fmt(ow, base.c)) + (oOw ? '<del>' + esc(fmt(oOw, base.c)) + '</del>' : '');
+      $('#ttRt').innerHTML = esc(fmt(rt + exRt, base.c)) + (oRt ? '<del>' + esc(fmt(oRt + exRt, base.c)) + '</del>' : '');
+      $('#ttOw').innerHTML = esc(fmt(ow + exOw, base.c)) + (oOw ? '<del>' + esc(fmt(oOw + exOw, base.c)) + '</del>' : '');
+      $('#ttRtO').textContent = exRt > 0 ? T('extras_incl', { x: fmt(exRt, base.c) }) : '';
+      $('#ttOwO').textContent = exOw > 0 ? T('extras_incl', { x: fmt(exOw, base.c) }) : '';
     }
     $('#dirSeg').hidden = S.trip !== 'ow';
 
@@ -564,6 +568,7 @@
     if (info) info.innerHTML = '<i class="bi bi-people-fill"></i>' + esc(T('vh_for', { pax: paxText(), trip: tripText() }));
     $$('.vh', body).forEach(function (b) {
       var vid = b.getAttribute('data-v'), v = SL.veh[vid], p = legPrice(vid) * m, c = curOf(vid), o = oldPrice(p);
+      var ex = extrasTotal(c, vid); // seçilen ek koltuk ücreti fiyata dahil (alttaki toplamla aynı)
       var small = v.cap < paxNeed, fewSeats = !small && v.cs < S.s, off = small || fewSeats;
       var on = vid === S.v && !off;
       b.classList.toggle('on', on);
@@ -574,10 +579,13 @@
       warn.textContent = small ? T('too_small') : (fewSeats ? T('too_few_seats', { n: v.cs }) : '');
       warn.hidden = !off;
       $('.vh-tl', b).textContent = S.trip === 'rt' ? T('rt') : T('ow');
-      $('.vh-now', b).textContent = fmt(p, c);
+      $('.vh-now', b).textContent = fmt(p + ex, c);
       var od = $('.vh-old', b);
-      od.textContent = o ? fmt(o, c) : '';
+      od.textContent = o ? fmt(o + ex, c) : '';
       od.hidden = !o;
+      var xe = $('.vh-ex', b);
+      xe.textContent = ex > 0 ? T('extras_incl', { x: fmt(ex, c) }) : '';
+      xe.hidden = !(ex > 0);
     });
 
     // Transfer ayakları

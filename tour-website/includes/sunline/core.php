@@ -12,7 +12,7 @@
  */
 
 // Not: Bu dosya her zaman require_once ile yüklenmelidir.
-if (!defined('SL_ASSET_VER')) define('SL_ASSET_VER', '1.2.4');
+if (!defined('SL_ASSET_VER')) define('SL_ASSET_VER', '1.2.5');
 
 require_once __DIR__ . '/defaults.php';
 
@@ -1086,7 +1086,7 @@ function sl_booking_payload() {
         'vehicle', 'passengers', 'total', 'cash', 'send', 'sending', 'ok', 'ok2', 'booking_no', 'wa_write', 'wa_msg',
         'err_required', 'err_vehicle', 'err_terms', 'err_generic', 'err_date', 'err_order', 'err_phone', 'err_email',
         'err_capacity', 'err_names', 'pick', 'pick_airport', 'close', 'no_price', 'person',
-        'booster', 'seat_free_note', 'seat_fee_note', 'per_leg', 'per_booking', 'extras', 'free', 'pay_cur', 'pay_cur_note',
+        'booster', 'seat_free_note', 'seat_fee_note', 'per_leg', 'per_booking', 'extras', 'extras_incl', 'free', 'pay_cur', 'pay_cur_note',
         'info', 'flight_info', 'flight_info_dep', 'err_flight'];
     $i18n = [];
     foreach ($keys as $k) $i18n[$k] = sl_t($k);

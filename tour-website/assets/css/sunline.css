@@ -292,6 +292,8 @@ a{color:var(--acc-t,var(--accent));text-decoration:none}a:hover{color:var(--acc-
 .vh-warn{display:block;font-size:.72rem;color:var(--red);font-weight:700;margin-top:4px}
 .vh-warn[hidden]{display:none}
 @media(max-width:575.98px){.vh{grid-template-columns:76px 1fr;row-gap:6px}.vh-p{grid-column:1/-1;text-align:left;display:flex;align-items:baseline;gap:8px}.vh-p small{order:3}}
+/* "… ekstra dahil" notu: telefonda sığmazsa alt satıra geçer */
+@media(max-width:575.98px){.vh-p{flex-wrap:wrap;row-gap:2px}.vh-p .vh-ex{white-space:normal}}
 .leg{border:1px solid var(--cline);border-radius:16px;padding:16px;margin-bottom:14px;background:color-mix(in oklab,var(--ctext) 2%,transparent)}
 .leg:last-child{margin-bottom:0}
 .fm .hint{font-size:.74rem;color:var(--cmuted);margin-top:5px}
