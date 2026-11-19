@@ -264,7 +264,7 @@ if ($bookingType === 'transfer' && isset($_POST['trip'])) {
                 airport_id, destination_id, vehicle_id,
                 customer_name, customer_email, customer_phone,
                 flight_date, flight_time, flight_number, hotel_address, pickup_time,
-                adults, children, child_seat,
+                adults, children, child_seat, booster,
                 total_price, currency,
                 notes, admin_notes, created_at, customer_id
             ) VALUES (
@@ -272,7 +272,7 @@ if ($bookingType === 'transfer' && isset($_POST['trip'])) {
                 ?, ?, ?,
                 ?, ?, ?,
                 ?, ?, ?, ?, ?,
-                ?, ?, ?,
+                ?, ?, ?, ?,
                 ?, ?,
                 ?, ?, NOW(), ?
             )
@@ -295,7 +295,7 @@ if ($bookingType === 'transfer' && isset($_POST['trip'])) {
                 $airportId, $destId, $vehicleId,
                 $name, $email, $phone,
                 $leg[1], $leg[2], $leg[3], $leg[4], $leg[5],
-                $adults, $children, $childSeat,
+                $adults, $children, $childSeat, $booster, // yükseltici: admin "Yükseltici" alanı (031); not satırı da kalır
                 $rowTotal, $currency,
                 $notes, $adminNote, $customerId ?: null,
             ]);

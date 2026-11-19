@@ -71,7 +71,7 @@ switch ($action) {
                     destination_id, vehicle_id,
                     pickup_hotel_id, pickup_hotel_name, pickup_date, pickup_time,
                     destination_hotel_id, destination_hotel_name,
-                    adults, children, child_seat,
+                    adults, children, child_seat, booster,
                     total_price, currency,
                     notes, admin_notes, booking_status, created_at
                 ) VALUES (
@@ -79,7 +79,7 @@ switch ($action) {
                     ?, ?,
                     ?, ?, ?, ?,
                     ?, ?,
-                    ?, ?, ?,
+                    ?, ?, ?, ?,
                     ?, ?,
                     ?, ?, ?, NOW()
                 )
@@ -95,6 +95,7 @@ switch ($action) {
                 (int)($_POST['adults'] ?? 1),
                 (int)($_POST['children'] ?? 0),
                 (int)($_POST['child_seat'] ?? 0),
+                max(0, (int)($_POST['booster'] ?? 0)),
                 (float)($_POST['total_price'] ?? 0),
                 trim($_POST['currency'] ?? 'EUR'),
                 trim($_POST['notes'] ?? '') ?: null,
@@ -155,7 +156,7 @@ switch ($action) {
                     destination_id = ?, vehicle_id = ?,
                     pickup_hotel_id = ?, pickup_hotel_name = ?, pickup_date = ?, pickup_time = ?,
                     destination_hotel_id = ?, destination_hotel_name = ?,
-                    adults = ?, children = ?, child_seat = ?,
+                    adults = ?, children = ?, child_seat = ?, booster = ?,
                     total_price = ?, currency = ?,
                     notes = ?, admin_notes = ?,
                     booking_status = ?,
@@ -173,6 +174,7 @@ switch ($action) {
                 (int)($_POST['adults'] ?? 1),
                 (int)($_POST['children'] ?? 0),
                 (int)($_POST['child_seat'] ?? 0),
+                max(0, (int)($_POST['booster'] ?? 0)),
                 (float)($_POST['total_price'] ?? 0),
                 trim($_POST['currency'] ?? 'EUR'),
                 trim($_POST['notes'] ?? '') ?: null,

@@ -65,7 +65,7 @@ switch ($action) {
                     airport_id, destination_id, vehicle_id,
                     customer_name, customer_email, customer_phone,
                     flight_date, flight_time, flight_number, hotel_address, pickup_time,
-                    adults, children, child_seat,
+                    adults, children, child_seat, booster,
                     total_price, currency,
                     notes, admin_notes, created_at, customer_id
                 ) VALUES (
@@ -73,7 +73,7 @@ switch ($action) {
                     ?, ?, ?,
                     ?, ?, ?,
                     ?, ?, ?, ?, ?,
-                    ?, ?, ?,
+                    ?, ?, ?, ?,
                     ?, ?,
                     ?, ?, NOW(), ?
                 )
@@ -89,6 +89,7 @@ switch ($action) {
                 (int)($_POST['adults'] ?? 1),
                 (int)($_POST['children'] ?? 0),
                 (int)($_POST['child_seat'] ?? 0),
+                max(0, (int)($_POST['booster'] ?? 0)),
             ];
             $noteFields = [
                 trim($_POST['notes'] ?? '') ?: null,
@@ -218,7 +219,7 @@ switch ($action) {
                         airport_id = ?, destination_id = ?, vehicle_id = ?,
                         customer_name = ?, customer_email = ?, customer_phone = ?,
                         pickup_location = ?, pickup_date = ?, pickup_time = ?, return_time = ?,
-                        adults = ?, children = ?, child_seat = ?,
+                        adults = ?, children = ?, child_seat = ?, booster = ?,
                         total_price = ?, currency = ?,
                         notes = ?, admin_notes = ?,
                         booking_status = ?,
@@ -238,6 +239,7 @@ switch ($action) {
                     (int)($_POST['adults'] ?? 1),
                     (int)($_POST['children'] ?? 0),
                     (int)($_POST['child_seat'] ?? 0),
+                    max(0, (int)($_POST['booster'] ?? 0)),
                     (float)($_POST['total_price'] ?? 0),
                     trim($_POST['currency'] ?? 'TRY'),
                     trim($_POST['notes'] ?? '') ?: null,
@@ -267,7 +269,7 @@ switch ($action) {
                                 customer_name = ?, customer_email = ?, customer_phone = ?,
                                 flight_date = ?, flight_time = ?, flight_number = ?, hotel_address = ?,
                                 pickup_time = NULL,
-                                adults = ?, children = ?, child_seat = ?,
+                                adults = ?, children = ?, child_seat = ?, booster = ?,
                                 total_price = ?, currency = ?,
                                 notes = ?, admin_notes = ?,
                                 booking_status = ?,
@@ -287,6 +289,7 @@ switch ($action) {
                             (int)($_POST['adults'] ?? 1),
                             (int)($_POST['children'] ?? 0),
                             (int)($_POST['child_seat'] ?? 0),
+                            max(0, (int)($_POST['booster'] ?? 0)),
                             (float)($_POST['total_price'] ?? 0),
                             trim($_POST['currency'] ?? 'TRY'),
                             trim($_POST['notes'] ?? '') ?: null,
@@ -304,7 +307,7 @@ switch ($action) {
                                 airport_id, destination_id, vehicle_id,
                                 customer_name, customer_email, customer_phone,
                                 flight_date, flight_time, flight_number, hotel_address,
-                                adults, children, child_seat,
+                                adults, children, child_seat, booster,
                                 total_price, currency,
                                 notes, admin_notes, created_at, customer_id
                             ) VALUES (
@@ -312,7 +315,7 @@ switch ($action) {
                                 ?, ?, ?,
                                 ?, ?, ?,
                                 ?, ?, ?, ?,
-                                ?, ?, ?,
+                                ?, ?, ?, ?,
                                 ?, ?,
                                 ?, ?, NOW(), ?
                             )
@@ -329,6 +332,7 @@ switch ($action) {
                             (int)($_POST['adults'] ?? 1),
                             (int)($_POST['children'] ?? 0),
                             (int)($_POST['child_seat'] ?? 0),
+                            max(0, (int)($_POST['booster'] ?? 0)),
                             (float)($_POST['total_price'] ?? 0),
                             trim($_POST['currency'] ?? 'TRY'),
                             trim($_POST['notes'] ?? '') ?: null,
@@ -351,7 +355,7 @@ switch ($action) {
                                 customer_name = ?, customer_email = ?, customer_phone = ?,
                                 flight_date = ?, flight_time = ?, flight_number = ?, hotel_address = ?,
                                 pickup_time = ?,
-                                adults = ?, children = ?, child_seat = ?,
+                                adults = ?, children = ?, child_seat = ?, booster = ?,
                                 total_price = ?, currency = ?,
                                 notes = ?, admin_notes = ?,
                                 booking_status = ?,
@@ -372,6 +376,7 @@ switch ($action) {
                             (int)($_POST['adults'] ?? 1),
                             (int)($_POST['children'] ?? 0),
                             (int)($_POST['child_seat'] ?? 0),
+                            max(0, (int)($_POST['booster'] ?? 0)),
                             (float)($_POST['return_total_price'] ?? 0),
                             trim($_POST['return_currency'] ?? $_POST['currency'] ?? 'TRY'),
                             trim($_POST['notes'] ?? '') ?: null,
@@ -389,7 +394,7 @@ switch ($action) {
                                 airport_id, destination_id, vehicle_id,
                                 customer_name, customer_email, customer_phone,
                                 flight_date, flight_time, flight_number, hotel_address, pickup_time,
-                                adults, children, child_seat,
+                                adults, children, child_seat, booster,
                                 total_price, currency,
                                 notes, admin_notes, created_at, customer_id
                             ) VALUES (
@@ -397,7 +402,7 @@ switch ($action) {
                                 ?, ?, ?,
                                 ?, ?, ?,
                                 ?, ?, ?, ?, ?,
-                                ?, ?, ?,
+                                ?, ?, ?, ?,
                                 ?, ?,
                                 ?, ?, NOW(), ?
                             )
@@ -415,6 +420,7 @@ switch ($action) {
                             (int)($_POST['adults'] ?? 1),
                             (int)($_POST['children'] ?? 0),
                             (int)($_POST['child_seat'] ?? 0),
+                            max(0, (int)($_POST['booster'] ?? 0)),
                             (float)($_POST['return_total_price'] ?? 0),
                             trim($_POST['return_currency'] ?? $_POST['currency'] ?? 'TRY'),
                             trim($_POST['notes'] ?? '') ?: null,

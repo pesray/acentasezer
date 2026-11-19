@@ -82,7 +82,7 @@ if ($view === 'inter_transfer' || $view === 'all' || $view === 'daily') {
                    b.pickup_hotel_name AS pickup_location, b.pickup_date, b.pickup_time,
                    b.destination_hotel_name AS hotel_address,
                    NULL AS flight_date, NULL AS flight_time, NULL AS flight_number,
-                   b.adults, b.children, b.child_seat, b.total_price, b.currency, b.notes, b.admin_notes,
+                   b.adults, b.children, b.child_seat, b.booster, b.total_price, b.currency, b.notes, b.admin_notes,
                    b.is_completed, b.is_outsourced, b.outsource_price, b.outsource_currency, b.created_at, b.updated_at,
                    b.outsource_name, b.outsource_pickup_time, b.outsource_partner_id, b.customer_id,
                    1 AS is_inter_transfer,
@@ -1350,6 +1350,14 @@ table.dataTable > tbody > tr.child ul.custom-dtr-details > li.dtr-info-full {
                                 <button type="button" class="btn btn-outline-secondary pax-btn" data-op="plus" data-target="modal-child-seat"><i class="bi bi-plus"></i></button>
                             </div>
                         </div>
+                        <div>
+                            <label class="form-label d-block small fw-semibold">Yükseltici</label>
+                            <div class="pax-stepper input-group">
+                                <button type="button" class="btn btn-outline-secondary pax-btn" data-op="minus" data-target="modal-booster"><i class="bi bi-dash"></i></button>
+                                <input type="number" name="booster" id="modal-booster" class="form-control" value="0" min="0" readonly>
+                                <button type="button" class="btn btn-outline-secondary pax-btn" data-op="plus" data-target="modal-booster"><i class="bi bi-plus"></i></button>
+                            </div>
+                        </div>
                     </div>
                     <div id="edit-passenger-names" class="mb-4"></div>
 
@@ -1545,6 +1553,14 @@ table.dataTable > tbody > tr.child ul.custom-dtr-details > li.dtr-info-full {
                                         <button type="button" class="btn btn-outline-secondary inter-pax-step-btn" data-action="minus" data-target="inter-seat-input">-</button>
                                         <input type="number" name="child_seat" id="inter-seat-input" class="form-control text-center px-1" value="0" min="0" max="10">
                                         <button type="button" class="btn btn-outline-secondary inter-pax-step-btn" data-action="plus" data-target="inter-seat-input">+</button>
+                                    </div>
+                                </div>
+                                <div class="col-auto">
+                                    <label class="form-label small mb-1 d-block">Yükseltici</label>
+                                    <div class="input-group input-group-sm" style="width:110px;">
+                                        <button type="button" class="btn btn-outline-secondary inter-pax-step-btn" data-action="minus" data-target="inter-booster-input">-</button>
+                                        <input type="number" name="booster" id="inter-booster-input" class="form-control text-center px-1" value="0" min="0" max="10">
+                                        <button type="button" class="btn btn-outline-secondary inter-pax-step-btn" data-action="plus" data-target="inter-booster-input">+</button>
                                     </div>
                                 </div>
                             </div>
@@ -1804,6 +1820,14 @@ table.dataTable > tbody > tr.child ul.custom-dtr-details > li.dtr-info-full {
                                 <button type="button" class="btn btn-outline-secondary pax-btn" data-op="minus" data-target="add-child-seat"><i class="bi bi-dash"></i></button>
                                 <input type="number" name="child_seat" id="add-child-seat" class="form-control" value="0" min="0" readonly>
                                 <button type="button" class="btn btn-outline-secondary pax-btn" data-op="plus" data-target="add-child-seat"><i class="bi bi-plus"></i></button>
+                            </div>
+                        </div>
+                        <div>
+                            <label class="form-label d-block small fw-semibold">Yükseltici</label>
+                            <div class="pax-stepper input-group">
+                                <button type="button" class="btn btn-outline-secondary pax-btn" data-op="minus" data-target="add-booster"><i class="bi bi-dash"></i></button>
+                                <input type="number" name="booster" id="add-booster" class="form-control" value="0" min="0" readonly>
+                                <button type="button" class="btn btn-outline-secondary pax-btn" data-op="plus" data-target="add-booster"><i class="bi bi-plus"></i></button>
                             </div>
                         </div>
                     </div>
@@ -2157,7 +2181,7 @@ try {
                b.pickup_hotel_name AS pickup_location, b.pickup_date, b.pickup_time,
                b.destination_hotel_name AS hotel_address,
                NULL AS flight_date, NULL AS flight_time, NULL AS flight_number, NULL AS return_time,
-               b.adults, b.children, b.child_seat, b.total_price, b.currency, b.notes, b.admin_notes,
+               b.adults, b.children, b.child_seat, b.booster, b.total_price, b.currency, b.notes, b.admin_notes,
                b.is_completed, b.is_outsourced, b.outsource_price, b.outsource_currency, b.created_at, b.updated_at,
                b.outsource_name, b.outsource_pickup_time, b.outsource_partner_id, b.customer_id,
                1 AS is_inter_transfer,
@@ -2205,6 +2229,7 @@ const bookingsData = <?= json_encode(array_map(function($b) {
         'adults'            => (int)($b['adults'] ?? 1),
         'children'          => (int)($b['children'] ?? 0),
         'child_seat'        => (int)($b['child_seat'] ?? 0),
+        'booster'           => (int)($b['booster'] ?? 0),
         'vehicle_capacity'  => (int)($b['vehicle_capacity'] ?? 20),
         'total_price'       => (float)($b['total_price'] ?? 0),
         'currency'          => $b['currency'] ?? 'EUR',
@@ -2744,6 +2769,7 @@ function openBookingModal(id) {
     document.getElementById('modal-adults').value     = b.adults     || 1;
     document.getElementById('modal-children').value   = b.children   || 0;
     document.getElementById('modal-child-seat').value = b.child_seat || 0;
+    document.getElementById('modal-booster').value    = b.booster    || 0;
 
     document.getElementById('modal-notes').value       = b.notes       || '';
     document.getElementById('modal-admin-notes').value = b.admin_notes || '';
@@ -2948,6 +2974,7 @@ function openEditInterTransferModal(id) {
     if (document.getElementById('inter-adults-input')) document.getElementById('inter-adults-input').value = b.adults || 1;
     if (document.getElementById('inter-children-input')) document.getElementById('inter-children-input').value = b.children || 0;
     if (document.getElementById('inter-seat-input')) document.getElementById('inter-seat-input').value = b.child_seat || 0;
+    if (document.getElementById('inter-booster-input')) document.getElementById('inter-booster-input').value = b.booster || 0;
 
     renderInterPassengerInputs();
 
@@ -3275,6 +3302,7 @@ document.addEventListener('click', function(e) {
     const adultsInput   = document.getElementById(isEdit ? 'modal-adults'     : 'add-adults');
     const childrenInput = document.getElementById(isEdit ? 'modal-children'   : 'add-children');
     const seatInput     = document.getElementById(isEdit ? 'modal-child-seat' : 'add-child-seat');
+    const boosterInput  = document.getElementById(isEdit ? 'modal-booster'    : 'add-booster');
 
     let adults   = parseInt(adultsInput.value)   || 0;
     let children = parseInt(childrenInput.value) || 0;
@@ -3294,6 +3322,11 @@ document.addEventListener('click', function(e) {
         if (op === 'plus')  seats = Math.min(seats + 1, capacity);
         if (op === 'minus') seats = Math.max(seats - 1, 0);
         seatInput.value = seats;
+    } else if (input === boosterInput) {
+        let boosters = parseInt(boosterInput.value) || 0;
+        if (op === 'plus')  boosters = Math.min(boosters + 1, capacity);
+        if (op === 'minus') boosters = Math.max(boosters - 1, 0);
+        boosterInput.value = boosters;
     }
 
     // İsim alanlarını güncelle (mevcut değerleri koru)
@@ -3321,6 +3354,7 @@ document.getElementById('addBookingModal').addEventListener('show.bs.modal', fun
     document.getElementById('add-adults').value     = 1;
     document.getElementById('add-children').value   = 0;
     document.getElementById('add-child-seat').value = 0;
+    document.getElementById('add-booster').value    = 0;
     document.getElementById('add-pax-capacity').value = 20;
     renderPassengerNames('add', 1, 0, []);
 });
@@ -3635,11 +3669,13 @@ function buildOutsourceMessage(b, partnerPrice, pickupTimeOverride, passengers, 
     var adults   = b.adults || 0;
     var children = b.children || 0;
     var childSeat = b.child_seat || 0;
+    var booster   = parseInt(b.booster) || 0;
 
     var paxStr = adults + ' Yetişkin' + (children > 0 ? ' + ' + children + ' Çocuk' : '');
-    if (childSeat > 0) {
-        paxStr += ' (' + childSeat + ' Çocuk Koltuğu)';
-    }
+    var paxExtra = [];
+    if (childSeat > 0) paxExtra.push(childSeat + ' Çocuk Koltuğu');
+    if (booster > 0)   paxExtra.push(booster + ' Yükseltici');
+    if (paxExtra.length) paxStr += ' (' + paxExtra.join(', ') + ')';
     var price  = b.total_price > 0
         ? (parseFloat(b.total_price).toLocaleString('tr-TR', {minimumFractionDigits:0}) + ' ' + (b.currency || 'EUR'))
         : '-';
@@ -3728,9 +3764,10 @@ function openOpsStatus(id) {
         }
         var rawTime = bData.flight_time ? bData.flight_time.substring(0, 5) : '—';
         var paxStr  = (bData.adults || 1) + ' Yetişkin' + ((bData.children || 0) > 0 ? ' + ' + bData.children + ' Çocuk' : '');
-        if (bData.child_seat > 0) {
-            paxStr += ' (' + bData.child_seat + ' Çocuk Koltuğu)';
-        }
+        var paxExtra2 = [];
+        if (bData.child_seat > 0) paxExtra2.push(bData.child_seat + ' Çocuk Koltuğu');
+        if (parseInt(bData.booster) > 0) paxExtra2.push(parseInt(bData.booster) + ' Yükseltici');
+        if (paxExtra2.length) paxStr += ' (' + paxExtra2.join(', ') + ')';
         var priceVal = bData.total_price > 0
             ? (parseFloat(bData.total_price).toLocaleString('tr-TR', {minimumFractionDigits:2}) + ' ' + (bData.currency || 'EUR'))
             : '—';
@@ -4314,11 +4351,13 @@ function buildDriverMessage(b, driverName, passengers) {
     var adults   = b.adults || 0;
     var children = b.children || 0;
     var childSeat = b.child_seat || 0;
+    var booster   = parseInt(b.booster) || 0;
 
     var paxStr = adults + ' Yetişkin' + (children > 0 ? ' + ' + children + ' Çocuk' : '');
-    if (childSeat > 0) {
-        paxStr += ' (' + childSeat + ' Çocuk Koltuğu)';
-    }
+    var paxExtra = [];
+    if (childSeat > 0) paxExtra.push(childSeat + ' Çocuk Koltuğu');
+    if (booster > 0)   paxExtra.push(booster + ' Yükseltici');
+    if (paxExtra.length) paxStr += ' (' + paxExtra.join(', ') + ')';
     var price  = b.total_price > 0
         ? (parseFloat(b.total_price).toLocaleString('tr-TR', {minimumFractionDigits:0}) + ' ' + (b.currency || 'EUR'))
         : '-';

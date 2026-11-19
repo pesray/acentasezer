@@ -334,7 +334,10 @@ function openDetails(id) {
     
     let pax = (b.adults || 1) + " Yetişkin";
     if (b.children > 0) pax += " + " + b.children + " Çocuk";
-    if (b.child_seat > 0) pax += " (" + b.child_seat + " Çocuk Koltuğu)";
+    let paxEx = [];
+    if (b.child_seat > 0) paxEx.push(b.child_seat + " Çocuk Koltuğu");
+    if (parseInt(b.booster) > 0) paxEx.push(parseInt(b.booster) + " Yükseltici");
+    if (paxEx.length) pax += " (" + paxEx.join(", ") + ")";
     document.getElementById("detail-pax").textContent = pax;
     
     const priceStr = b.total_price > 0 ? (parseFloat(b.total_price).toLocaleString("tr-TR", {minimumFractionDigits: 0}) + " " + b.currency) : "—";

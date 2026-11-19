@@ -207,6 +207,7 @@ $labels = [
         'pax'            => 'Kişi Sayısı',
         'notes'          => 'Notlar',
         'child_seat'     => 'Çocuk Koltuğu',
+        'booster'        => 'Yükseltici',
         'departure_flight_time' => 'Kalkış Saati',
         'pickup_time_note'      => '(Otelden alış saatini değiştirmek için bizimle iletişime geçebilirsiniz.)',
         'price'          => 'Transfer Ücreti',
@@ -238,6 +239,7 @@ $labels = [
         'pax'            => 'Passengers',
         'notes'          => 'Notes',
         'child_seat'     => 'Child Seat',
+        'booster'        => 'Booster Seat',
         'departure_flight_time' => 'Departure Time',
         'pickup_time_note'      => '(To change your hotel pickup time, please contact us.)',
         'price'          => 'Transfer Fee',
@@ -269,6 +271,7 @@ $labels = [
         'pax'            => 'Passagiere',
         'notes'          => 'Anmerkungen',
         'child_seat'     => 'Kindersitz',
+        'booster'        => 'Sitzerhöhung',
         'departure_flight_time' => 'Abflugzeit',
         'pickup_time_note'      => '(Um die Abholzeit vom Hotel zu ändern, kontaktieren Sie uns bitte.)',
         'price'          => 'Transfergebühr',
@@ -300,6 +303,7 @@ $labels = [
         'pax'            => 'Пассажиров',
         'notes'          => 'Примечания',
         'child_seat'     => 'Детское кресло',
+        'booster'        => 'Бустер',
         'departure_flight_time' => 'Время вылета',
         'pickup_time_note'      => '(Чтобы изменить время подачи от отеля, свяжитесь с нами.)',
         'price'          => 'Стоимость трансфера',
@@ -589,6 +593,9 @@ function voucherLangUrl($l, $outId, $retId) {
                         <?php endif; ?>
                         <?php if ((int)$base['child_seat'] > 0): ?>
                         (<?= (int)$base['child_seat'] ?> <?= $L['child_seat'] ?>)
+                        <?php endif; ?>
+                        <?php if ((int)($base['booster'] ?? 0) > 0): ?>
+                        (<?= (int)$base['booster'] ?> <?= $L['booster'] ?>)
                         <?php endif; ?>
                     </span>
                 </div>
