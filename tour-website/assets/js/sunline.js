@@ -311,8 +311,7 @@
     var v = SL.veh[vid];
     var img = '<i class="bi bi-car-front"></i>' + (v.img ? '<img src="' + esc(v.img) + '" alt="' + esc(v.n) + '" loading="lazy" onerror="this.remove()">' : '');
     var spec = '<span><i class="bi bi-people-fill"></i>' + esc(T('cap_pax', { n: v.cap })) + '</span>' +
-      '<span><i class="bi bi-briefcase-fill"></i>' + esc(T('cap_lug', { n: v.lug })) + '</span>' +
-      (v.cs ? '<span><i class="bi bi-person-arms-up"></i>' + esc(T('cap_seat', { n: v.cs })) + '</span>' : '');
+      '<span><i class="bi bi-briefcase-fill"></i>' + esc(T('cap_lug', { n: v.lug })) + '</span>';
     var sv = (v.sv && v.sv.length) ? '<span class="vh-sv d-block">' + esc(v.sv.join(' · ')) + '</span>' : '';
     return '<button type="button" class="vh" data-v="' + esc(vid) + '" aria-pressed="false">' +
       '<span class="vh-img">' + img + '</span>' +
@@ -369,13 +368,13 @@
       '</div>';
 
     var legA = '<div class="leg" id="legA"><div class="wz-sub"><i class="bi bi-airplane-engines"></i>' + esc(T('arrival_title')) + ' · ' + ap + ' → ' + place + '</div><div class="row g-3">' +
-      field('aDate', T('flight_date'), '<input class="form-control" type="date" id="aDate" min="' + esc(today) + '" data-req="1">', 'col-12 col-sm-6 col-lg-4', true) +
+      field('aDate', T('flight_date'), '<input class="form-control" type="date" id="aDate" min="' + esc(today) + '" max="9999-12-31" data-req="1">', 'col-12 col-sm-6 col-lg-4', true) +
       field('aTime', T('arr_time'), '<input class="form-control" type="time" id="aTime" data-req="1">', 'col-6 col-lg-4', true) +
       field('aFl', T('flight'), '<input class="form-control upc" id="aFl" placeholder="' + esc(T('flight_ph')) + '" autocomplete="off" autocapitalize="characters" spellcheck="false" maxlength="12" data-req="1" data-flight="1" aria-describedby="aFlTip">', 'col-6 col-lg-4', true, '', T('flight_info')) +
       field('aHotel', T('hotel'), '<input class="form-control" id="aHotel" placeholder="' + esc(T('hotel_ph')) + '" data-req="1" maxlength="250">', 'col-12', true) +
       '</div></div>';
     var legD = '<div class="leg" id="legD"><div class="wz-sub"><i class="bi bi-airplane"></i>' + esc(T('departure_title')) + ' · ' + place + ' → ' + ap + '</div><div class="row g-3">' +
-      field('dDate', T('flight_date'), '<input class="form-control" type="date" id="dDate" min="' + esc(today) + '" data-req="1">', 'col-12 col-sm-6 col-lg-4', true) +
+      field('dDate', T('flight_date'), '<input class="form-control" type="date" id="dDate" min="' + esc(today) + '" max="9999-12-31" data-req="1">', 'col-12 col-sm-6 col-lg-4', true) +
       field('dTime', T('dep_time'), '<input class="form-control" type="time" id="dTime" data-req="1">', 'col-6 col-lg-4', true) +
       field('dFl', T('flight'), '<input class="form-control upc" id="dFl" placeholder="' + esc(T('flight_ph')) + '" autocomplete="off" autocapitalize="characters" spellcheck="false" maxlength="12" data-req="1" data-flight="1" aria-describedby="dFlTip">', 'col-6 col-lg-4', true, '', T('flight_info_dep')) +
       field('dPick', T('pickup_time'), '<input class="form-control" type="time" id="dPick">', 'col-12 col-sm-6 col-lg-4', false, T('pickup_hint')) +

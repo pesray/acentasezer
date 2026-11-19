@@ -179,7 +179,6 @@ require_once INCLUDES_PATH . 'header.php';
           <div class="vspec">
             <span><i class="bi bi-people-fill"></i><?= e(sl_t('cap_pax', ['n' => $v['cap']])) ?></span>
             <span><i class="bi bi-briefcase-fill"></i><?= e(sl_t('cap_lug', ['n' => $v['lug']])) ?></span>
-            <?php if ($v['cs'] > 0): ?><span><i class="bi bi-person-arms-up"></i><?= e(sl_t('cap_seat', ['n' => $v['cs']])) ?></span><?php endif; ?>
           </div>
           <?php if ($v['sv']): ?>
           <div class="vsv"><?php foreach (array_slice($v['sv'], 0, 8) as $s): ?><span><i class="bi <?= e($s['i']) ?> me-1"></i><?= e($s['n']) ?></span><?php endforeach; ?></div>
