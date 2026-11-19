@@ -1,5 +1,7 @@
 <?php
 $pageTitle = 'Galeri';
+require_once __DIR__ . '/includes/auth.php';
+csrfProtect(); // form gönderimi + silme bağlantısı güvenlik anahtarı ister (CSRF)
 require_once __DIR__ . '/includes/header.php';
 
 $db = getDB();
@@ -59,7 +61,7 @@ $gallery = $db->query("SELECT g.*, gc.name as category_name FROM gallery g LEFT 
         <div class="card">
             <div class="card-header bg-white py-3"><h6 class="mb-0 fw-bold"><?= $editData ? 'Görsel Düzenle' : 'Yeni Görsel' ?></h6></div>
             <div class="card-body">
-                <form method="post">
+                <form method="post"><?= csrfField() ?>
                     <div class="mb-3">
                         <label class="form-label">Başlık</label>
                         <input type="text" name="title" class="form-control" value="<?= e($editData['title'] ?? '') ?>">
@@ -102,7 +104,7 @@ $gallery = $db->query("SELECT g.*, gc.name as category_name FROM gallery g LEFT 
                 <small class="text-muted"><?= e($item['category_name'] ?? 'Kategorisiz') ?></small>
                 <div class="mt-2">
                     <a href="?action=edit&id=<?= $item['id'] ?>" class="btn btn-sm btn-outline-primary"><i class="bi bi-pencil"></i></a>
-                    <a href="?action=delete&id=<?= $item['id'] ?>" class="btn btn-sm btn-outline-danger btn-delete"><i class="bi bi-trash"></i></a>
+                    <a href="?action=delete&id=<?= $item['id'] ?>&<?= csrfQuery() ?>" class="btn btn-sm btn-outline-danger btn-delete"><i class="bi bi-trash"></i></a>
                 </div>
             </div>
         </div>

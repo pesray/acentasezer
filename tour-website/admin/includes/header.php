@@ -16,6 +16,8 @@ $logoUrl     = '';
 if ($siteLogo && defined('UPLOADS_URL')) {
     $logoUrl = UPLOADS_URL . ltrim($siteLogo, '/');
 }
+// Profil = kendi kullanıcı kaydını düzenleme (ad, e-posta, şifre). Kullanıcılar sayfası yalnız admin rolüne açık.
+$profileUrl = hasPermission('admin') ? ADMIN_URL . '/users.php?action=edit&id=' . (int)($_SESSION['admin_id'] ?? 0) : '';
 ?>
 <!DOCTYPE html>
 <html lang="tr">
@@ -910,7 +912,7 @@ if ($siteLogo && defined('UPLOADS_URL')) {
     </div>
 
     <div class="sidebar-footer">
-        <a href="<?= ADMIN_URL ?>/profile.php" class="sidebar-user" title="<?= e($adminName) ?>">
+        <a <?= $profileUrl ? 'href="' . e($profileUrl) . '"' : '' ?> class="sidebar-user" title="<?= e($adminName) ?>">
             <span class="sidebar-user-avatar"><?= e(mb_strtoupper(mb_substr($adminName, 0, 1))) ?></span>
             <div class="sidebar-user-info">
                 <div class="name"><?= e($adminName) ?></div>
@@ -966,7 +968,9 @@ if ($siteLogo && defined('UPLOADS_URL')) {
                         <div class="text-muted" style="font-size:.72rem;">Yönetici</div>
                     </li>
                     <li><hr class="dropdown-divider my-1"></li>
-                    <li><a class="dropdown-item small" href="<?= ADMIN_URL ?>/profile.php"><i class="bi bi-person me-2"></i>Profil</a></li>
+                    <?php if ($profileUrl): ?>
+                    <li><a class="dropdown-item small" href="<?= e($profileUrl) ?>"><i class="bi bi-person me-2"></i>Profil</a></li>
+                    <?php endif; ?>
                     <li><a class="dropdown-item small" href="<?= ADMIN_URL ?>/settings.php"><i class="bi bi-gear me-2"></i>Ayarlar</a></li>
                     <li><hr class="dropdown-divider my-1"></li>
                     <li><a class="dropdown-item small text-danger" href="<?= ADMIN_URL ?>/logout.php"><i class="bi bi-box-arrow-right me-2"></i>Çıkış Yap</a></li>

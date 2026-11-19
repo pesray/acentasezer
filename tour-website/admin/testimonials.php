@@ -4,6 +4,8 @@
  */
 
 $pageTitle = 'Müşteri Yorumları';
+require_once __DIR__ . '/includes/auth.php';
+csrfProtect(); // form gönderimi + silme bağlantısı güvenlik anahtarı ister (CSRF)
 require_once __DIR__ . '/includes/header.php';
 
 $db = getDB();
@@ -91,7 +93,7 @@ $testimonials = $db->query("SELECT * FROM testimonials ORDER BY sort_order, crea
 </div>
 
 <?php if ($action === 'add' || $action === 'edit'): ?>
-<form method="post" action="?action=<?= $action ?><?= $id ? '&id=' . $id : '' ?>">
+<form method="post" action="?action=<?= $action ?><?= $id ? '&id=' . $id : '' ?>"><?= csrfField() ?>
     <div class="row">
         <div class="col-lg-8">
             <div class="card mb-4">
@@ -192,7 +194,7 @@ $testimonials = $db->query("SELECT * FROM testimonials ORDER BY sort_order, crea
                     <td><span class="badge bg-<?= $t['is_approved'] ? 'success' : 'secondary' ?>"><?= $t['is_approved'] ? 'Onaylı' : 'Bekliyor' ?></span></td>
                     <td>
                         <a href="?action=edit&id=<?= $t['id'] ?>" class="btn btn-sm btn-outline-primary"><i class="bi bi-pencil"></i></a>
-                        <a href="?action=delete&id=<?= $t['id'] ?>" class="btn btn-sm btn-outline-danger btn-delete"><i class="bi bi-trash"></i></a>
+                        <a href="?action=delete&id=<?= $t['id'] ?>&<?= csrfQuery() ?>" class="btn btn-sm btn-outline-danger btn-delete"><i class="bi bi-trash"></i></a>
                     </td>
                 </tr>
                 <?php endforeach; ?>

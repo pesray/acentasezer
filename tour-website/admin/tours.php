@@ -5,6 +5,7 @@
 
 require_once __DIR__ . '/includes/auth.php';
 requireLogin();
+csrfProtect(); // form gönderimi + silme bağlantısı güvenlik anahtarı ister (CSRF)
 
 $db = getDB();
 $action = $_GET['action'] ?? 'list';
@@ -202,7 +203,7 @@ require_once __DIR__ . '/includes/header.php';
 
 <?php if ($action === 'add' || $action === 'edit'): ?>
 <!-- Tur Formu - destinations.php ile birebir aynı yapı -->
-<form method="post" action="?action=<?= $action ?><?= $id ? '&id=' . $id : '' ?>" enctype="multipart/form-data">
+<form method="post" action="?action=<?= $action ?><?= $id ? '&id=' . $id : '' ?>" enctype="multipart/form-data"><?= csrfField() ?>
     <div class="row">
         <div class="col-lg-8">
             <!-- Dil Tabları -->
@@ -400,7 +401,7 @@ require_once __DIR__ . '/includes/header.php';
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Kapat"></button>
             </div>
             <div class="modal-body">
-                <form method="post" id="pageSettingsForm">
+                <form method="post" id="pageSettingsForm"><?= csrfField() ?>
                     <input type="hidden" name="save_page_settings" value="1">
                     
                     <div class="mb-4">

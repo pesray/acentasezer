@@ -4,6 +4,8 @@
  */
 
 $pageTitle = 'SSS Yönetimi';
+require_once __DIR__ . '/includes/auth.php';
+csrfProtect(); // form gönderimi + silme bağlantısı güvenlik anahtarı ister (CSRF)
 require_once __DIR__ . '/includes/header.php';
 
 $db = getDB();
@@ -90,7 +92,7 @@ $faqs = $db->query("SELECT f.*, fc.name as category_name FROM faqs f LEFT JOIN f
 </div>
 
 <?php if ($action === 'add' || $action === 'edit'): ?>
-<form method="post" action="?action=<?= $action ?><?= $id ? '&id=' . $id : '' ?>">
+<form method="post" action="?action=<?= $action ?><?= $id ? '&id=' . $id : '' ?>"><?= csrfField() ?>
     <div class="row">
         <div class="col-lg-8">
             <div class="card mb-4">
@@ -174,7 +176,7 @@ $faqs = $db->query("SELECT f.*, fc.name as category_name FROM faqs f LEFT JOIN f
                     <td><span class="badge bg-<?= $faq['is_active'] ? 'success' : 'secondary' ?>"><?= $faq['is_active'] ? 'Aktif' : 'Pasif' ?></span></td>
                     <td>
                         <a href="?action=edit&id=<?= $faq['id'] ?>" class="btn btn-sm btn-outline-primary"><i class="bi bi-pencil"></i></a>
-                        <a href="?action=delete&id=<?= $faq['id'] ?>" class="btn btn-sm btn-outline-danger btn-delete"><i class="bi bi-trash"></i></a>
+                        <a href="?action=delete&id=<?= $faq['id'] ?>&<?= csrfQuery() ?>" class="btn btn-sm btn-outline-danger btn-delete"><i class="bi bi-trash"></i></a>
                     </td>
                 </tr>
                 <?php endforeach; ?>

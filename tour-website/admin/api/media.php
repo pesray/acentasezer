@@ -13,6 +13,14 @@ if (!isAdminLoggedIn()) {
     exit;
 }
 
+// CSRF: değiştiren istekler (POST güncelle, DELETE sil) güvenlik anahtarı ister
+if ($_SERVER['REQUEST_METHOD'] !== 'GET'
+    && !validateCSRFToken($_POST['csrf_token'] ?? $_SERVER['HTTP_X_CSRF_TOKEN'] ?? '')) {
+    http_response_code(403);
+    echo json_encode(['success' => false, 'error' => 'Güvenlik doğrulaması başarısız. Sayfayı yenileyip tekrar deneyin.']);
+    exit;
+}
+
 $db = getDB();
 
 // GET - Medya detayı veya liste

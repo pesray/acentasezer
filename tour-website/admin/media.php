@@ -4,6 +4,8 @@
  */
 
 $pageTitle = 'Medya Yönetimi';
+require_once __DIR__ . '/includes/auth.php';
+csrfProtect(); // form gönderimi + silme bağlantısı güvenlik anahtarı ister (CSRF)
 require_once __DIR__ . '/includes/header.php';
 
 $db = getDB();
@@ -309,7 +311,7 @@ $stats = $db->query("
             <a href="<?= UPLOADS_URL . e($media['file_path']) ?>" target="_blank" class="btn btn-sm" title="Görüntüle" onclick="event.stopPropagation()">
                 <i class="bi bi-eye"></i>
             </a>
-            <a href="?delete=<?= $media['id'] ?>" class="btn btn-sm text-danger btn-delete" title="Sil" onclick="event.stopPropagation()">
+            <a href="?delete=<?= $media['id'] ?>&<?= csrfQuery() ?>" class="btn btn-sm text-danger btn-delete" title="Sil" onclick="event.stopPropagation()">
                 <i class="bi bi-trash"></i>
             </a>
         </div>
@@ -495,6 +497,7 @@ function uploadFile(file, index) {
     const formData = new FormData();
     formData.append('file', file);
     formData.append('folder', folder);
+    formData.append('csrf_token', '<?= e(generateCSRFToken()) ?>');
     
     const progressItem = document.createElement('div');
     progressItem.className = 'progress-item';
@@ -586,7 +589,7 @@ function copyMediaUrl() {
 
 function deleteMedia() {
     if (currentMedia && confirm('Bu dosyayı silmek istediğinize emin misiniz?')) {
-        location.href = '?delete=' + currentMedia.id;
+        location.href = '?delete=' + currentMedia.id + '&<?= csrfQuery() ?>';
     }
 }
 
@@ -594,6 +597,7 @@ function deleteMedia() {
 document.getElementById('mediaEditForm').addEventListener('submit', function(e) {
     e.preventDefault();
     const formData = new FormData(this);
+    formData.append('csrf_token', '<?= e(generateCSRFToken()) ?>');
     
     fetch('<?= ADMIN_URL ?>/api/media.php', {
         method: 'POST',

@@ -19,13 +19,32 @@ if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
     exit;
 }
 
-if (!isset($_FILES['file'])) {
+// post_max_size aşılınca PHP bütün alanları boşaltır (anahtar da gelmez) → doğru mesajı ver
+if (empty($_POST) && empty($_FILES) && (int)($_SERVER['CONTENT_LENGTH'] ?? 0) > 0) {
+    echo json_encode(['success' => false, 'error' => 'Dosya çok büyük (sunucu limiti)']);
+    exit;
+}
+
+// CSRF: başka bir siteden admin oturumu kullanılarak gizlice dosya yüklenmesin
+if (!validateCSRFToken($_POST['csrf_token'] ?? $_SERVER['HTTP_X_CSRF_TOKEN'] ?? '')) {
+    http_response_code(403);
+    echo json_encode(['success' => false, 'error' => 'Güvenlik doğrulaması başarısız. Sayfayı yenileyip tekrar deneyin.']);
+    exit;
+}
+
+if (!isset($_FILES['file']) || !is_array($_FILES['file']) || is_array($_FILES['file']['name'])) {
     echo json_encode(['success' => false, 'error' => 'Dosya bulunamadı']);
     exit;
 }
 
 $file = $_FILES['file'];
+
+// Klasör yalnız bu listeden olabilir (../ ile uploads dışına yazılmasın); bilinmeyen → general
+$allowedFolders = ['general', 'hero', 'tours', 'destinations', 'blog', 'testimonials'];
 $folder = $_POST['folder'] ?? 'general';
+if (!is_string($folder) || !in_array($folder, $allowedFolders, true)) {
+    $folder = 'general';
+}
 
 // Hata kontrolü
 if ($file['error'] !== UPLOAD_ERR_OK) {
@@ -48,19 +67,19 @@ if ($file['size'] > $maxSize) {
     exit;
 }
 
-// MIME type kontrolü
+// MIME type kontrolü (dosyanın içeriğine bakılır, adına değil) → [tür, kaydedilecek uzantı]
 $allowedTypes = [
-    'image/jpeg' => 'image',
-    'image/png' => 'image',
-    'image/gif' => 'image',
-    'image/webp' => 'image',
-    'image/svg+xml' => 'image',
-    'video/mp4' => 'video',
-    'video/webm' => 'video',
-    'video/ogg' => 'video',
-    'application/pdf' => 'document',
-    'application/msword' => 'document',
-    'application/vnd.openxmlformats-officedocument.wordprocessingml.document' => 'document',
+    'image/jpeg' => ['image', 'jpg'],
+    'image/png' => ['image', 'png'],
+    'image/gif' => ['image', 'gif'],
+    'image/webp' => ['image', 'webp'],
+    'image/svg+xml' => ['image', 'svg'],
+    'video/mp4' => ['video', 'mp4'],
+    'video/webm' => ['video', 'webm'],
+    'video/ogg' => ['video', 'ogv'],
+    'application/pdf' => ['document', 'pdf'],
+    'application/msword' => ['document', 'doc'],
+    'application/vnd.openxmlformats-officedocument.wordprocessingml.document' => ['document', 'docx'],
 ];
 
 $mimeType = mime_content_type($file['tmp_name']);
@@ -69,10 +88,11 @@ if (!isset($allowedTypes[$mimeType])) {
     exit;
 }
 
-$fileType = $allowedTypes[$mimeType];
+$fileType = $allowedTypes[$mimeType][0];
 
-// Dosya adı oluştur
-$extension = strtolower(pathinfo($file['name'], PATHINFO_EXTENSION));
+// Dosya adı oluştur — uzantı İÇERİKTEN (MIME) gelir, kullanıcının verdiği addan değil.
+// Böylece resim gibi görünen "kotu.php" sunucuya .php olarak yazılamaz (kod çalıştırma açığı).
+$extension = $allowedTypes[$mimeType][1];
 $filename = time() . '_' . bin2hex(random_bytes(8)) . '.' . $extension;
 
 // Klasör oluştur

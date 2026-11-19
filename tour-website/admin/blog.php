@@ -4,6 +4,8 @@
  */
 
 $pageTitle = 'Blog Yazıları';
+require_once __DIR__ . '/includes/auth.php';
+csrfProtect(); // form gönderimi + silme bağlantısı güvenlik anahtarı ister (CSRF)
 require_once __DIR__ . '/includes/header.php';
 
 $db = getDB();
@@ -114,7 +116,7 @@ $posts = $db->query("SELECT bp.*, bc.name as category_name, u.full_name as autho
 </div>
 
 <?php if ($action === 'add' || $action === 'edit'): ?>
-<form method="post" action="?action=<?= $action ?><?= $id ? '&id=' . $id : '' ?>">
+<form method="post" action="?action=<?= $action ?><?= $id ? '&id=' . $id : '' ?>"><?= csrfField() ?>
     <div class="row">
         <div class="col-lg-8">
             <div class="card mb-4">
@@ -226,7 +228,7 @@ $posts = $db->query("SELECT bp.*, bc.name as category_name, u.full_name as autho
                     <td><span class="badge bg-<?= $post['status'] === 'published' ? 'success' : 'secondary' ?>"><?= $post['status'] === 'published' ? 'Yayında' : 'Taslak' ?></span></td>
                     <td>
                         <a href="?action=edit&id=<?= $post['id'] ?>" class="btn btn-sm btn-outline-primary"><i class="bi bi-pencil"></i></a>
-                        <a href="?action=delete&id=<?= $post['id'] ?>" class="btn btn-sm btn-outline-danger btn-delete"><i class="bi bi-trash"></i></a>
+                        <a href="?action=delete&id=<?= $post['id'] ?>&<?= csrfQuery() ?>" class="btn btn-sm btn-outline-danger btn-delete"><i class="bi bi-trash"></i></a>
                     </td>
                 </tr>
                 <?php endforeach; ?>

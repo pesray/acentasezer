@@ -4,6 +4,8 @@
  */
 
 $pageTitle = 'İletişim Mesajları';
+require_once __DIR__ . '/includes/auth.php';
+csrfProtect(); // form gönderimi + silme bağlantısı güvenlik anahtarı ister (CSRF)
 require_once __DIR__ . '/includes/header.php';
 
 $db = getDB();
@@ -81,7 +83,7 @@ $unreadCount = $db->query("SELECT COUNT(*) FROM contacts WHERE is_read = 0")->fe
         <div class="card">
             <div class="card-header bg-white py-3 d-flex justify-content-between align-items-center">
                 <h6 class="mb-0 fw-bold"><?= e($message['subject'] ?: 'Konu belirtilmemiş') ?></h6>
-                <a href="?action=delete&id=<?= $message['id'] ?>" class="btn btn-sm btn-outline-danger btn-delete"><i class="bi bi-trash"></i> Sil</a>
+                <a href="?action=delete&id=<?= $message['id'] ?>&<?= csrfQuery() ?>" class="btn btn-sm btn-outline-danger btn-delete"><i class="bi bi-trash"></i> Sil</a>
             </div>
             <div class="card-body">
                 <div class="row mb-3">

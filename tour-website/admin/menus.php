@@ -4,6 +4,8 @@
  */
 
 $pageTitle = 'Menü Yönetimi';
+require_once __DIR__ . '/includes/auth.php';
+csrfProtect(); // form gönderimi + silme bağlantısı güvenlik anahtarı ister (CSRF)
 require_once __DIR__ . '/includes/header.php';
 
 $db = getDB();
@@ -172,7 +174,7 @@ if ($action === 'edit_item' && $itemId) {
                 <h6 class="mb-0 fw-bold"><?= $editItem ? 'Menü Öğesi Düzenle' : 'Yeni Menü Öğesi' ?></h6>
             </div>
             <div class="card-body">
-                <form method="post" action="?action=edit_item&menu_id=<?= $menuId ?><?= $itemId ? '&item_id=' . $itemId : '' ?>">
+                <form method="post" action="?action=edit_item&menu_id=<?= $menuId ?><?= $itemId ? '&item_id=' . $itemId : '' ?>"><?= csrfField() ?>
                     <div class="row">
                         <div class="col-md-6 mb-3">
                             <label class="form-label">Başlık (Varsayılan) <span class="text-danger">*</span></label>

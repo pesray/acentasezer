@@ -6,6 +6,7 @@
 require_once __DIR__ . '/includes/auth.php';
 requireLogin();
 requireAdmin();
+csrfProtect(); // form gönderimi + silme bağlantısı güvenlik anahtarı ister (CSRF)
 
 $db = getDB();
 
@@ -23,7 +24,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $ext      = strtolower(pathinfo($origName, PATHINFO_EXTENSION));
                 $allowed  = ['jpg', 'jpeg', 'png', 'gif', 'svg', 'webp'];
                 if (in_array($ext, $allowed) && is_uploaded_file($tmpName)) {
-                    $filename = $key . '_' . time() . '.' . $ext;
+                    // Ayar adı dosya adına girer → yalnız harf/rakam/_ (../ ile klasör dışına yazılmasın)
+                    $filename = preg_replace('/[^A-Za-z0-9_]/', '', (string) $key) . '_' . time() . '.' . $ext;
                     if (!is_dir(UPLOADS_PATH)) mkdir(UPLOADS_PATH, 0755, true);
                     if (move_uploaded_file($tmpName, UPLOADS_PATH . $filename)) {
                         $value = $filename;
@@ -95,7 +97,7 @@ require_once __DIR__ . '/includes/header.php';
     <h1 class="h3 mb-0"><i class="bi bi-gear me-2"></i>Site Ayarları</h1>
 </div>
 
-<form method="post" action="" enctype="multipart/form-data">
+<form method="post" action="" enctype="multipart/form-data"><?= csrfField() ?>
     <div class="row">
         <div class="col-lg-8">
             <?php foreach ($settings as $group => $items): ?>

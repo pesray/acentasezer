@@ -338,6 +338,7 @@ function handlePickerUpload(files) {
         const formData = new FormData();
         formData.append('file', file);
         formData.append('folder', 'general');
+        formData.append('csrf_token', '<?= e(generateCSRFToken()) ?>');
         
         const item = document.createElement('div');
         item.className = 'progress-item d-flex align-items-center gap-2 mb-2';

@@ -5,6 +5,7 @@
 
 require_once __DIR__ . '/includes/auth.php';
 requireLogin();
+csrfProtect(); // form gönderimi + silme bağlantısı güvenlik anahtarı ister (CSRF)
 
 $db = getDB();
 $action = $_GET['action'] ?? 'list';
@@ -259,7 +260,7 @@ if (empty($availableServices)) {
 </div>
 
 <?php if ($action === 'add' || $action === 'edit'): ?>
-<form method="post" action="?action=<?= $action ?><?= $id ? '&id=' . $id : '' ?>">
+<form method="post" action="?action=<?= $action ?><?= $id ? '&id=' . $id : '' ?>"><?= csrfField() ?>
     <div class="row">
         <div class="col-lg-8">
             <div class="card mb-4">
@@ -480,7 +481,7 @@ if (empty($availableServices)) {
                 </h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
-            <form method="post" action="?action=save_services">
+            <form method="post" action="?action=save_services"><?= csrfField() ?>
                 <div class="modal-body">
                     <p class="text-muted mb-4">
                         <i class="bi bi-info-circle me-1"></i>

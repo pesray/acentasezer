@@ -1,0 +1,7 @@
+# GÜVENLİK: Bu klasöre yüklenen dosyalar asla program olarak çalıştırılmaz.
+# Resim/video/belge normal açılır; .php .phtml .phar .pht .phps .cgi .pl .py .sh .shtml
+# (adın neresinde olursa olsun, ör. resim.php.jpg) 403 ile engellenir.
+# Not: deploy uploads/ klasörünü silmez; bu dosya repodan her deploy'da yeniden kopyalanır.
+<FilesMatch "\.([Pp][Hh]([Pp][0-9]*|[Tt][Mm][Ll]|[Aa][Rr]|[Tt]|[Pp][Ss])|[Cc][Gg][Ii]|[Pp][Ll]|[Pp][Yy]|[Ss][Hh]|[Ss][Hh][Tt][Mm][Ll])(\.|$)">
+    Require all denied
+</FilesMatch>

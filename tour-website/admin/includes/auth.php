@@ -98,7 +98,63 @@ function generateCSRFToken() {
  * CSRF token doğrula
  */
 function validateCSRFToken($token) {
-    return isset($_SESSION['csrf_token']) && hash_equals($_SESSION['csrf_token'], $token);
+    return isset($_SESSION['csrf_token']) && is_string($token) && hash_equals($_SESSION['csrf_token'], $token);
+}
+
+/**
+ * Formlara eklenen gizli güvenlik anahtarı alanı: <?= csrfField() ?>
+ */
+function csrfField() {
+    return '<input type="hidden" name="csrf_token" value="' . e(generateCSRFToken()) . '">';
+}
+
+/**
+ * Silme bağlantılarına eklenen güvenlik anahtarı: href="?action=delete&id=5&<?= csrfQuery() ?>"
+ */
+function csrfQuery() {
+    return 'csrf_token=' . urlencode(generateCSRFToken());
+}
+
+/**
+ * Sayfa koruması (CSRF) — admin sayfasının en başında, header.php'den ÖNCE çağrılır.
+ * Bu sayfaya gelen her form gönderimi (POST) ve her silme bağlantısı
+ * (?action=delete, ?action=delete_item, ?delete=ID) geçerli güvenlik anahtarı taşımalı.
+ * Taşımıyorsa hiçbir şey kaydedilmez / silinmez; uyarıyla sayfaya geri dönülür.
+ * Amaç: başka bir siteden, admin'in açık oturumu kullanılarak gizlice gönderilen istekleri durdurmak.
+ */
+function csrfProtect() {
+    requireLogin();
+
+    $isPost   = ($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST';
+    $isDelete = in_array($_GET['action'] ?? '', ['delete', 'delete_item'], true) || isset($_GET['delete']);
+    if (!$isPost && !$isDelete) {
+        return;
+    }
+
+    $token = $_POST['csrf_token'] ?? $_SERVER['HTTP_X_CSRF_TOKEN'] ?? $_GET['csrf_token'] ?? '';
+    if (validateCSRFToken($token)) {
+        return;
+    }
+
+    if ($isPost && empty($_POST) && empty($_FILES) && (int)($_SERVER['CONTENT_LENGTH'] ?? 0) > 0) {
+        // post_max_size aşılınca PHP bütün alanları boşaltır; anahtar da gelmez
+        setFlashMessage('error', 'Gönderilen veri çok büyük (dosya boyutu sınırı aşıldı), hiçbir şey kaydedilmedi.');
+    } else {
+        setFlashMessage('error', 'Güvenlik doğrulaması başarısız oldu, işlem yapılmadı. Sayfayı yenileyip tekrar deneyin.');
+    }
+
+    // Geri dönüş: form → aynı ekran (ör. düzenleme), silme bağlantısı → sayfanın listesi
+    $caller = debug_backtrace(DEBUG_BACKTRACE_IGNORE_ARGS, 1);
+    $page   = basename($caller[0]['file'] ?? 'index.php');
+    $query  = $_SERVER['QUERY_STRING'] ?? '';
+    $url    = ADMIN_URL . '/' . $page . (($isPost && $query !== '' && !$isDelete) ? '?' . $query : '');
+
+    if (!headers_sent()) {
+        header('Location: ' . $url);
+    } else {
+        echo '<script>location.replace(' . json_encode($url) . ');</script>';
+    }
+    exit;
 }
 
 /**

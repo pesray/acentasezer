@@ -4,6 +4,8 @@
  */
 
 $pageTitle = 'Section Yönetimi';
+require_once __DIR__ . '/includes/auth.php';
+csrfProtect(); // form gönderimi + silme bağlantısı güvenlik anahtarı ister (CSRF)
 require_once __DIR__ . '/includes/header.php';
 
 $db = getDB();
@@ -167,7 +169,7 @@ $sections = $db->query($sql)->fetchAll();
 
 <?php if ($action === 'add' || $action === 'edit'): ?>
 <!-- Section Formu -->
-<form method="post" action="?action=<?= $action ?><?= $id ? '&id=' . $id : '' ?>">
+<form method="post" action="?action=<?= $action ?><?= $id ? '&id=' . $id : '' ?>"><?= csrfField() ?>
     <div class="row">
         <div class="col-lg-8">
             <!-- Dil Tabları -->

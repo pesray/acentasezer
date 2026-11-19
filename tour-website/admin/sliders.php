@@ -4,6 +4,8 @@
  */
 
 $pageTitle = 'Slider Yönetimi';
+require_once __DIR__ . '/includes/auth.php';
+csrfProtect(); // form gönderimi + silme bağlantısı güvenlik anahtarı ister (CSRF)
 require_once __DIR__ . '/includes/header.php';
 
 $db = getDB();
@@ -130,7 +132,7 @@ $sliders = $db->query("SELECT * FROM sliders ORDER BY location, sort_order")->fe
 </div>
 
 <?php if ($action === 'add' || $action === 'edit'): ?>
-<form method="post" action="?action=<?= $action ?><?= $id ? '&id=' . $id : '' ?>">
+<form method="post" action="?action=<?= $action ?><?= $id ? '&id=' . $id : '' ?>"><?= csrfField() ?>
     <div class="row">
         <div class="col-lg-8">
             <div class="card mb-4">

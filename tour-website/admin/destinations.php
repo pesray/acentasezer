@@ -5,6 +5,7 @@
 
 require_once __DIR__ . '/includes/auth.php';
 requireLogin();
+csrfProtect(); // form gönderimi + silme bağlantısı güvenlik anahtarı ister (CSRF)
 
 $db = getDB();
 $action = $_GET['action'] ?? 'list';
@@ -486,7 +487,7 @@ try {
 </div>
 
 <?php if ($action === 'add' || $action === 'edit'): ?>
-<form method="post" action="?action=<?= $action ?><?= $id ? '&id=' . $id : '' ?>">
+<form method="post" action="?action=<?= $action ?><?= $id ? '&id=' . $id : '' ?>"><?= csrfField() ?>
     <div class="row">
         <div class="col-lg-8">
             <div class="card mb-4">
@@ -945,7 +946,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 <div class="tab-content">
                     <!-- Tab 1: Transfer Sayfası -->
                     <div class="tab-pane fade show active" id="pane-page-settings" role="tabpanel">
-                        <form method="post" action="?action=page_settings" id="pageSettingsForm">
+                        <form method="post" action="?action=page_settings" id="pageSettingsForm"><?= csrfField() ?>
                             <div class="mb-4">
                                 <label class="form-label fw-bold">Sayfa Arka Plan Görseli</label>
                                 <div class="input-group">
@@ -1014,7 +1015,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     
                     <!-- Tab 2: Transfer Detay Çevirileri -->
                     <div class="tab-pane fade" id="pane-detail-settings" role="tabpanel">
-                        <form method="post" action="?action=detail_translations" id="detailTranslationsForm">
+                        <form method="post" action="?action=detail_translations" id="detailTranslationsForm"><?= csrfField() ?>
                             <p class="text-muted mb-4">
                                 <i class="bi bi-info-circle me-1"></i>
                                 Transfer detay sayfasında görünen tüm metinleri buradan yönetebilirsiniz.
@@ -1225,7 +1226,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     
                     <!-- Tab 3: Transfer Özellikleri -->
                     <div class="tab-pane fade" id="pane-features-settings" role="tabpanel">
-                        <form method="post" action="?action=save_features" id="featuresForm">
+                        <form method="post" action="?action=save_features" id="featuresForm"><?= csrfField() ?>
                             <div class="alert alert-light border d-flex justify-content-between align-items-center mb-4">
                                 <div>
                                     <i class="bi bi-eye me-2"></i>
@@ -1359,7 +1360,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     
                     <!-- Tab 4: Sözleşme -->
                     <div class="tab-pane fade" id="pane-terms-settings" role="tabpanel">
-                        <form method="post" action="?action=save_terms" id="termsForm">
+                        <form method="post" action="?action=save_terms" id="termsForm"><?= csrfField() ?>
                             <p class="text-muted mb-4">
                                 <i class="bi bi-info-circle me-1"></i>
                                 Rezervasyon formunda gösterilecek sözleşme/kullanım koşulları metnini buradan yönetebilirsiniz.
@@ -1409,7 +1410,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     
                     <!-- Tab 5: Uyarı -->
                     <div class="tab-pane fade" id="pane-alert-settings" role="tabpanel">
-                        <form method="post" action="?action=save_alert" id="alertForm">
+                        <form method="post" action="?action=save_alert" id="alertForm"><?= csrfField() ?>
                             <p class="text-muted mb-4">
                                 <i class="bi bi-info-circle me-1"></i>
                                 Rezervasyon formunda notlar alanının altında gösterilecek uyarı mesajını buradan yönetebilirsiniz.

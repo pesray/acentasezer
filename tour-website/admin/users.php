@@ -1,5 +1,7 @@
 <?php
 $pageTitle = 'Kullanıcılar';
+require_once __DIR__ . '/includes/auth.php';
+csrfProtect(); // form gönderimi + silme bağlantısı güvenlik anahtarı ister (CSRF)
 require_once __DIR__ . '/includes/header.php';
 requireAdmin();
 
@@ -75,7 +77,7 @@ $users = $db->query("SELECT * FROM users ORDER BY created_at DESC")->fetchAll();
 <div class="card">
     <div class="card-header bg-white py-3"><h6 class="mb-0 fw-bold"><?= $editData ? 'Kullanıcı Düzenle' : 'Yeni Kullanıcı' ?></h6></div>
     <div class="card-body">
-        <form method="post">
+        <form method="post"><?= csrfField() ?>
             <div class="mb-3">
                 <label class="form-label">Kullanıcı Adı <span class="text-danger">*</span></label>
                 <input type="text" name="username" class="form-control" value="<?= e($editData['username'] ?? '') ?>" required>

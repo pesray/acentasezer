@@ -4,6 +4,8 @@
  */
 
 $pageTitle = 'Sayfa Yönetimi';
+require_once __DIR__ . '/includes/auth.php';
+csrfProtect(); // form gönderimi + silme bağlantısı güvenlik anahtarı ister (CSRF)
 require_once __DIR__ . '/includes/header.php';
 
 $db = getDB();
@@ -147,7 +149,7 @@ $pages = $db->query("SELECT * FROM pages ORDER BY sort_order, title")->fetchAll(
 </div>
 
 <?php if ($action === 'add' || $action === 'edit'): ?>
-<form method="post" action="?action=<?= $action ?><?= $id ? '&id=' . $id : '' ?>">
+<form method="post" action="?action=<?= $action ?><?= $id ? '&id=' . $id : '' ?>"><?= csrfField() ?>
     <div class="row">
         <div class="col-lg-8">
             <div class="card mb-4">
@@ -273,7 +275,7 @@ $pages = $db->query("SELECT * FROM pages ORDER BY sort_order, title")->fetchAll(
                     <td>
                         <a href="?action=edit&id=<?= $page['id'] ?>" class="btn btn-sm btn-outline-primary"><i class="bi bi-pencil"></i></a>
                         <?php if (!$page['is_homepage']): ?>
-                        <a href="?action=delete&id=<?= $page['id'] ?>" class="btn btn-sm btn-outline-danger btn-delete"><i class="bi bi-trash"></i></a>
+                        <a href="?action=delete&id=<?= $page['id'] ?>&<?= csrfQuery() ?>" class="btn btn-sm btn-outline-danger btn-delete"><i class="bi bi-trash"></i></a>
                         <?php endif; ?>
                     </td>
                 </tr>
