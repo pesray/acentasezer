@@ -147,6 +147,35 @@ $hotelOptions = $db->query("
     ORDER BY name ASC
 ")->fetchAll();
 
+// Listede "Bölge" sütunu: otel adı gösterilmez, yalnız bölge (hotels.address).
+// Kayıt "OTEL — BÖLGE" ise bölge oradan; yalnız otel adı yazılmışsa Oteller listesinden bulunur; yoksa boş.
+function rzBolgeAnahtar($s) {
+    $s = str_replace(['İ', 'I', 'ı'], 'i', trim((string)$s));
+    $s = function_exists('mb_strtolower') ? mb_strtolower($s, 'UTF-8') : strtolower($s);
+    return preg_replace('/\s+/u', ' ', $s);
+}
+function rzBolge($adres, $otelBolge) {
+    $adres = trim((string)$adres);
+    if ($adres === '') return '';
+    if (strpos($adres, '—') !== false) {
+        $parcalar = explode('—', $adres);
+        return trim(end($parcalar));
+    }
+    $k = rzBolgeAnahtar($adres);
+    return isset($otelBolge[$k]) ? (string)$otelBolge[$k] : '';
+}
+$otelBolge = [];
+foreach ($db->query("SELECT name, address FROM hotels WHERE address IS NOT NULL AND TRIM(address) <> ''")->fetchAll() as $ob) {
+    $k = rzBolgeAnahtar($ob['name']);
+    if ($k === '') continue;
+    $bolgeAd = trim($ob['address']);
+    if (array_key_exists($k, $otelBolge) && $otelBolge[$k] !== $bolgeAd) {
+        $otelBolge[$k] = null; // aynı adlı otel farklı bölgelerde → belirsiz, boş göster
+    } elseif (!array_key_exists($k, $otelBolge)) {
+        $otelBolge[$k] = $bolgeAd;
+    }
+}
+
 // Tüm Rezervasyonlar: arrival-depar çiftlerini eşleştir
 $tripGroups = [];
 if ($view === 'all') {
@@ -700,7 +729,7 @@ table.dataTable > tbody > tr.child ul.custom-dtr-details > li.dtr-info-full {
                 <th class="min-tablet">Uçuş Kodu</th>
                 <th class="min-tablet">Müşteri</th>
                 <th class="min-tablet">Kişi</th>
-                <th class="all">Otel Adı</th>
+                <th class="all">Bölge</th>
                 <th class="min-tablet">Araç</th>
                 <th class="min-tablet">Tutar</th>
                 <th class="min-tablet">İş Durumu</th>
@@ -776,10 +805,14 @@ table.dataTable > tbody > tr.child ul.custom-dtr-details > li.dtr-info-full {
                         $hotelShort = trim(end($parts));
                     }
                 ?>
-                <td>
+                <?php if ($isInter): /* ara transfer: varış oteli olduğu gibi */ ?>
+                <td data-search="<?= e($hotelFull) ?>">
                     <span class="hotel-full"><?= e($hotelFull ?: '-') ?></span>
                     <span class="hotel-short"><?= e($hotelShort ?: '-') ?></span>
                 </td>
+                <?php else: $bolge = rzBolge($hotelFull, $otelBolge); /* yalnız bölge; otel adı yalnız aramada */ ?>
+                <td data-search="<?= e(trim($bolge . ' ' . $hotelFull)) ?>"><?= e($bolge) ?></td>
+                <?php endif; ?>
                 <td><?= e(trim($b['vehicle_name'] ?? '') ?: '-') ?></td>
                 <td>
                     <?php if ((float)$b['total_price'] > 0): ?>
@@ -876,7 +909,7 @@ table.dataTable > tbody > tr.child ul.custom-dtr-details > li.dtr-info-full {
                 <?php endif; ?>
                 <th class="min-tablet">Müşteri</th>
                 <th class="min-tablet">Kişi</th>
-                <th class="all"><?= $view === 'inter_transfer' ? 'Varış Oteli' : 'Otel Adı' ?></th>
+                <th class="all"><?= $view === 'inter_transfer' ? 'Varış Oteli' : 'Bölge' ?></th>
                 <th class="min-tablet">Araç</th>
                 <th class="min-tablet">Tutar</th>
                 <th class="min-tablet">İş Durumu</th>
@@ -972,10 +1005,14 @@ table.dataTable > tbody > tr.child ul.custom-dtr-details > li.dtr-info-full {
                         $hotelShort = trim(end($parts));
                     }
                 ?>
-                <td>
+                <?php if ($isInter): /* ara transfer: varış oteli olduğu gibi */ ?>
+                <td data-search="<?= e($hotelFull) ?>">
                     <span class="hotel-full"><?= e($hotelFull ?: '-') ?></span>
                     <span class="hotel-short"><?= e($hotelShort ?: '-') ?></span>
                 </td>
+                <?php else: $bolge = rzBolge($hotelFull, $otelBolge); /* yalnız bölge; otel adı yalnız aramada */ ?>
+                <td data-search="<?= e(trim($bolge . ' ' . $hotelFull)) ?>"><?= e($bolge) ?></td>
+                <?php endif; ?>
                 <td><?= e(trim($b['vehicle_name'] ?? '') ?: '-') ?></td>
                 <td>
                     <?php if ((float)$b['total_price'] > 0): ?>
@@ -2061,15 +2098,24 @@ table.dataTable > tbody > tr.child ul.custom-dtr-details > li.dtr-info-full {
                         <option value="">-- Şöför Seç --</option>
                     </select>
                 </div>
-                
-                <!-- WP Mesaj At Toggle -->
-                <div class="d-flex align-items-center border rounded px-2" style="height:32px;background:#f6fff8;border-color:#25d366 !important;white-space:nowrap;width:fit-content;">
-                    <div class="form-check form-switch mb-0" style="padding-left:2.2em;min-height:auto;">
-                        <input class="form-check-input mt-0" type="checkbox" id="driver-wa-toggle" style="cursor:pointer;width:1.8em;height:.9em;" checked>
+                <!-- Tahsilat Yok ve WP Mesaj At (Dışarıya Verildi penceresiyle aynı) -->
+                <div class="d-flex flex-wrap gap-2">
+                    <div class="d-flex align-items-center border rounded px-2" style="height:32px;background:#fff5f5;border-color:#dc3545 !important;white-space:nowrap;width:fit-content;">
+                        <div class="form-check form-switch mb-0" style="padding-left:2.2em;min-height:auto;">
+                            <input class="form-check-input mt-0" type="checkbox" id="driver-no-collection" style="cursor:pointer;width:1.8em;height:.9em;">
+                        </div>
+                        <label for="driver-no-collection" class="fw-bold mb-0" style="cursor:pointer;color:#dc3545;font-size:.8rem;line-height:1;">
+                            Tahsilat Yok
+                        </label>
                     </div>
-                    <label for="driver-wa-toggle" class="fw-bold mb-0" style="cursor:pointer;color:#25d366;font-size:.8rem;line-height:1;">
-                        <i class="bi bi-whatsapp"></i> WP Mesaj At
-                    </label>
+                    <div class="d-flex align-items-center border rounded px-2" style="height:32px;background:#f6fff8;border-color:#25d366 !important;white-space:nowrap;width:fit-content;">
+                        <div class="form-check form-switch mb-0" style="padding-left:2.2em;min-height:auto;">
+                            <input class="form-check-input mt-0" type="checkbox" id="driver-wa-toggle" style="cursor:pointer;width:1.8em;height:.9em;" checked>
+                        </div>
+                        <label for="driver-wa-toggle" class="fw-bold mb-0" style="cursor:pointer;color:#25d366;font-size:.8rem;line-height:1;">
+                            <i class="bi bi-whatsapp"></i> WP Mesaj At
+                        </label>
+                    </div>
                 </div>
             </div>
             <div class="modal-footer">
@@ -2105,12 +2151,21 @@ table.dataTable > tbody > tr.child ul.custom-dtr-details > li.dtr-info-full {
                 <div id="ops-driver-section" class="mt-4 pt-4" style="border-top:1px dashed #b8d4f0; display:none;">
                     <h6 class="fw-bold mb-3"><i class="bi bi-person-badge me-2 text-primary"></i>Şöför Ata</h6>
                     <div class="row g-2 align-items-center mb-3">
-                        <div class="col-md-8">
+                        <div class="col-md-6">
                             <select id="ops-modal-driver" class="form-select" data-booking-id="">
                                 <option value="">-- Şöför Seç --</option>
                             </select>
                         </div>
-                        <div class="col-md-4">
+                        <div class="col-md-6 d-flex flex-wrap gap-2">
+                            <!-- Tahsilat Yok (Dışarıya Verildi penceresiyle aynı) -->
+                            <div class="d-flex align-items-center border rounded px-2" style="height:38px;background:#fff5f5;border-color:#dc3545 !important;white-space:nowrap;width:fit-content;">
+                                <div class="form-check form-switch mb-0" style="padding-left:2.2em;min-height:auto;">
+                                    <input class="form-check-input mt-0" type="checkbox" id="ops-modal-no-collection" style="cursor:pointer;width:1.8em;height:.9em;">
+                                </div>
+                                <label for="ops-modal-no-collection" class="fw-bold mb-0" style="cursor:pointer;color:#dc3545;font-size:.8rem;line-height:1;">
+                                    Tahsilat Yok
+                                </label>
+                            </div>
                             <!-- WP Mesaj At Toggle -->
                             <div class="d-flex align-items-center border rounded px-2" style="height:38px;background:#f6fff8;border-color:#25d366 !important;white-space:nowrap;width:fit-content;">
                                 <div class="form-check form-switch mb-0" style="padding-left:2.2em;min-height:auto;">
@@ -2122,7 +2177,6 @@ table.dataTable > tbody > tr.child ul.custom-dtr-details > li.dtr-info-full {
                             </div>
                         </div>
                     </div>
-
                     <button type="button" class="btn btn-primary btn-sm" id="ops-modal-driver-save">
                         <i class="bi bi-check-lg me-1"></i>Kaydet
                     </button>
@@ -2268,7 +2322,7 @@ $(document).ready(function() {
                             extraClass = ' dtr-status-cell';
                         } else if (title.includes('Durum') || title.includes('İşlem')) {
                             extraClass = ' dtr-action-cell';
-                        } else if (title.includes('Otel') || title.includes('Adı')) {
+                        } else if (title.includes('Otel') || title.includes('Adı') || title.includes('Bölge')) {
                             extraClass = ' dtr-info-full';
                         } else if (title.includes('Yön') || title.includes('Tarih') || title.includes('Saat') || title.includes('Müşteri') || title.includes('Kişi')) {
                             extraClass = ' dtr-info-cell';
@@ -3884,6 +3938,10 @@ function openOpsStatus(id) {
                 + '<div class="d-flex justify-content-between align-items-center">'
                 + '<span><i class="bi bi-people text-warning me-1"></i><strong>Dışarıya Verildi</strong></span>'
                 + yesNo(ops.is_outsourced, 'warning text-dark', 'secondary')
+                + '</div>'
+                + '<div class="d-flex justify-content-between align-items-center">'
+                + '<span><i class="bi bi-cash-coin text-success me-1"></i><strong>Tahsilat</strong></span>'
+                + '<span id="ops-tahsilat-durum">' + rzTahsilatDurumHtml(ops.tahsilat) + '</span>'
                 + '</div>';
 
             if (ops.is_outsourced == 1) {
@@ -4010,6 +4068,10 @@ function openOpsStatus(id) {
         })
         .catch(function(err) { body.innerHTML = '<p class="text-danger mb-0">Hata: ' + (err.message || 'Bağlantı hatası') + '</p>'; console.error('Ops Error:', err); })
         .finally(function() {
+            // Tahsilat seçimini bu işin kayıtlı değerine getir (yoksa boş)
+            var opsKayit = (window.bookingOpsData && window.bookingOpsData[id]) ? window.bookingOpsData[id] : null;
+            var opsTahsilatYok = document.getElementById('ops-modal-no-collection');
+            if (opsTahsilatYok) opsTahsilatYok.checked = !!(opsKayit && (opsKayit.tahsilat === 0 || opsKayit.tahsilat === '0'));
             // Şöför listesini yükle
             var fdDrivers = new FormData();
             fdDrivers.append('action', 'list_drivers');
@@ -4263,6 +4325,7 @@ document.getElementById('ops-modal-driver-save').addEventListener('click', funct
 
     var btn = this;
     var statusEl = document.querySelector('.ops-modal-driver-status');
+    var tahsilat = rzTahsilatDegeri('ops-modal-no-collection');
     btn.disabled = true;
     btn.innerHTML = '<span class="spinner-border spinner-border-sm me-1" style="width:.7rem;height:.7rem;"></span>Kaydediliyor...';
     statusEl.style.display = 'none';
@@ -4271,6 +4334,7 @@ document.getElementById('ops-modal-driver-save').addEventListener('click', funct
     fd.append('action', bData && bData.is_inter_transfer ? 'assign_driver' : 'set_driver');
     fd.append(bData && bData.is_inter_transfer ? 'id' : 'booking_id', bookingId);
     fd.append('driver_id', driverId);
+    fd.append('tahsilat', driverId > 0 ? tahsilat : '');
     fd.append('csrf_token', csrfToken);
 
     fetch(targetDriverApiUrl, {method:'POST', body:fd})
@@ -4283,6 +4347,15 @@ document.getElementById('ops-modal-driver-save').addEventListener('click', funct
                 statusEl.className = 'ops-modal-driver-status ms-2 small text-success';
                 statusEl.style.display = 'inline';
 
+                // Açık pencerenin tahsilat bilgisini güncelle
+                var tYeni = driverId > 0 ? parseInt(tahsilat, 10) : null;
+                if (window.bookingOpsData && window.bookingOpsData[bookingId]) {
+                    window.bookingOpsData[bookingId].tahsilat = tYeni;
+                    window.bookingOpsData[bookingId].driver_id = driverId;
+                }
+                var opsDurum = document.getElementById('ops-tahsilat-durum');
+                if (opsDurum) opsDurum.innerHTML = rzTahsilatDurumHtml(tYeni);
+
                 // WhatsApp Mesajı Gönder (Eğer check edilmişse)
                 const waToggle = document.getElementById('ops-modal-driver-wa-toggle');
                 if (waToggle && waToggle.checked) {
@@ -4290,7 +4363,7 @@ document.getElementById('ops-modal-driver-save').addEventListener('click', funct
                     const driverPhone = selectedOption ? selectedOption.dataset.phone : '';
                     const driverName = selectedOption ? selectedOption.dataset.name : '';
                     if (driverPhone) {
-                        sendDriverWhatsApp(bookingId, driverPhone, driverName);
+                        sendDriverWhatsApp(bookingId, driverPhone, driverName, driverId > 0 && tahsilat === '0');
                     }
                 }
             } else {
@@ -4310,7 +4383,7 @@ document.getElementById('ops-modal-driver-save').addEventListener('click', funct
 
 // ─── Şöför Seçim Modal (İş Yapıldı Checkbox) ─────────────────────────────────
 // ─── Şöför WhatsApp Mesajı Gönder ───────────────────────────────────────────
-function sendDriverWhatsApp(bookingId, driverPhone, driverName) {
+function sendDriverWhatsApp(bookingId, driverPhone, driverName, noCollection) {
     var bData = bookingsData.find(function(x) { return x.id == bookingId; });
     if (!bData) return;
 
@@ -4328,7 +4401,7 @@ function sendDriverWhatsApp(bookingId, driverPhone, driverName) {
         .then(function(r) { return r.json(); })
         .then(function(d) {
             var passengers = (d.success && d.data && d.data.passengers) ? d.data.passengers : [];
-            var msg = buildDriverMessage(bData, driverName, passengers);
+            var msg = buildDriverMessage(bData, driverName, passengers, noCollection);
             var waNumber = (driverPhone || '').replace(/[^0-9]/g, '');
             if (waNumber.length === 10 && waNumber.startsWith('5')) {
                 waNumber = '90' + waNumber;
@@ -4342,7 +4415,7 @@ function sendDriverWhatsApp(bookingId, driverPhone, driverName) {
         .catch(function() {});
 }
 
-function buildDriverMessage(b, driverName, passengers) {
+function buildDriverMessage(b, driverName, passengers, noCollection) {
     var isInter = b.is_inter_transfer === 1 || b.booking_direction === 'inter_transfer';
     var AIRPORT  = AIRPORT_NAME;
     var hotel    = b.hotel_address || '-';
@@ -4361,6 +4434,10 @@ function buildDriverMessage(b, driverName, passengers) {
     var price  = b.total_price > 0
         ? (parseFloat(b.total_price).toLocaleString('tr-TR', {minimumFractionDigits:0}) + ' ' + (b.currency || 'EUR'))
         : '-';
+
+    if (noCollection) {
+        price = 'YOK'; // Dışarıya Verildi mesajındaki gibi: tahsilat yoksa tutar yerine YOK
+    }
 
     function fmtDate(d) {
         if (!d) return '';
@@ -4410,8 +4487,22 @@ function buildDriverMessage(b, driverName, passengers) {
     return parseWhatsAppTemplate(templateKey, placeholders);
 }
 
+// İş Durumu penceresinde "Tahsilat: Var / Yok / Seçilmedi"
+function rzTahsilatDurumHtml(val) {
+    if (val === 1 || val === '1') return '<span class="badge bg-success">Var</span>';
+    if (val === 0 || val === '0') return '<span class="badge bg-danger">Yok</span>';
+    return '<span class="badge bg-light text-muted border">Seçilmedi</span>';
+}
+// "Tahsilat Yok" anahtarı (Dışarıya Verildi penceresindeki gibi): açık → 0 (yok), kapalı → 1 (var)
+function rzTahsilatDegeri(anahtarId) {
+    var a = document.getElementById(anahtarId);
+    return (a && a.checked) ? '0' : '1';
+}
+
 function openDriverModal(bookingId) {
     const $sel = $('#driver-modal-select');
+    var tahsilatYok = document.getElementById('driver-no-collection');
+    if (tahsilatYok) tahsilatYok.checked = false;
 
     // Select2'yi yoksa initialize et
     if (!$sel.hasClass('select2-hidden-accessible')) {
@@ -4462,6 +4553,9 @@ document.getElementById('driver-modal-save-btn').addEventListener('click', funct
     const sel = document.getElementById('driver-modal-select');
     const bookingId = parseInt(document.getElementById('driver-modal-booking-id').value || 0);
     const driverId = parseInt(sel.value || 0);
+    const tahsilat = rzTahsilatDegeri('driver-no-collection');
+    // Satırı şimdi al: pencere kapanınca (hide olayı) completedChkRef sıfırlanıyor
+    const kayitSatiri = completedChkRef ? completedChkRef.closest('tr') : null;
 
     if (!bookingId) return;
 
@@ -4473,6 +4567,7 @@ document.getElementById('driver-modal-save-btn').addEventListener('click', funct
     fd.append('action', 'set_driver');
     fd.append('booking_id', bookingId);
     fd.append('driver_id', driverId);
+    fd.append('tahsilat', driverId > 0 ? tahsilat : '');
     fd.append('csrf_token', csrfToken);
 
     fetch(apiUrl, {method:'POST', body:fd})
@@ -4494,10 +4589,7 @@ document.getElementById('driver-modal-save-btn').addEventListener('click', funct
                     .then(function(d2) {
                         bootstrap.Modal.getInstance(document.getElementById('driverSelectModal')).hide();
                         showToast('Şöför kaydedildi ve iş yapıldı olarak işaretlendi.', true);
-                        if (completedChkRef) {
-                            const tr = completedChkRef.closest('tr');
-                            if (tr) tr.classList.add('row-completed');
-                        }
+                        if (kayitSatiri) kayitSatiri.classList.add('row-completed');
                         if (typeof table !== 'undefined') table.draw();
 
                         // WhatsApp Mesajı Gönder (Eğer check edilmişse, durum güncellendikten sonra açılır)
@@ -4507,7 +4599,7 @@ document.getElementById('driver-modal-save-btn').addEventListener('click', funct
                             const driverPhone = selectedOption ? selectedOption.dataset.phone : '';
                             const driverName = selectedOption ? selectedOption.dataset.name : '';
                             if (driverPhone) {
-                                sendDriverWhatsApp(bookingId, driverPhone, driverName);
+                                sendDriverWhatsApp(bookingId, driverPhone, driverName, driverId > 0 && tahsilat === '0');
                             }
                         }
                     })

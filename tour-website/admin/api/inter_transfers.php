@@ -267,7 +267,7 @@ switch ($action) {
         if (!$id) jsonResponse(false, 'Geçersiz ID');
         try {
             $stmt = $db->prepare("
-                SELECT b.is_completed, b.is_outsourced, b.outsource_name, b.outsource_price,
+                SELECT b.is_completed, b.tahsilat, b.is_outsourced, b.outsource_name, b.outsource_price,
                        b.outsource_currency, b.currency, b.outsource_pickup_time,
                        op.phone AS outsource_phone,
                        d.id AS driver_id, d.name AS driver_name, d.surname AS driver_surname
@@ -294,7 +294,8 @@ switch ($action) {
                 'outsource_currency'    => $row['outsource_currency'] ?: ($row['currency'] ?: 'EUR'),
                 'outsource_pickup_time' => $row['outsource_pickup_time'],
                 'driver_id'             => $row['driver_id'] ? (int)$row['driver_id'] : null,
-                'driver_name'           => $row['driver_name'] ? trim($row['driver_name'] . ' ' . ($row['driver_surname'] ?? '')) : null
+                'driver_name'           => $row['driver_name'] ? trim($row['driver_name'] . ' ' . ($row['driver_surname'] ?? '')) : null,
+                'tahsilat'              => $row['tahsilat'] === null ? null : (int)$row['tahsilat']
             ]);
         } catch (Exception $e) {
             jsonResponse(false, 'Hata: ' . $e->getMessage());
@@ -350,6 +351,13 @@ switch ($action) {
                 $sD = $db->prepare("SELECT CONCAT(name,' ',surname) FROM drivers WHERE id = ?");
                 $sD->execute([$driverId]);
                 $driverName = trim($sD->fetchColumn() ?: '');
+            }
+            // Tahsilat var/yok: şoför kaldırılınca silinir; şoförle birlikte 0/1 gelirse kaydedilir
+            $tahsilat = $_POST['tahsilat'] ?? null;
+            if ($driverId <= 0) {
+                $db->prepare("UPDATE inter_hotel_transfers SET tahsilat = NULL WHERE id = ?")->execute([$id]);
+            } elseif ($tahsilat === '0' || $tahsilat === '1') {
+                $db->prepare("UPDATE inter_hotel_transfers SET tahsilat = ?, updated_at = NOW() WHERE id = ?")->execute([(int)$tahsilat, $id]);
             }
 
             $db->commit();

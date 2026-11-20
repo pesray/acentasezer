@@ -668,7 +668,7 @@ switch ($action) {
         if (!$id) jsonResponse(false, 'Geçersiz ID');
         try {
             $stmt = $db->prepare("
-                SELECT b.is_completed, b.is_outsourced, b.outsource_name, b.outsource_price,
+                SELECT b.is_completed, b.tahsilat, b.is_outsourced, b.outsource_name, b.outsource_price,
                        b.outsource_currency, b.currency, b.outsource_pickup_time,
                        op.phone AS outsource_phone,
                        d.id AS driver_id, d.name AS driver_name, d.surname AS driver_surname
@@ -697,6 +697,7 @@ switch ($action) {
                 'driver_id'             => (int)($row['driver_id'] ?? 0),
                 'driver_name'           => $row['driver_name'] ?? '',
                 'driver_surname'        => $row['driver_surname'] ?? '',
+                'tahsilat'              => $row['tahsilat'] === null ? null : (int)$row['tahsilat'],
             ]);
         } catch (Exception $e) {
             jsonResponse(false, 'Hata: ' . $e->getMessage());
@@ -736,6 +737,14 @@ switch ($action) {
                 if ($driverId > 0) {
                     $db->prepare("INSERT INTO booking_drivers (booking_id, driver_id) VALUES (?, ?)")->execute([$bookingId, $driverId]);
                 }
+            }
+            // Tahsilat var/yok: şoför kaldırılınca silinir; şoförle birlikte 0/1 gelirse kaydedilir
+            $tahsilat = $_POST['tahsilat'] ?? null;
+            $tTablo = $isInter ? 'inter_hotel_transfers' : 'bookings';
+            if ($driverId <= 0) {
+                $db->prepare("UPDATE $tTablo SET tahsilat = NULL WHERE id = ?")->execute([$bookingId]);
+            } elseif ($tahsilat === '0' || $tahsilat === '1') {
+                $db->prepare("UPDATE $tTablo SET tahsilat = ?, updated_at = NOW() WHERE id = ?")->execute([(int)$tahsilat, $bookingId]);
             }
             $db->commit();
             jsonResponse(true, 'Şöför kaydedildi.');
