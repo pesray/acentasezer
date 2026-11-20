@@ -766,6 +766,40 @@ $profileUrl = hasPermission('admin') ? ADMIN_URL . '/users.php?action=edit&id=' 
             <i class="bi bi-grid-1x2 nav-link-icon"></i>
             <span class="nav-link-text">Dashboard</span>
         </a>
+        <?php if (hasPermission('admin')):
+            $raporAcik = in_array($currentPage, ['reports', 'reports_drivers'], true); ?>
+        <!-- Raporlar (flyout destekli) -->
+        <div class="nav-item-group">
+            <a href="#reportsSubmenu" class="nav-link <?= $raporAcik ? 'active' : '' ?>"
+               data-bs-toggle="collapse" role="button" aria-expanded="<?= $raporAcik ? 'true' : 'false' ?>" title="Raporlar">
+                <i class="bi bi-graph-up-arrow nav-link-icon"></i>
+                <span class="nav-link-text">Raporlar</span>
+                <i class="bi bi-chevron-down sidebar-chevron"></i>
+            </a>
+            <div class="collapse <?= $raporAcik ? 'show' : '' ?>" id="reportsSubmenu">
+                <div class="nav-submenu">
+                    <a href="<?= ADMIN_URL ?>/reports.php" class="nav-link <?= $currentPage === 'reports' ? 'active' : '' ?>">
+                        <i class="bi bi-bar-chart-line nav-link-icon"></i>
+                        <span class="nav-link-text">Genel Rapor</span>
+                    </a>
+                    <a href="<?= ADMIN_URL ?>/reports_drivers.php" class="nav-link <?= $currentPage === 'reports_drivers' ? 'active' : '' ?>">
+                        <i class="bi bi-person-badge nav-link-icon"></i>
+                        <span class="nav-link-text">Şoförler</span>
+                    </a>
+                </div>
+            </div>
+            <!-- Collapsed flyout -->
+            <div class="submenu-flyout">
+                <div class="flyout-header">Raporlar</div>
+                <a href="<?= ADMIN_URL ?>/reports.php" class="flyout-item <?= $currentPage === 'reports' ? 'active' : '' ?>">
+                    <i class="bi bi-bar-chart-line"></i> Genel Rapor
+                </a>
+                <a href="<?= ADMIN_URL ?>/reports_drivers.php" class="flyout-item <?= $currentPage === 'reports_drivers' ? 'active' : '' ?>">
+                    <i class="bi bi-person-badge"></i> Şoförler
+                </a>
+            </div>
+        </div>
+        <?php endif; ?>
 
         <div class="nav-section">Tur Yönetimi</div>
 
