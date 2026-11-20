@@ -3462,6 +3462,8 @@ document.addEventListener('change', function(e) {
             fetch(apiUrl, {method:'POST', body:fd})
                 .then(r => r.json())
                 .then(d => {
+                    // Şoför/tahsilat silinemediyse iş yapıldıyı da kaldırma (yarım kalmasın)
+                    if (!d || !d.success) throw new Error((d && d.message) || 'Şoför kaldırılamadı.');
                     // is_completed'ı 0 yap
                     const fdStatus = new FormData();
                     fdStatus.append('action', 'update_ops');
@@ -3477,9 +3479,14 @@ document.addEventListener('change', function(e) {
                         const tr = e.target.closest('tr');
                         if (tr) tr.classList.remove('row-completed');
                         if (typeof table !== 'undefined') table.draw();
+                    } else {
+                        e.target.checked = true; // kaldırılamadı → işaret geri gelsin
                     }
                 })
-                .catch(() => showToast('Bir hata oluştu.', false));
+                .catch(err => {
+                    e.target.checked = true; // hiçbir şey değişmedi → işaret geri gelsin
+                    showToast((err && err.message) ? err.message : 'Bir hata oluştu.', false);
+                });
         }
         return;
     }
@@ -3801,6 +3808,11 @@ function openOpsStatus(id) {
     // WP toggle'ı varsayılan açık yap
     const waToggle = document.getElementById('ops-modal-driver-wa-toggle');
     if (waToggle) waToggle.checked = true;
+    // Önceki işten kalan "Kaydedildi" yazısını ve Tahsilat Yok anahtarını sıfırla
+    const opsDurumYazi = document.querySelector('.ops-modal-driver-status');
+    if (opsDurumYazi) { opsDurumYazi.style.display = 'none'; opsDurumYazi.textContent = ''; }
+    const opsTahsilatYokAc = document.getElementById('ops-modal-no-collection');
+    if (opsTahsilatYokAc) opsTahsilatYokAc.checked = false;
 
     new bootstrap.Modal(document.getElementById('opsStatusModal')).show();
 
@@ -3939,7 +3951,8 @@ function openOpsStatus(id) {
                 + '<span><i class="bi bi-people text-warning me-1"></i><strong>Dışarıya Verildi</strong></span>'
                 + yesNo(ops.is_outsourced, 'warning text-dark', 'secondary')
                 + '</div>'
-                + '<div class="d-flex justify-content-between align-items-center">'
+                // Tahsilat satırı yalnız iş bir şoföre verilmişse (değer kayıtlıysa) görünür
+                + '<div id="ops-tahsilat-satir" class="justify-content-between align-items-center" style="display:' + (rzTahsilatVarMi(ops.tahsilat) ? 'flex' : 'none') + ';">'
                 + '<span><i class="bi bi-cash-coin text-success me-1"></i><strong>Tahsilat</strong></span>'
                 + '<span id="ops-tahsilat-durum">' + rzTahsilatDurumHtml(ops.tahsilat) + '</span>'
                 + '</div>';
@@ -4355,6 +4368,8 @@ document.getElementById('ops-modal-driver-save').addEventListener('click', funct
                 }
                 var opsDurum = document.getElementById('ops-tahsilat-durum');
                 if (opsDurum) opsDurum.innerHTML = rzTahsilatDurumHtml(tYeni);
+                var opsSatir = document.getElementById('ops-tahsilat-satir');
+                if (opsSatir) opsSatir.style.display = rzTahsilatVarMi(tYeni) ? 'flex' : 'none';
 
                 // WhatsApp Mesajı Gönder (Eğer check edilmişse)
                 const waToggle = document.getElementById('ops-modal-driver-wa-toggle');
@@ -4487,7 +4502,11 @@ function buildDriverMessage(b, driverName, passengers, noCollection) {
     return parseWhatsAppTemplate(templateKey, placeholders);
 }
 
-// İş Durumu penceresinde "Tahsilat: Var / Yok / Seçilmedi"
+// Tahsilat kayıtlı mı (1 = var, 0 = yok); null/boş = iş şoföre verilmemiş
+function rzTahsilatVarMi(val) {
+    return val === 1 || val === 0 || val === '1' || val === '0';
+}
+// İş Durumu penceresinde "Tahsilat: Var / Yok"
 function rzTahsilatDurumHtml(val) {
     if (val === 1 || val === '1') return '<span class="badge bg-success">Var</span>';
     if (val === 0 || val === '0') return '<span class="badge bg-danger">Yok</span>';
@@ -4584,9 +4603,26 @@ document.getElementById('driver-modal-save-btn').addEventListener('click', funct
                 fdStatus.append('value', 1);
                 fdStatus.append('csrf_token', csrfToken);
 
+                // İş yapıldı kaydedilemezse şoförü geri al (yarım kalmasın: "iş yapılmadı ama şoför + tahsilat var")
+                const yarimKalmasin = function(mesaj) {
+                    const fdGeri = new FormData();
+                    fdGeri.append('action', 'set_driver');
+                    fdGeri.append('booking_id', bookingId);
+                    fdGeri.append('driver_id', 0);
+                    fdGeri.append('csrf_token', csrfToken);
+                    fetch(apiUrl, {method:'POST', body:fdGeri}).catch(function() {});
+                    completedSaved = false; // pencere kapanınca "İş yapıldı" işareti geri alınır
+                    bootstrap.Modal.getInstance(document.getElementById('driverSelectModal')).hide();
+                    showToast(mesaj, false);
+                };
+
                 fetch(apiUrl, {method:'POST', body:fdStatus})
                     .then(function(r) { return r.json(); })
                     .then(function(d2) {
+                        if (!d2 || !d2.success) {
+                            yarimKalmasin('İş yapıldı kaydedilemedi' + (d2 && d2.message ? ': ' + d2.message : '') + '. Tekrar deneyin.');
+                            return;
+                        }
                         bootstrap.Modal.getInstance(document.getElementById('driverSelectModal')).hide();
                         showToast('Şöför kaydedildi ve iş yapıldı olarak işaretlendi.', true);
                         if (kayitSatiri) kayitSatiri.classList.add('row-completed');
@@ -4604,8 +4640,7 @@ document.getElementById('driver-modal-save-btn').addEventListener('click', funct
                         }
                     })
                     .catch(function() {
-                        bootstrap.Modal.getInstance(document.getElementById('driverSelectModal')).hide();
-                        showToast('Şöför kaydedildi fakat status güncellenemedi.', false);
+                        yarimKalmasin('İş yapıldı kaydedilemedi (bağlantı hatası). Tekrar deneyin.');
                     });
             } else {
                 btn.disabled = false;
