@@ -18,6 +18,22 @@ $defaultLang = reset($defaultLang) ?: $languages[0] ?? ['code' => 'tr'];
 
 // Turlarda fiyat / araç yok (sitede kart + WhatsApp rezervasyon). tour_vehicles kayıtları kaydette temizlenir.
 
+// Tur galerisi (tours.gallery, JSON dizi): formdaki gizli alandan gelen listeyi temizler — boş/tekrar atılır, en çok 30 resim
+const TOUR_GALLERY_MAX = 30;
+function tourGalleryClean($raw) {
+    $list = is_array($raw) ? $raw : json_decode((string)$raw, true);
+    $out = [];
+    if (!is_array($list)) return $out;
+    foreach ($list as $p) {
+        if (!is_string($p)) continue;
+        $p = trim($p);
+        if ($p === '' || strlen($p) > 255 || in_array($p, $out, true)) continue;
+        $out[] = $p;
+        if (count($out) >= TOUR_GALLERY_MAX) break;
+    }
+    return $out;
+}
+
 // Sayfa ayarları işlemleri
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['save_page_settings'])) {
     $bgImage = $_POST['background_image'] ?? '';
@@ -51,7 +67,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && !isset($_POST['save_page_settings']
     $status = $_POST['status'] ?? 'draft';
     $sortOrder = (int)($_POST['sort_order'] ?? 0);
     $image = $_POST['image'] ?? '';
-    
+    // Galeri: alan formda yoksa (eski açık sekme vb.) mevcut galeri korunur
+    $galleryPosted = array_key_exists('gallery', $_POST);
+    $galleryList = tourGalleryClean($_POST['gallery'] ?? '');
+    $galleryJson = $galleryList ? json_encode($galleryList, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE) : null;
+
     // Çeviriler
     $translations = $_POST['translations'] ?? [];
 
@@ -84,18 +104,21 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && !isset($_POST['save_page_settings']
                     $defaultTrans['meta_title'] ?? '', $defaultTrans['meta_description'] ?? '',
                     $id
                 ]);
+                if ($galleryPosted) {
+                    $db->prepare("UPDATE tours SET gallery = ? WHERE id = ?")->execute([$galleryJson, $id]);
+                }
                 $tourId = $id;
             } else {
                 // Ekle (price tabloda zorunlu ve varsayılansız → turlarda fiyat yok, 0 yazılır)
                 $stmt = $db->prepare("
-                    INSERT INTO tours (title, slug, description, content, image, is_featured, status, sort_order, meta_title, meta_description, price)
-                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0)
+                    INSERT INTO tours (title, slug, description, content, image, gallery, is_featured, status, sort_order, meta_title, meta_description, price)
+                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0)
                 ");
                 $stmt->execute([
                     $defaultTitle, $defaultSlug,
                     $defaultTrans['description'] ?? '',
                     $defaultTrans['content'] ?? '',
-                    $image, $isFeatured, $status, $sortOrder,
+                    $image, $galleryJson, $isFeatured, $status, $sortOrder,
                     $defaultTrans['meta_title'] ?? '', $defaultTrans['meta_description'] ?? ''
                 ]);
                 $tourId = $db->lastInsertId();
@@ -165,8 +188,11 @@ if ($action === 'edit' && $id) {
     }
 }
 
+// Galeri listesi (form için)
+$editGallery = tourGalleryClean($editData['gallery'] ?? '');
+
 // Sayfa ayarlarını al
-$pageSettings = $db->query("SELECT * FROM page_settings WHERE page_key = 'tours'")->fetch();
+$pageSettings =$db->query("SELECT * FROM page_settings WHERE page_key = 'tours'")->fetch();
 $pageSettingTranslations = [];
 if ($pageSettings) {
     $stmt = $db->prepare("SELECT * FROM page_setting_translations WHERE page_setting_id = ?");
@@ -275,8 +301,26 @@ require_once __DIR__ . '/includes/header.php';
                     </div>
                 </div>
             </div>
+
+            <!-- Galeri: tur sayfasında mini resim galerisi (tıklayınca büyür) -->
+            <div class="card mb-4">
+                <div class="card-header bg-white py-3 d-flex justify-content-between align-items-center">
+                    <h6 class="mb-0 fw-bold"><i class="bi bi-images me-1"></i> Galeri <span class="text-muted fw-normal small" id="tgCount"></span></h6>
+                    <button type="button" class="btn btn-sm btn-primary" id="tgAdd">
+                        <i class="bi bi-plus-lg me-1"></i> Resim Ekle
+                    </button>
+                </div>
+                <div class="card-body">
+                    <input type="hidden" name="gallery" id="tour_gallery" value="<?= e(json_encode($editGallery, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE)) ?>">
+                    <div id="tgGrid" class="tg-admin-grid"></div>
+                    <div id="tgEmpty" class="text-muted small py-2">
+                        Henüz resim yok. <b>Resim Ekle</b>'ye basın: Kütüphane'den birden fazla resmi tıklayarak seçebilir ya da <b>Yükle</b> sekmesinden yeni resimleri toplu yükleyebilirsiniz (yüklenenler otomatik seçili gelir).
+                    </div>
+                    <small class="text-muted d-block mt-2">Resimler tur sayfasında bu sırayla görünür, misafir tıklayınca büyür. Sırayı oklarla değiştirin; <i class="bi bi-x-lg"></i> resmi yalnız galeriden çıkarır (Medya'dan silinmez). En çok <?= TOUR_GALLERY_MAX ?> resim. Değişiklikler <b>Kaydet</b>'e basınca geçerli olur.</small>
+                </div>
+            </div>
         </div>
-        
+
         <div class="col-lg-4">
             <div class="card mb-4">
                 <div class="card-header bg-white py-3">
@@ -480,6 +524,15 @@ require_once __DIR__ . '/includes/header.php';
     </div>
 </div>
 
+<style>
+.tg-admin-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(130px,1fr));gap:10px}
+.tg-admin-item{position:relative;aspect-ratio:4/3;border-radius:8px;overflow:hidden;background:#f1f5f9;border:1px solid #e2e8f0}
+.tg-admin-item img{width:100%;height:100%;object-fit:cover;display:block}
+.tg-admin-n{position:absolute;top:6px;left:6px;background:rgba(0,0,0,.6);color:#fff;font-size:11px;padding:1px 7px;border-radius:10px}
+.tg-admin-bar{position:absolute;left:0;right:0;bottom:0;display:flex;gap:4px;justify-content:center;padding:6px;background:linear-gradient(transparent,rgba(0,0,0,.55))}
+.tg-admin-bar .btn{padding:2px 8px;line-height:1.2}
+</style>
+
 <script>
 // Türkçe karakter çevrimi ve slug oluşturma
 function generateSlug(text) {
@@ -528,6 +581,77 @@ document.querySelectorAll('input[name*="[slug]"]').forEach(function(slugInput) {
         this.dataset.manualEdit = 'true';
     });
 });
+
+// Tur galerisi (Galeri kartı): liste gizli alanda JSON olarak tutulur, Kaydet ile yazılır
+(function () {
+    const input = document.getElementById('tour_gallery');
+    if (!input) return;
+    const grid = document.getElementById('tgGrid');
+    const empty = document.getElementById('tgEmpty');
+    const count = document.getElementById('tgCount');
+    const MAX = <?= (int)TOUR_GALLERY_MAX ?>;
+    const UP = <?= json_encode(UPLOADS_URL, JSON_HEX_TAG) ?>, AS = <?= json_encode(ASSETS_URL, JSON_HEX_TAG) ?>;
+    let list = [];
+    try { list = JSON.parse(input.value || '[]'); } catch (e) { list = []; }
+    if (!Array.isArray(list)) list = [];
+
+    function url(p) {
+        if (/^https?:\/\//i.test(p)) return p;
+        if (p.indexOf('img/') === 0 || p.indexOf('video/') === 0) return AS + p;
+        return UP + p;
+    }
+    function button(icon, title, disabled, fn, danger) {
+        const b = document.createElement('button');
+        b.type = 'button';
+        b.className = 'btn btn-sm ' + (danger ? 'btn-danger' : 'btn-light');
+        b.title = title;
+        b.setAttribute('aria-label', title);
+        b.disabled = disabled;
+        b.innerHTML = '<i class="bi ' + icon + '"></i>';
+        b.addEventListener('click', fn);
+        return b;
+    }
+    function move(i, dir) {
+        const j = i + dir;
+        if (j < 0 || j >= list.length) return;
+        const t = list[i]; list[i] = list[j]; list[j] = t;
+        render();
+    }
+    function render() {
+        input.value = JSON.stringify(list);
+        count.textContent = list.length ? '(' + list.length + ' resim)' : '';
+        empty.style.display = list.length ? 'none' : '';
+        grid.innerHTML = '';
+        list.forEach(function (p, i) {
+            const item = document.createElement('div');
+            item.className = 'tg-admin-item';
+            const img = document.createElement('img');
+            img.src = url(p); img.alt = ''; img.loading = 'lazy';
+            const no = document.createElement('span');
+            no.className = 'tg-admin-n'; no.textContent = i + 1;
+            const bar = document.createElement('div');
+            bar.className = 'tg-admin-bar';
+            bar.appendChild(button('bi-arrow-left', 'Öne al', i === 0, function () { move(i, -1); }));
+            bar.appendChild(button('bi-arrow-right', 'Arkaya al', i === list.length - 1, function () { move(i, 1); }));
+            bar.appendChild(button('bi-x-lg', 'Galeriden çıkar', false, function () { list.splice(i, 1); render(); }, true));
+            item.appendChild(img); item.appendChild(no); item.appendChild(bar);
+            grid.appendChild(item);
+        });
+    }
+    document.getElementById('tgAdd').addEventListener('click', function () {
+        openMediaPickerMulti('image', function (items) {
+            let full = false;
+            items.forEach(function (m) {
+                if (!m || typeof m.file_path !== 'string' || m.file_path === '' || list.indexOf(m.file_path) !== -1) return;
+                if (list.length >= MAX) { full = true; return; }
+                list.push(m.file_path);
+            });
+            render();
+            if (full) alert('Galeride en çok ' + MAX + ' resim olabilir; fazlası eklenmedi.');
+        });
+    });
+    render();
+})();
 
 </script>
 

@@ -167,12 +167,50 @@ let mediaPickerCallback = null;
 let mediaPickerType = 'all';
 let selectedMedia = null;
 let mediaPickerPage = 1;
+// Çoklu seçim modu (ör. tur galerisi): openMediaPickerMulti ile açılır, callback seçilenlerin dizisini alır
+let mediaPickerMulti = false;
+let selectedMediaList = [];
+
+function mediaPickerUpdateSelectBtn() {
+    const btn = document.getElementById('mediaPickerSelect');
+    if (mediaPickerMulti) {
+        btn.disabled = selectedMediaList.length === 0;
+        btn.innerHTML = '<i class="bi bi-check-lg me-1"></i>Seç' + (selectedMediaList.length ? ' (' + selectedMediaList.length + ')' : '');
+    } else {
+        btn.disabled = !selectedMedia;
+        btn.innerHTML = '<i class="bi bi-check-lg me-1"></i>Seç';
+    }
+}
+
+function mediaPickerIsSelected(id) {
+    return selectedMediaList.some(m => String(m.id) === String(id));
+}
+
+/** Birden fazla medya seçtirir: callback([{id, file_path, url, file_type, ...}, ...]) */
+function openMediaPickerMulti(type, callback) {
+    mediaPickerType = type || 'all';
+    mediaPickerMulti = true;
+    selectedMedia = null;
+    selectedMediaList = [];
+    mediaPickerPage = 1;
+    mediaPickerCallback = callback;
+    document.querySelectorAll('#mediaTypeFilter button').forEach(btn => {
+        btn.classList.toggle('active', btn.dataset.type === mediaPickerType);
+        btn.style.display = mediaPickerType === 'all' || btn.dataset.type === mediaPickerType || btn.dataset.type === 'all' ? '' : 'none';
+    });
+    mediaPickerUpdateSelectBtn();
+    bootstrap.Modal.getOrCreateInstance(document.getElementById('mediaPickerModal')).show();
+    loadMediaPickerItems();
+}
 
 function openMediaPicker(inputId, type = 'all') {
     mediaPickerType = type;
+    mediaPickerMulti = false;
+    selectedMediaList = [];
     selectedMedia = null;
     mediaPickerPage = 1;
-    
+    mediaPickerUpdateSelectBtn();
+
     // Callback ayarla
     mediaPickerCallback = (media) => {
         const input = document.getElementById(inputId);
@@ -220,7 +258,7 @@ function loadMediaPickerItems() {
         .then(data => {
             if (data.success && data.media.length > 0) {
                 grid.innerHTML = data.media.map(media => `
-                    <div class="media-picker-item" data-id="${media.id}" data-media='${JSON.stringify(media).replace(/'/g, "&#39;")}' onclick="selectMediaItem(this)">
+                    <div class="media-picker-item${mediaPickerMulti && mediaPickerIsSelected(media.id) ? ' selected' : ''}" data-id="${media.id}" data-media='${JSON.stringify(media).replace(/'/g, "&#39;")}' onclick="selectMediaItem(this)">
                         ${media.file_type === 'image' 
                             ? `<img src="${media.url}" alt="${media.original_name}" loading="lazy">`
                             : `<video src="${media.url}" muted></video><span class="video-icon"><i class="bi bi-play-fill"></i></span>`
@@ -252,6 +290,20 @@ function loadMediaPickerItems() {
 }
 
 function selectMediaItem(element) {
+    if (mediaPickerMulti) {
+        // Çoklu mod: tıklayınca seç / seçimi kaldır (seçim sırası korunur)
+        const media = JSON.parse(element.dataset.media);
+        const i = selectedMediaList.findIndex(m => String(m.id) === String(media.id));
+        if (i >= 0) {
+            selectedMediaList.splice(i, 1);
+            element.classList.remove('selected');
+        } else {
+            selectedMediaList.push(media);
+            element.classList.add('selected');
+        }
+        mediaPickerUpdateSelectBtn();
+        return;
+    }
     document.querySelectorAll('.media-picker-item').forEach(el => el.classList.remove('selected'));
     element.classList.add('selected');
     selectedMedia = JSON.parse(element.dataset.media);
@@ -296,6 +348,13 @@ document.getElementById('mediaSearchInput').addEventListener('input', function()
 
 // Select button
 document.getElementById('mediaPickerSelect').addEventListener('click', function() {
+    if (mediaPickerMulti) {
+        if (selectedMediaList.length && mediaPickerCallback) {
+            mediaPickerCallback(selectedMediaList.slice());
+            bootstrap.Modal.getInstance(document.getElementById('mediaPickerModal')).hide();
+        }
+        return;
+    }
     if (selectedMedia && mediaPickerCallback) {
         mediaPickerCallback(selectedMedia);
         bootstrap.Modal.getInstance(document.getElementById('mediaPickerModal')).hide();
@@ -356,6 +415,11 @@ function handlePickerUpload(files) {
         .then(data => {
             completed++;
             if (data.success) {
+                // Çoklu modda yeni yüklenen dosya otomatik seçili gelir
+                if (mediaPickerMulti && data.media && (mediaPickerType === 'all' || data.media.file_type === mediaPickerType) && !mediaPickerIsSelected(data.media.id)) {
+                    selectedMediaList.push(data.media);
+                    mediaPickerUpdateSelectBtn();
+                }
                 item.innerHTML = `
                     <span class="small flex-grow-1">${file.name}</span>
                     <i class="bi bi-check-circle-fill text-success"></i>

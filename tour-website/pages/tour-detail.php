@@ -39,13 +39,15 @@ $img = !empty($tour['image']) ? getMediaUrl($tour['image']) : '';
 $bookUrl = sl_tour_book_url($tour['title']);
 $desc = (string)$tour['description'];
 $others = sl_tours((int)$tour['id']);
+$gallery = sl_tour_gallery($tour); // Turlar > Galeri (boşsa galeri bloğu çıkmaz)
+if ($gallery) $extraJs = sl_tour_gallery_js();
 
 $seoTitle = (!empty($tour['meta_title']) ? $tour['meta_title'] : $tour['title']) . ' · ' . getSetting('site_name', 'Sunline VIP Transfer');
 $metaDescription = !empty($tour['meta_description']) ? $tour['meta_description'] : $desc;
 $canonicalUrl = $tourUrl;
 if ($img !== '') $ogImage = $img;
 $bodyClass = 'sl-tour has-mbar';
-$extraCss = sl_tour_css();
+$extraCss = sl_tour_css() . ($gallery ? sl_tour_gallery_css() : '');
 $pageSchema = [
     getBreadcrumbSchema([['name' => $listTitle, 'url' => $listUrl], ['name' => $tour['title'], 'url' => $tourUrl]]),
     getTourSchema($tour, $tourUrl),
@@ -66,6 +68,7 @@ sl_partial('page-hero', ['h1' => $tour['title'], 'crumbs' => [[$listTitle, $list
         <?php if (trim((string)$tour['content']) !== ''): ?>
         <div class="prose mt-4"><?= $tour['content'] ?></div>
         <?php endif; ?>
+        <?php sl_tour_gallery_html($gallery); ?>
       </div>
       <div class="col-lg-4">
         <aside class="side-card">
@@ -77,6 +80,7 @@ sl_partial('page-hero', ['h1' => $tour['title'], 'crumbs' => [[$listTitle, $list
     </div>
   </div>
 </section>
+<?php sl_tour_gallery_lightbox($gallery); ?>
 
 <?php if ($others): ?>
 <section class="sec pt-0">
