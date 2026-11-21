@@ -79,6 +79,12 @@ $slOlF = sl_olcum();
           <?php if ($slWa !== ''): ?><li><a href="<?= e($slWa) ?>" target="_blank" rel="noopener"><i class="bi bi-whatsapp me-2"></i>WhatsApp</a></li><?php endif; ?>
           <?php if ($slEmail !== ''): ?><li><a href="mailto:<?= e($slEmail) ?>"><i class="bi bi-envelope me-2"></i><?= e($slEmail) ?></a></li><?php endif; ?>
         </ul>
+        <?php /* Ticari unvan + acenta yasal adı (Sezer 2026-11-21: sitede görünmesi gerekiyor) */ ?>
+        <div class="ftr-legal mt-3" style="color:var(--muted);font-size:.8rem;line-height:1.5">
+          <div style="font-weight:600">MANAVGAT MES TURİZM TİCARET LİMİTED ŞİRKETİ</div>
+          <div>SHINEWAY TRAVEL AGENCY</div>
+          <div><?= sl_e('f_license', ['no' => '18675']) ?></div>
+        </div>
       </div>
     </div>
     <div class="copy">© <?= date('Y') ?> <?= e(mb_strtoupper($slSiteName, 'UTF-8')) ?> — <?= sl_e('rights') ?><?php if ($slOlF['any']): ?> · <button type="button" class="ck-open" data-ck-open><?= sl_e('ck_set') ?></button><?php endif; ?></div>
