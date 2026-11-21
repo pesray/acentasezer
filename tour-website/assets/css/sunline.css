@@ -204,7 +204,7 @@ a{color:var(--acc-t,var(--accent));text-decoration:none}a:hover{color:var(--acc-
   .vprice{text-align:left;min-width:0}
   .vprice .pp{justify-content:flex-start}
 }
-.prose{line-height:1.75;font-size:1.02rem}
+.prose{line-height:1.75;font-size:1.02rem;overflow-wrap:break-word}
 .prose h2,.prose h3,.prose h4{font-family:var(--ff-d);font-weight:700;margin:1.6rem 0 .7rem;line-height:1.25}
 .prose h2{font-size:1.7rem}.prose h3{font-size:1.35rem}
 .prose p{margin:0 0 1rem;color:var(--text)}
@@ -244,7 +244,7 @@ a{color:var(--acc-t,var(--accent));text-decoration:none}a:hover{color:var(--acc-
 .nf b{font-family:var(--ff-d);font-size:clamp(5rem,16vw,9rem);color:var(--accent);line-height:1;display:block}
 .post-meta{color:#ddd;font-size:.88rem;display:flex;gap:16px;flex-wrap:wrap}
 .post-cover{border-radius:20px;overflow:hidden;margin:-90px 0 34px;position:relative;z-index:3;box-shadow:0 20px 60px rgba(0,0,0,.35)}
-.post-cover img{width:100%;max-height:480px;object-fit:cover;display:block}
+.post-cover img{width:100%;height:auto;max-height:480px;object-fit:cover;display:block}
 .tour-meta{display:flex;flex-wrap:wrap;gap:8px 18px;color:var(--cmuted);font-size:.86rem;margin-top:8px}
 .tour-meta i{color:var(--accent);margin-right:4px}
 
