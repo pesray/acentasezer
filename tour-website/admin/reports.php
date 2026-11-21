@@ -123,16 +123,6 @@ rp_ust('genel');
                         <td class="text-end <?= $alan === 'net' ? 'rp-col-gercek' : '' ?>" data-k="<?= $alan ?>" data-pb="<?= e($pb) ?>" data-t="<?= number_format($b['t'], 2, '.', '') ?>" data-n="<?= (int)$b['n'] ?>">
                             <?= rp_tutar($b, $pb) ?>
                             <?php if ($b['n'] > 0): ?><span class="rp-n"><?= (int)$b['n'] ?> iş</span><?php endif; ?>
-                            <?php if ($alan === 'net' && $o['netCevrim']['n'] > 0):
-                                $cv = $o['netCevrim'];
-                                $kendi = ['n' => $b['n'] - $cv['n'], 't' => $b['t'] - $cv['t']];
-                                $kaynakPb = rp_sirala_anahtar(array_keys($h['cevrimKaynak'][$pb] ?? []));
-                                $kaynakYazi = implode(', ', array_map(function ($k) use ($pbSem) { return $pbSem[$k] ?? $k; }, $kaynakPb)); ?>
-                            <span class="rp-kirilim" data-kendi="<?= number_format($kendi['t'], 2, '.', '') ?>" data-kendi-n="<?= (int)$kendi['n'] ?>" data-cevrim="<?= number_format($cv['t'], 2, '.', '') ?>" data-cevrim-n="<?= (int)$cv['n'] ?>">
-                                <span>kendi <?= e($pbSem[$pb] ?? $pb) ?> işleri: <?= e(rp_para($kendi['t'], $pb)) ?> · <?= (int)$kendi['n'] ?> iş</span>
-                                <span>+ <?= e($kaynakYazi) ?> ile satılıp <?= e($pbSem[$pb] ?? $pb) ?> verilen işlerin pass'ı: <?= e(rp_para($cv['t'], $pb)) ?> · <?= (int)$cv['n'] ?> iş</span>
-                            </span>
-                            <?php endif; ?>
                         </td>
                         <?php endforeach; ?>
                     </tr>
@@ -163,8 +153,8 @@ rp_ust('genel');
             <?php if (!empty($kur['eski'])): ?><span class="text-warning-emphasis" id="rpKurEski">TCMB'ye şu an ulaşılamadı; en son alınan kur kullanıldı.</span><?php endif; ?>
             Hakedişi farklı para biriminde girilen <strong><?= (int)$h['cevrilen'] ?> işte</strong> iş bedeli bu güncel kurla hakediş para birimine çevrildi
             (ör. 40 € iş, 1.500 ₺ hakediş: 40 € × kur − 1.500 ₺ = pass ₺); pass o para biriminde net ciroya eklendi.
-            Bu işlerin bedeli kendi para biriminin tahmini cirosunda kalır; bu yüzden bir para biriminin net cirosu tahmini cirosundan büyük olabilir
-            (net ciro hücresinin altındaki kırılımda görünür). Kurla çevrilen tutarlar kuruşlu çıkabilir.
+            Bu işlerin bedeli kendi para biriminin tahmini cirosunda kalır; bu yüzden bir para biriminin net cirosu tahmini cirosundan büyük olabilir.
+            Kurla çevrilen tutarlar kuruşlu çıkabilir.
         </div>
         <?php endif; ?>
     </div>

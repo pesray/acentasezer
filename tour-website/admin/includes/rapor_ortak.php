@@ -30,6 +30,7 @@ if (!defined('RAPOR_SAYFASI')) { // yalnız rapor sayfalarından (girişli + adm
 /*  Filtreler                                                          */
 /* ------------------------------------------------------------------ */
 $presets = [
+    'bu_ay_bugune' => 'Bu ay (bugüne kadar)', // varsayılan (Sezer, 2026-11-21): ayın 1'i – bugün
     'bu_ay'     => 'Bu ay',
     'gecen_ay'  => 'Geçen ay',
     'son_3_ay'  => 'Son 3 ay',
@@ -45,7 +46,7 @@ $turler = [
     'ara'     => 'Ara Transfer',
 ];
 
-$donem = isset($_GET['donem']) && is_string($_GET['donem']) && isset($presets[$_GET['donem']]) ? $_GET['donem'] : 'bu_ay';
+$donem = isset($_GET['donem']) && is_string($_GET['donem']) && isset($presets[$_GET['donem']]) ? $_GET['donem'] : 'bu_ay_bugune';
 $tur   = isset($_GET['tur']) && is_string($_GET['tur']) && isset($turler[$_GET['tur']]) ? $_GET['tur'] : 'tumu';
 
 function rp_tarih_gecerli($s) {
@@ -64,6 +65,10 @@ $bugun = new DateTime('today');
 $from = null;
 $to = null;
 switch ($donem) {
+    case 'bu_ay':
+        $from = (new DateTime('first day of this month'))->format('Y-m-d');
+        $to   = (new DateTime('last day of this month'))->format('Y-m-d');
+        break;
     case 'gecen_ay':
         $from = (new DateTime('first day of last month'))->format('Y-m-d');
         $to   = (new DateTime('last day of last month'))->format('Y-m-d');
@@ -92,11 +97,11 @@ switch ($donem) {
             if ($from > $to) { $tmp = $from; $from = $to; $to = $tmp; }
             break;
         }
-        $donem = 'bu_ay'; // geçersiz tarih → bu ay
+        $donem = 'bu_ay_bugune'; // geçersiz tarih → varsayılan
         // no break
-    default: // bu_ay
+    default: // bu_ay_bugune: ayın 1'i – bugün (bugün dahil)
         $from = (new DateTime('first day of this month'))->format('Y-m-d');
-        $to   = (new DateTime('last day of this month'))->format('Y-m-d');
+        $to   = $bugun->format('Y-m-d');
 }
 
 /* ------------------------------------------------------------------ */
@@ -357,8 +362,7 @@ function rp_is_hesap($r, $k, $kur) {
 
 function rp_bos_alan() {
     $b = ['n' => 0, 't' => 0.0];
-    // netCevrim: net cironun, başka para birimiyle satılıp bu para biriminde hakediş verilen (kurla çevrilen) işlerden gelen kısmı
-    return ['tahmini' => $b, 'net' => $b, 'hakedis' => $b, 'pass' => $b, 'netCevrim' => $b];
+    return ['tahmini' => $b, 'net' => $b, 'hakedis' => $b, 'pass' => $b];
 }
 function rp_alan_ekle(&$set, $alan, $t) {
     if (!is_array($set)) $set = rp_bos_alan();
@@ -372,7 +376,7 @@ function rp_alan_ekle(&$set, $alan, $t) {
  */
 function rp_genel_hesapla($rows, $kur) {
     $h = ['say' => ['yapildi' => 0, 'disari' => 0, 'bekleyen' => 0, 'iptal' => 0],
-          'ozet' => [], 'aylar' => [], 'tipler' => [], 'partner' => [], 'isler' => [], 'cevrimKaynak' => [],
+          'ozet' => [], 'aylar' => [], 'tipler' => [], 'partner' => [], 'isler' => [],
           'fiyatsiz' => 0, 'verilenEksik' => 0, 'passEksi' => 0, 'partnerYok' => 0, 'cevrilen' => 0, 'kurYok' => 0];
     foreach ($rows as $r) {
         $k = rp_kategori($r);
@@ -390,10 +394,6 @@ function rp_genel_hesapla($rows, $kur) {
             rp_alan_ekle($h['ozet'][$g[0]], $alan, $g[1]);
             rp_alan_ekle($h['aylar'][$g[0]][$ym], $alan, $g[1]);
             rp_alan_ekle($h['tipler'][$g[0]][$tip], $alan, $g[1]);
-        }
-        if ($x['cevrim'] && $x['net']) { // özet kırılımı: kendi işleri + kurla çevrilen işlerin pass'ı
-            rp_alan_ekle($h['ozet'][$x['net'][0]], 'netCevrim', $x['net'][1]);
-            $h['cevrimKaynak'][$x['net'][0]][$x['pb']] = true;
         }
 
         $pad = '';
@@ -647,10 +647,7 @@ function rp_stil() {
     .rp-table tfoot td, .rp-table tfoot th { font-weight: 700; border-top: 2px solid var(--bs-border-color); background: var(--hover-bg); }
     .rp-table .rp-col-gercek { font-weight: 700; color: var(--bs-success-text-emphasis); }
     .rp-ozet td { font-size: 1.05rem; padding-top: .8rem; padding-bottom: .8rem; }
-    .rp-ozet .rp-n { display: block; font-size: .75rem; font-weight: 500; color: var(--text-muted); }
-    .rp-kirilim { display: block; margin-top: .35rem; padding-top: .3rem; border-top: 1px dashed var(--bs-border-color); font-size: .72rem; font-weight: 500; color: var(--text-muted); line-height: 1.35; }
-    .rp-kirilim > span { display: block; }
-    .rp-pb { display: inline-flex; align-items: center; gap: .5rem; font-weight: 700; }
+    .rp-ozet .rp-n { display: block; font-size: .75rem; font-weight: 500; color: var(--text-muted); }    .rp-pb { display: inline-flex; align-items: center; gap: .5rem; font-weight: 700; }
     .rp-pb-sem { width: 2rem; height: 2rem; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center;
                  background: var(--primary-light); color: var(--primary); font-size: 1rem; }
     .rp-pills .nav-link { border: 1px solid var(--bs-border-color); margin: 0 .5rem .5rem 0; font-weight: 600; color: var(--text-base); }
