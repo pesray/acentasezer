@@ -12,7 +12,7 @@
  */
 
 // Not: Bu dosya her zaman require_once ile yüklenmelidir.
-if (!defined('SL_ASSET_VER')) define('SL_ASSET_VER', '1.2.6');
+if (!defined('SL_ASSET_VER')) define('SL_ASSET_VER', '1.2.7');
 
 require_once __DIR__ . '/defaults.php';
 

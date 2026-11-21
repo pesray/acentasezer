@@ -237,6 +237,9 @@ a{color:var(--acc-t,var(--accent));text-decoration:none}a:hover{color:var(--acc-
 .cinfo a,.cinfo div{display:flex;gap:12px;align-items:center;background:var(--card);border:1px solid var(--cline);border-radius:14px;padding:14px 16px;color:var(--ctext);font-weight:600}
 .cinfo i{width:40px;height:40px;border-radius:11px;display:flex;align-items:center;justify-content:center;background:color-mix(in oklab,var(--accent) 14%,transparent);color:var(--accent);font-size:1.1rem;flex-shrink:0}
 .cinfo small{display:block;color:var(--cmuted);font-weight:500;font-size:.75rem;letter-spacing:.06em;text-transform:uppercase}
+/* Telefonda uzun e-posta/adres kartı ekrandan taşırmasın: metin kendi kutusunda kalır, dar ekranda kart biraz sıkılaşır */
+.cinfo a>span,.cinfo div>span{min-width:0;overflow-wrap:anywhere}
+@media(max-width:400px){.cinfo a,.cinfo div{padding:12px 14px;gap:10px;font-size:.9rem}.cinfo i{width:36px;height:36px}}
 .alert-sl{border-radius:14px;padding:14px 16px;font-weight:600;display:flex;gap:10px;align-items:flex-start}
 .alert-sl.ok-msg{background:color-mix(in oklab,#25D366 14%,transparent);border:1px solid color-mix(in oklab,#25D366 45%,transparent);color:var(--text)}
 .alert-sl.err-msg{background:var(--redbg);border:1px solid color-mix(in oklab,var(--red) 55%,transparent);color:var(--red)}

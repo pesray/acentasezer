@@ -59,7 +59,7 @@ sl_partial('page-hero', ['h1' => $title, 'sub' => sl_t('contact_s'), 'crumbs' =>
         <div class="cinfo">
           <?php if ($wa !== ''): ?><a href="<?= e($wa) ?>" target="_blank" rel="noopener"><i class="bi bi-whatsapp"></i><span><small>WhatsApp</small><?= e($phone !== '' ? $phone : 'WhatsApp') ?></span></a><?php endif; ?>
           <?php if ($phone !== ''): ?><a href="tel:<?= e(preg_replace('/[^\d+]/', '', $phone)) ?>"><i class="bi bi-telephone"></i><span><small><?= sl_e('c_phone') ?></small><?= e($phone) ?></span></a><?php endif; ?>
-          <?php if ($email !== ''): ?><a href="mailto:<?= e($email) ?>"><i class="bi bi-envelope"></i><span><small><?= sl_e('c_email') ?></small><?= e($email) ?></span></a><?php endif; ?>
+          <?php if ($email !== ''): ?><a href="mailto:<?= e($email) ?>"><i class="bi bi-envelope"></i><span><small><?= sl_e('c_email') ?></small><?= str_replace('@', '@<wbr>', e($email)) /* dar ekranda @'den sonra alt satıra geçebilsin */ ?></span></a><?php endif; ?>
           <?php if ($address !== ''): ?><a href="https://www.google.com/maps/search/?api=1&amp;query=<?= e(rawurlencode($address)) ?>" target="_blank" rel="noopener"><i class="bi bi-geo-alt"></i><span><small><?= sl_e('address') ?></small><?= e($address) ?></span></a><?php endif; ?>
         </div>
       </div>
