@@ -3,13 +3,19 @@
  * Raporlar — ortak parçalar (reports.php + reports_drivers.php)
  * Filtreler, veri sorgusu (yalnız okuma), biçimlendirme, sayfa üstü, stil ve JS.
  *
- * Kurallar (Sezer, 2026-11-20):
- *  - Sisteme girilen her transfer = TAHMİNİ CİRO (iptal edilen ve silinenler hariç; onay bekleyen site rezervasyonları dahil)
- *  - "Yapıldı" ya da "Dışarıya verildi" işaretli işler = GERÇEKLEŞEN (NET) CİRO
- *      · Dışarıya verildi : is_outsourced = 1 (aynı iş "yapıldı" da işaretli olabilir, bir kez sayılır)
- *      · Kendimiz yaptık  : is_completed = 1 ve dışarıya verilmemiş
- *      · Bekleyen          : ikisi de işaretli değil
- *  - Para birimleri ayrı toplanır (kur çevrimi yapılmaz).
+ * Kurallar (Sezer, 2026-11-21):
+ *  - TAHMİNİ CİRO = sisteme girilen işlerin bedeli (total_price), her iş kendi para biriminde (potansiyel kazanç;
+ *    iptal edilen ve silinenler hariç; onay bekleyen site rezervasyonları dahil).
+ *  - Durumlar: Dışarıya verildi = is_outsourced 1 (aynı iş "iş yapıldı" da işaretli olabilir, BİR KEZ sayılır)
+ *              Kendimiz yaptık  = is_completed 1 ve dışarıya verilmemiş · Bekleyen = ikisi de değil
+ *  - NET CİRO = kendimiz yaptığımız işlerin bedelinin tamamı + dışarıya verilen işlerde PASS.
+ *  - PARTNER HAKEDİŞİ = işi dışarıya verdiğimiz tutar (İş Durumu'ndaki "Verilen Tutar", outsource_price).
+ *  - PASS = iş bedeli − partner hakedişi (bize kalan). Örnek: 40 € iş, dışarıya 30 € → hakediş 30 €, pass 10 €.
+ *    Verilen Tutar girilmemişse düşülecek tutar yok (pass = iş bedeli) ve "Kontrol edilmesi gerekenler"de listelenir.
+ *  - Hakediş farklı para biriminde girildiyse (ör. € iş, ₺ hakediş) iş bedeli GÜNCEL kurla hakediş para birimine
+ *    çevrilir: 40 € × 55 = 2.200 ₺ − 1.500 ₺ = 700 ₺ → pass ve net ciro ₺'ye 700 ₺ eklenir.
+ *    Kur: TCMB günlük kurları (döviz alış), rp_kurlar(). Kur alınamazsa o işlerin pass'ı hesaplanmaz, sayfada uyarı çıkar.
+ *  - Para birimleri birbirine eklenmez (kur yalnız yukarıdaki pass hesabında kullanılır).
  *  - Tarih = transferin tarihi (Arrival/Depar: uçuş tarihi, Ara transfer: alış tarihi; boşsa kayıt tarihi).
  *  - Gidiş-dönüş rezervasyon 2 kayıttır (her yön kendi tutarıyla), rezervasyon ekranındaki gibi.
  *  - Şoför: booking_drivers tablosundaki atama (bir işe bir şoför).
@@ -199,6 +205,227 @@ function rp_pb($c) {
     $c = strtoupper(trim((string)$c));
     return $c !== '' ? $c : '—';
 }
+/**
+ * İşin tutarları:
+ *  bedel / pb = işin bedeli (total_price, currency) → tahmini ciro
+ *  hk / hpb   = dışarıya verildiyse partner hakedişi (outsource_price, outsource_currency; boşsa işin para birimi)
+ */
+function rp_is($r, $k) {
+    $o = ['bedel' => max(0, (float)$r['total_price']), 'pb' => rp_pb($r['currency']), 'hk' => 0.0, 'hpb' => ''];
+    if ($k === 'disari') {
+        $o['hk'] = max(0, (float)$r['outsource_price']);
+        $o['hpb'] = rp_pb(trim((string)($r['outsource_currency'] ?? '')) !== '' ? $r['outsource_currency'] : $r['currency']);
+    }
+    return $o;
+}
+
+/* ------------------------------------------------------------------ */
+/*  Döviz kuru — yalnız hakedişi farklı para biriminde girilen işlerin  */
+/*  pass hesabı için. Kaynak: TCMB günlük kurlar (döviz alış).          */
+/*  Sezer ileride sabit kur verirse rp_kurlar() başında kullanılır.     */
+/* ------------------------------------------------------------------ */
+define('RP_KUR_URL', 'https://www.tcmb.gov.tr/kurlar/today.xml');
+
+/** TCMB today.xml → ['kur' => ['TRY' => 1, 'EUR' => .., 'USD' => .., 'GBP' => ..] (1 birim = x ₺), 'tarih' => 'gg.aa.yyyy', 'kaynak' => ..] ya da null */
+function rp_kur_ayristir($xml) {
+    if (!is_string($xml) || $xml === '' || !function_exists('simplexml_load_string')) return null;
+    $eski = libxml_use_internal_errors(true);
+    $x = simplexml_load_string($xml, 'SimpleXMLElement', LIBXML_NONET);
+    libxml_clear_errors();
+    libxml_use_internal_errors($eski);
+    if ($x === false || !isset($x->Currency)) return null;
+    $kur = ['TRY' => 1.0];
+    foreach ($x->Currency as $c) {
+        $kod = strtoupper((string)$c['Kod']);
+        if (!in_array($kod, ['EUR', 'USD', 'GBP'], true)) continue;
+        $birim = max(1, (int)$c->Unit);
+        $deger = (float)str_replace(',', '.', (string)$c->ForexBuying);
+        if ($deger > 0) $kur[$kod] = $deger / $birim;
+    }
+    if (count($kur) < 4) return null; // EUR, USD, GBP üçü de gelmeli
+    $tarih = (string)$x['Tarih'];
+    return ['kur' => $kur, 'tarih' => preg_match('/^\d{2}\.\d{2}\.\d{4}$/', $tarih) ? $tarih : '', 'kaynak' => 'TCMB döviz alış'];
+}
+function rp_kur_cek($url) {
+    $govde = false;
+    if (function_exists('curl_init')) {
+        $ch = curl_init($url);
+        curl_setopt_array($ch, [
+            CURLOPT_RETURNTRANSFER => true, CURLOPT_CONNECTTIMEOUT => 5, CURLOPT_TIMEOUT => 12, // TCMB bazen 9-10 sn'de cevap veriyor
+            CURLOPT_FOLLOWLOCATION => false, CURLOPT_USERAGENT => 'Mozilla/5.0',
+        ]);
+        $govde = curl_exec($ch);
+        if ((int)curl_getinfo($ch, CURLINFO_HTTP_CODE) !== 200) $govde = false;
+        curl_close($ch);
+    } elseif (ini_get('allow_url_fopen')) {
+        $govde = @file_get_contents($url, false, stream_context_create(['http' => ['timeout' => 12]]));
+    }
+    return $govde === false ? null : rp_kur_ayristir($govde);
+}
+/** Son alınan kurun saklandığı geçici dosya (sunucunun geçici klasörü; veritabanına yazılmaz, deploy'dan etkilenmez) */
+function rp_kur_dosya() {
+    return rtrim(sys_get_temp_dir(), '/\\') . DIRECTORY_SEPARATOR . 'sunline_rapor_kur_' . substr(md5(__DIR__), 0, 8) . '.json';
+}
+function rp_kur_gecerli($k) {
+    if (!is_array($k) || !isset($k['kur']) || !is_array($k['kur'])) return false;
+    foreach (['EUR', 'USD', 'GBP'] as $pb) {
+        if (!isset($k['kur'][$pb]) || !is_numeric($k['kur'][$pb]) || $k['kur'][$pb] <= 0) return false;
+    }
+    return isset($k['tarih'], $k['kaynak']) && is_string($k['tarih']) && is_string($k['kaynak']);
+}
+/**
+ * Güncel kurlar. TCMB en fazla saatte bir sorulur; son alınan kur geçici dosyada saklanır (tüm oturumlar ortak).
+ * TCMB cevap vermezse son alınan kur kullanılır ('eski' => true; tarihi sayfada yazar), hiç alınmamışsa null.
+ * Başarısız denemeden sonra o oturumda 5 dk yeniden denenmez (her sayfa beklemesin).
+ */
+function rp_kurlar() {
+    static $kur = false;
+    if ($kur !== false) return $kur;
+    $dosya = rp_kur_dosya();
+    $sakli = null;
+    if (is_file($dosya)) {
+        $j = json_decode((string)@file_get_contents($dosya), true);
+        if (is_array($j) && isset($j['zaman']) && rp_kur_gecerli($j['veri'] ?? null)) $sakli = $j;
+    }
+    $simdi = time();
+    if ($sakli && $simdi - (int)$sakli['zaman'] < 3600) return $kur = $sakli['veri'];
+    if ($simdi - (int)($_SESSION['rp_kur_deneme'] ?? 0) >= 300) {
+        $yeni = rp_kur_cek(RP_KUR_URL);
+        if ($yeni) {
+            @file_put_contents($dosya, json_encode(['zaman' => $simdi, 'veri' => $yeni]), LOCK_EX);
+            unset($_SESSION['rp_kur_deneme']);
+            return $kur = $yeni;
+        }
+        if (session_status() === PHP_SESSION_ACTIVE) $_SESSION['rp_kur_deneme'] = $simdi;
+    }
+    return $kur = $sakli ? $sakli['veri'] + ['eski' => true] : null;
+}
+/** Kur gerekiyor mu: hakedişi işin para biriminden farklı girilmiş dışarı işi var mı */
+function rp_kur_gerekli($rows) {
+    foreach ($rows as $r) {
+        $k = rp_kategori($r);
+        if ($k !== 'disari') continue;
+        $is = rp_is($r, $k);
+        if ($is['hk'] > 0 && $is['hpb'] !== $is['pb']) return true;
+    }
+    return false;
+}
+/** Tutarı bir para biriminden diğerine çevirir (₺ üzerinden); kur yoksa null */
+function rp_cevir($tutar, $kaynak, $hedef, $kur) {
+    if ($kaynak === $hedef) return $tutar;
+    if (!$kur || empty($kur['kur'][$kaynak]) || empty($kur['kur'][$hedef])) return null;
+    return $tutar * $kur['kur'][$kaynak] / $kur['kur'][$hedef];
+}
+function rp_kur_yazi($kur, $pb) { // "1 € = 49,1234 ₺"
+    global $pbSem;
+    return '1 ' . ($pbSem[$pb] ?? $pb) . ' = ' . number_format($kur['kur'][$pb], 4, ',', '.') . ' ₺';
+}
+
+/**
+ * Bir işin rapora girişi (Sezer, 2026-11-21):
+ *  tahmini = [pb, bedel] (iptal hariç hepsi)
+ *  net     = [pb, tutar] | null  — kendimiz yaptık: bedel; dışarıya verildi: pass; bekleyen: null
+ *  hakedis = [hpb, hk]   | null  — dışarıya verildi ve Verilen Tutar girilmişse
+ *  pass    = [pb, tutar] | null  — dışarıya verildi: bedel − hakediş (hakediş para biriminde; gerekirse kurla)
+ *  cevrim  = [bedel, pb, çevrilmiş bedel, hpb] | null — kurla çevrildiyse
+ *  kurYok  = true → hakediş farklı para biriminde ama kur yok; pass hesaplanmadı
+ */
+function rp_is_hesap($r, $k, $kur) {
+    $is = rp_is($r, $k);
+    $o = ['k' => $k, 'bedel' => $is['bedel'], 'pb' => $is['pb'], 'hk' => $is['hk'], 'hpb' => $is['hpb'],
+          'tahmini' => [$is['pb'], $is['bedel']], 'net' => null, 'hakedis' => null, 'pass' => null, 'cevrim' => null, 'kurYok' => false];
+    if ($k === 'yapildi') {
+        $o['net'] = [$is['pb'], $is['bedel']];
+    } elseif ($k === 'disari') {
+        if ($is['hk'] <= 0) {
+            $o['pass'] = [$is['pb'], $is['bedel']]; // Verilen Tutar girilmemiş: düşülecek tutar yok
+        } else {
+            $o['hakedis'] = [$is['hpb'], $is['hk']];
+            $bedelH = rp_cevir($is['bedel'], $is['pb'], $is['hpb'], $kur);
+            if ($bedelH !== null) $bedelH = round($bedelH, 2); // kuruşa yuvarla: özet, liste ve Excel toplamları birebir tutsun
+            if ($bedelH === null) {
+                $o['kurYok'] = true;
+            } else {
+                if ($is['hpb'] !== $is['pb']) $o['cevrim'] = [$is['bedel'], $is['pb'], $bedelH, $is['hpb']];
+                $o['pass'] = [$is['hpb'], $bedelH - $is['hk']];
+            }
+        }
+        $o['net'] = $o['pass'];
+    }
+    return $o;
+}
+
+function rp_bos_alan() {
+    $b = ['n' => 0, 't' => 0.0];
+    // netCevrim: net cironun, başka para birimiyle satılıp bu para biriminde hakediş verilen (kurla çevrilen) işlerden gelen kısmı
+    return ['tahmini' => $b, 'net' => $b, 'hakedis' => $b, 'pass' => $b, 'netCevrim' => $b];
+}
+function rp_alan_ekle(&$set, $alan, $t) {
+    if (!is_array($set)) $set = rp_bos_alan();
+    $set[$alan]['n']++;
+    $set[$alan]['t'] += $t;
+}
+
+/**
+ * Genel rapor hesabı (yalnız okuma). Döner: say, ozet[pb], aylar[pb][ym], tipler[pb][tip], partner[pb][ad],
+ * isler[pb][] (işlem listesi; ek = satır başka para biriminin dökümünden geliyor), kontrol sayıları.
+ */
+function rp_genel_hesapla($rows, $kur) {
+    $h = ['say' => ['yapildi' => 0, 'disari' => 0, 'bekleyen' => 0, 'iptal' => 0],
+          'ozet' => [], 'aylar' => [], 'tipler' => [], 'partner' => [], 'isler' => [], 'cevrimKaynak' => [],
+          'fiyatsiz' => 0, 'verilenEksik' => 0, 'passEksi' => 0, 'partnerYok' => 0, 'cevrilen' => 0, 'kurYok' => 0];
+    foreach ($rows as $r) {
+        $k = rp_kategori($r);
+        $h['say'][$k]++;
+        if ($k === 'iptal') continue;
+
+        $x = rp_is_hesap($r, $k, $kur);
+        if ($x['bedel'] <= 0) $h['fiyatsiz']++;
+        $ym = $r['tarih'] ? substr($r['tarih'], 0, 7) : '0000-00';
+        $tip = $r['tip'];
+
+        $girisler = ['tahmini' => $x['tahmini'], 'net' => $x['net'], 'hakedis' => $x['hakedis'], 'pass' => $x['pass']];
+        foreach ($girisler as $alan => $g) {
+            if (!$g) continue;
+            rp_alan_ekle($h['ozet'][$g[0]], $alan, $g[1]);
+            rp_alan_ekle($h['aylar'][$g[0]][$ym], $alan, $g[1]);
+            rp_alan_ekle($h['tipler'][$g[0]][$tip], $alan, $g[1]);
+        }
+        if ($x['cevrim'] && $x['net']) { // özet kırılımı: kendi işleri + kurla çevrilen işlerin pass'ı
+            rp_alan_ekle($h['ozet'][$x['net'][0]], 'netCevrim', $x['net'][1]);
+            $h['cevrimKaynak'][$x['net'][0]][$x['pb']] = true;
+        }
+
+        $pad = '';
+        if ($k === 'disari') {
+            if ($x['hk'] <= 0) $h['verilenEksik']++;
+            if ($x['kurYok']) $h['kurYok']++;
+            if ($x['cevrim']) $h['cevrilen']++;
+            if ($x['pass'] && $x['pass'][1] <= -0.005) $h['passEksi']++;
+            $pad = trim((string)$r['partner']);
+            if ($pad === '') { $h['partnerYok']++; $pad = '(Partner girilmemiş)'; }
+            $dokundu = [];
+            foreach (['hakedis', 'pass'] as $alan) {
+                if (!$x[$alan]) continue;
+                $ppb = $x[$alan][0];
+                if (!isset($h['partner'][$ppb][$pad])) $h['partner'][$ppb][$pad] = ['n' => 0, 'hakedis' => 0.0, 'pass' => 0.0, 'passN' => 0];
+                $h['partner'][$ppb][$pad][$alan] += $x[$alan][1];
+                if ($alan === 'pass') $h['partner'][$ppb][$pad]['passN']++;
+                if (!isset($dokundu[$ppb])) { $dokundu[$ppb] = 1; $h['partner'][$ppb][$pad]['n']++; }
+            }
+        }
+
+        $satir = $x + ['tarih' => $r['tarih'], 'no' => $r['booking_number'], 'tip' => $tip,
+                       'musteri' => $r['customer_name'], 'guzergah' => $r['guzergah'], 'partner' => $pad];
+        // İşlem listesi: işin kendi para biriminde; hakediş / pass başka para birimindeyse o dökümde de (ek satır)
+        $dokum = [$x['pb'] => false];
+        foreach (['hakedis', 'net'] as $alan) {
+            if ($x[$alan] && !isset($dokum[$x[$alan][0]])) $dokum[$x[$alan][0]] = true;
+        }
+        foreach ($dokum as $dpb => $ek) $h['isler'][$dpb][] = ['ek' => $ek] + $satir;
+    }
+    return $h;
+}
 function rp_sirala_anahtar($keys) {
     $sira = ['EUR' => 1, 'TRY' => 2, 'USD' => 3, 'GBP' => 4];
     usort($keys, function ($a, $b) use ($sira) {
@@ -208,6 +435,7 @@ function rp_sirala_anahtar($keys) {
 }
 function rp_para($tutar, $pb) {
     $sem = ['EUR' => '€', 'TRY' => '₺', 'USD' => '$', 'GBP' => '£'];
+    if (abs($tutar) < 0.005) $tutar = 0.0; // "-0" yazmasın
     $ond = abs($tutar - round($tutar)) < 0.005 ? 0 : 2;
     return number_format($tutar, $ond, ',', '.') . ' ' . ($sem[$pb] ?? $pb);
 }
@@ -216,19 +444,17 @@ function rp_birlesik(...$bloklar) {
     foreach ($bloklar as $b) { $o['n'] += $b['n']; $o['t'] += $b['t']; }
     return $o;
 }
-/** Tek para birimli hücre: tutar (iş yoksa —) */
+/** Tek para birimli hücre: tutar (iş yoksa —; eksi tutar kırmızı) */
 function rp_tutar($blok, $pb) {
     if ($blok['n'] === 0) return '<span class="text-body-secondary">—</span>';
-    return e(rp_para($blok['t'], $pb));
+    $yazi = e(rp_para($blok['t'], $pb));
+    return $blok['t'] <= -0.005 ? '<span class="text-danger">' . $yazi . '</span>' : $yazi;
 }
 function rp_ay_ad($ym) {
     if ($ym === '0000-00') return 'Tarihsiz';
     $ad = ['01' => 'Ocak', '02' => 'Şubat', '03' => 'Mart', '04' => 'Nisan', '05' => 'Mayıs', '06' => 'Haziran',
            '07' => 'Temmuz', '08' => 'Ağustos', '09' => 'Eylül', '10' => 'Ekim', '11' => 'Kasım', '12' => 'Aralık'];
     return ($ad[substr($ym, 5, 2)] ?? '') . ' ' . substr($ym, 0, 4);
-}
-function rp_bos_set() {
-    return ['yapildi' => ['n' => 0, 't' => 0.0], 'disari' => ['n' => 0, 't' => 0.0], 'bekleyen' => ['n' => 0, 't' => 0.0]];
 }
 
 $pbAd = ['EUR' => 'Euro', 'TRY' => 'Türk Lirası', 'USD' => 'Dolar', 'GBP' => 'Sterlin'];
@@ -268,9 +494,25 @@ function rp_csv_gonder($rows, $dosyaOnEk) {
     header('Cache-Control: no-store');
     $out = fopen('php://output', 'w');
     fwrite($out, "\xEF\xBB\xBF"); // Excel UTF-8 tanısın
-    fputcsv($out, ['Tarih', 'Rezervasyon No', 'Tür', 'Durum', 'Müşteri', 'Güzergah', 'Araç', 'Şoför', 'Tutar', 'Para Birimi', 'Partner', 'Hakediş', 'Hakediş PB'], ';');
+    $kur = rp_kur_gerekli($rows) ? rp_kurlar() : null;
+    fputcsv($out, ['Tarih', 'Rezervasyon No', 'Tür', 'Durum', 'Müşteri', 'Güzergah', 'Araç', 'Şoför', 'İşin bedeli (tahmini ciro)', 'Para Birimi', 'Partner', 'Partner hakedişi', 'Hakediş PB', 'Pass', 'Pass PB', 'Net ciro', 'Net PB', 'Not'], ';');
     foreach ($rows as $r) {
         $k = rp_kategori($r);
+        $x = rp_is_hesap($r, $k, $kur);
+        $not = '';
+        if ($k === 'iptal') {
+            $not = 'İptal — hesaba katılmadı';
+        } elseif ($k === 'bekleyen') {
+            $not = 'Bekliyor — net ciroya girmedi';
+        } elseif ($k === 'disari' && $x['hk'] <= 0) {
+            $not = 'Verilen Tutar girilmemiş — hakediş düşülmedi';
+        } elseif ($x['kurYok']) {
+            $not = 'Kur alınamadı — pass hesaplanmadı';
+        } elseif ($x['cevrim']) {
+            $not = 'Pass = ' . $sayi($x['cevrim'][0]) . ' ' . $x['cevrim'][1] . ' × ' . number_format($kur['kur'][$x['cevrim'][1]] / $kur['kur'][$x['cevrim'][3]], 4, ',', '')
+                 . ' = ' . $sayi($x['cevrim'][2]) . ' ' . $x['cevrim'][3] . ' − ' . $sayi($x['hk']) . ' ' . $x['hpb']
+                 . ' (' . $kur['kaynak'] . ($kur['tarih'] !== '' ? ' ' . $kur['tarih'] : '') . ')';
+        }
         fputcsv($out, [
             $r['tarih'] ? date('d.m.Y', strtotime($r['tarih'])) : '',
             $guvenli($r['booking_number']),
@@ -283,8 +525,13 @@ function rp_csv_gonder($rows, $dosyaOnEk) {
             $sayi($r['total_price']),
             rp_pb($r['currency']),
             $k === 'disari' ? $guvenli($r['partner']) : '',
-            $k === 'disari' ? $sayi($r['outsource_price']) : '',
-            $k === 'disari' && (float)$r['outsource_price'] > 0 ? rp_pb($r['outsource_currency'] ?: $r['currency']) : '',
+            $x['hakedis'] ? $sayi($x['hakedis'][1]) : '',
+            $x['hakedis'] ? $x['hakedis'][0] : '',
+            $x['pass'] ? $sayi($x['pass'][1]) : '',
+            $x['pass'] ? $x['pass'][0] : '',
+            $x['net'] ? $sayi($x['net'][1]) : '',
+            $x['net'] ? $x['net'][0] : '',
+            $not,
         ], ';');
     }
     fclose($out);
@@ -401,6 +648,8 @@ function rp_stil() {
     .rp-table .rp-col-gercek { font-weight: 700; color: var(--bs-success-text-emphasis); }
     .rp-ozet td { font-size: 1.05rem; padding-top: .8rem; padding-bottom: .8rem; }
     .rp-ozet .rp-n { display: block; font-size: .75rem; font-weight: 500; color: var(--text-muted); }
+    .rp-kirilim { display: block; margin-top: .35rem; padding-top: .3rem; border-top: 1px dashed var(--bs-border-color); font-size: .72rem; font-weight: 500; color: var(--text-muted); line-height: 1.35; }
+    .rp-kirilim > span { display: block; }
     .rp-pb { display: inline-flex; align-items: center; gap: .5rem; font-weight: 700; }
     .rp-pb-sem { width: 2rem; height: 2rem; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center;
                  background: var(--primary-light); color: var(--primary); font-size: 1rem; }
@@ -467,6 +716,7 @@ function rp_js() {
 
     var SEM = { EUR: '€', TRY: '₺', USD: '$', GBP: '£' };
     function para(v, pb) {
+        if (Math.abs(v) < 0.005) v = 0; // "-0" yazmasın
         var d = Math.abs(v - Math.round(v)) < 0.005 ? 0 : 2;
         return v.toLocaleString('tr-TR', { minimumFractionDigits: d, maximumFractionDigits: d }) + ' ' + (SEM[pb] || pb);
     }
@@ -482,22 +732,28 @@ function rp_js() {
                 order: [[0, 'asc']],
                 pageLength: 25,
                 footerCallback: function () {
-                    var api = this.api(), n = 0, tutar = 0, hk = {}, kat = {}, sira = [];
+                    // ek satır = bedeli başka para biriminde olan işin, bu para biriminde girilen hakedişi
+                    // data-tutar / .rp-f-tutar: Şoförler sayfası; data-bedel/hk/net: Genel rapor
+                    var api = this.api(), n = 0, ek = 0, tutar = 0, bedel = 0, hk = 0, net = 0, kat = {}, sira = [];
                     api.rows({ search: 'applied' }).every(function () {
                         var tr = this.node();
-                        n++;
                         tutar += parseFloat(tr.getAttribute('data-tutar')) || 0;
+                        bedel += parseFloat(tr.getAttribute('data-bedel')) || 0;
+                        hk += parseFloat(tr.getAttribute('data-hk')) || 0;
+                        net += parseFloat(tr.getAttribute('data-net')) || 0;
+                        if (tr.getAttribute('data-ek') === '1') { ek++; return; }
+                        n++;
                         var k = tr.getAttribute('data-kad');
                         if (!(k in kat)) { kat[k] = 0; sira.push(k); }
                         kat[k]++;
-                        var h = parseFloat(tr.getAttribute('data-hk')) || 0;
-                        if (h > 0) { var p = tr.getAttribute('data-hpb'); hk[p] = (hk[p] || 0) + h; }
                     });
                     var f = $(api.table().footer());
-                    f.find('.rp-f-n').text('TOPLAM · ' + n + ' işlem');
+                    f.find('.rp-f-n').text('TOPLAM · ' + n + ' işlem' + (ek ? ' + ' + ek + ' hakediş' : ''));
                     f.find('.rp-f-kat').text(sira.sort().map(function (k) { return k + ': ' + kat[k]; }).join(' · '));
                     f.find('.rp-f-tutar').text(para(tutar, pb));
-                    f.find('.rp-f-hk').html(Object.keys(hk).map(function (p) { return para(hk[p], p); }).join('<br>') || '—');
+                    f.find('.rp-f-bedel').text(para(bedel, pb));
+                    f.find('.rp-f-hk').text(para(hk, pb));
+                    f.find('.rp-f-net').text(para(net, pb)).toggleClass('text-danger', net <= -0.005);
                 }
             });
         });

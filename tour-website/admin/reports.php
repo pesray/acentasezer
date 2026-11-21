@@ -1,7 +1,7 @@
 <?php
 /**
- * Raporlar › Genel rapor — tahmini ciro ve gerçekleşen (net) ciro
- * Kurallar ve ortak parçalar: includes/rapor_ortak.php
+ * Raporlar › Genel rapor — tahmini ciro, net ciro, partner hakedişi, pass
+ * Kurallar ve hesap: includes/rapor_ortak.php (rp_is_hesap, rp_genel_hesapla)
  * Bu sayfa yalnız OKUR; rezervasyon verisini değiştirmez.
  */
 
@@ -18,83 +18,31 @@ if (($_GET['export'] ?? '') === 'csv') {
     rp_csv_gonder($rows, 'rapor');
 }
 
-/* ------------------------------------------------------------------ */
-/*  Toplamlar — her para birimi ayrı (kur çevrimi yok)                 */
-/* ------------------------------------------------------------------ */
-$say = ['yapildi' => 0, 'disari' => 0, 'bekleyen' => 0, 'iptal' => 0]; // iş sayıları (para biriminden bağımsız)
-$ozet = [];      // pb => kategori => [n, t]
-$hakedis = [];   // hakediş pb => [n, t]
-$aylar = [];     // pb => 'Y-m' => kategori => [n, t]
-$tipler = [];    // pb => tip => kategori => [n, t]
-$partner = [];   // pb => ad => [n, tahsilat, hakedis]
-$isler = [];     // pb => satırlar (işlem listesi)
-$hakedisEksik = 0;
-$partnerYok = 0;
-$fiyatsiz = 0;
+// Kur yalnız hakedişi farklı para biriminde girilmiş iş varsa çekilir
+$kurGerekli = rp_kur_gerekli($rows);
+$kur = $kurGerekli ? rp_kurlar() : null;
+$h = rp_genel_hesapla($rows, $kur);
+$say = $h['say'];
 
-foreach ($rows as $r) {
-    $k = rp_kategori($r);
-    $say[$k]++;
-    if ($k === 'iptal') continue;
-
-    $pb = rp_pb($r['currency']);
-    $tutar = max(0, (float)$r['total_price']);
-    if ($tutar <= 0) $fiyatsiz++;
-    $ym = $r['tarih'] ? substr($r['tarih'], 0, 7) : '0000-00';
-    $tip = $r['tip'];
-
-    if (!isset($ozet[$pb])) $ozet[$pb] = rp_bos_set();
-    $ozet[$pb][$k]['n']++;
-    $ozet[$pb][$k]['t'] += $tutar;
-
-    if (!isset($aylar[$pb][$ym])) $aylar[$pb][$ym] = rp_bos_set();
-    $aylar[$pb][$ym][$k]['n']++;
-    $aylar[$pb][$ym][$k]['t'] += $tutar;
-
-    if (!isset($tipler[$pb][$tip])) $tipler[$pb][$tip] = rp_bos_set();
-    $tipler[$pb][$tip][$k]['n']++;
-    $tipler[$pb][$tip][$k]['t'] += $tutar;
-
-    $pad = '';
-    $hk = 0.0;
-    $hpb = '';
-    if ($k === 'disari') {
-        $pad = trim((string)$r['partner']);
-        if ($pad === '') { $partnerYok++; $pad = '(Partner girilmemiş)'; }
-        if (!isset($partner[$pb][$pad])) $partner[$pb][$pad] = ['n' => 0, 'tahsilat' => 0.0, 'hakedis' => 0.0];
-        $partner[$pb][$pad]['n']++;
-        $partner[$pb][$pad]['tahsilat'] += $tutar;
-
-        $hk = max(0, (float)$r['outsource_price']);
-        $hpb = rp_pb($r['outsource_currency'] ?: $r['currency']);
-        if ($hk > 0) {
-            if (!isset($hakedis[$hpb])) $hakedis[$hpb] = ['n' => 0, 't' => 0.0];
-            $hakedis[$hpb]['n']++;
-            $hakedis[$hpb]['t'] += $hk;
-            // hakediş, girildiği para biriminin dökümünde sayılır
-            if (!isset($partner[$hpb][$pad])) $partner[$hpb][$pad] = ['n' => 0, 'tahsilat' => 0.0, 'hakedis' => 0.0];
-            $partner[$hpb][$pad]['hakedis'] += $hk;
-        } else {
-            $hakedisEksik++;
-        }
-    }
-
-    $isler[$pb][] = [
-        'tarih' => $r['tarih'], 'no' => $r['booking_number'], 'tip' => $tip, 'k' => $k,
-        'musteri' => $r['customer_name'], 'guzergah' => $r['guzergah'], 'tutar' => $tutar,
-        'partner' => $pad, 'hk' => $hk, 'hpb' => $hpb,
-    ];
-}
-
-$pbler = rp_sirala_anahtar(array_unique(array_merge(array_keys($ozet), array_keys($hakedis))));
+$pbler = rp_sirala_anahtar(array_keys($h['ozet']));
 $pbSayi = [];
-foreach ($ozet as $pb => $o) $pbSayi[$pb] = $o['yapildi']['n'] + $o['disari']['n'] + $o['bekleyen']['n'];
+foreach ($pbler as $pb) $pbSayi[$pb] = $h['ozet'][$pb]['tahmini']['n'];
 $aktifPb = $pbler[0] ?? '';
-if ($pbSayi) { arsort($pbSayi); $aktifPb = (string)key($pbSayi); } // en çok işin olduğu para birimi
+if ($pbSayi) { $sirali = $pbSayi; arsort($sirali); $aktifPb = (string)key($sirali); } // en çok işin olduğu para birimi
 
 $tahminiN = $say['yapildi'] + $say['disari'] + $say['bekleyen'];
 $gercekN = $say['yapildi'] + $say['disari'];
 $oran = $tahminiN > 0 ? round($gercekN * 100 / $tahminiN) : 0;
+
+$alanlar = ['tahmini' => 'Tahmini ciro', 'net' => 'Net ciro', 'hakedis' => 'Partner hakedişi', 'pass' => 'Pass'];
+
+/** Satır toplamı için: bir kümeyi diğerine ekle */
+function rp_alan_topla(&$hedef, $set) {
+    foreach ($set as $alan => $b) {
+        $hedef[$alan]['n'] += $b['n'];
+        $hedef[$alan]['t'] += $b['t'];
+    }
+}
 
 $pageTitle = 'Raporlar';
 require_once __DIR__ . '/includes/header.php';
@@ -136,6 +84,13 @@ rp_ust('genel');
     <?php endforeach; ?>
 </div>
 
+<?php if ($h['kurYok'] > 0): ?>
+<div class="alert alert-warning d-flex gap-2 align-items-start" role="alert" id="rpKurUyari">
+    <i class="bi bi-exclamation-triangle-fill mt-1"></i>
+    <div><strong>Güncel döviz kuru alınamadı</strong> (TCMB'ye ulaşılamadı). Hakedişi farklı para biriminde girilen <strong><?= (int)$h['kurYok'] ?> işin</strong> pass'ı hesaplanamadı; bu işler net ciroya ve pass'a eklenmedi (partner hakedişinde görünür). Birkaç dakika sonra sayfayı yenileyin.</div>
+</div>
+<?php endif; ?>
+
 <?php if (!$pbler): ?>
 <div class="card table-card mb-4"><div class="card-body text-center text-body-secondary py-5">Bu aralıkta transfer yok.</div></div>
 <?php else: ?>
@@ -151,34 +106,33 @@ rp_ust('genel');
                 <thead class="table-light">
                     <tr>
                         <th>Para birimi</th>
-                        <th class="text-end">Tahmini ciro</th>
-                        <th class="text-end">Kendimiz yaptık</th>
-                        <th class="text-end">Dışarıya verildi</th>
-                        <th class="text-end">Gerçekleşen (net) ciro</th>
-                        <th class="text-end">Bekleyen</th>
-                        <th class="text-end">Partner hakedişi</th>
+                        <?php foreach ($alanlar as $alan => $ad): ?>
+                        <th class="text-end"><?= e($ad) ?></th>
+                        <?php endforeach; ?>
                     </tr>
                 </thead>
                 <tbody>
-                    <?php
-                    $topN = ['tahmini' => 0, 'yapildi' => 0, 'disari' => 0, 'gercek' => 0, 'bekleyen' => 0, 'hakedis' => 0];
+                    <?php $topN = array_fill_keys(array_keys($alanlar), 0);
                     foreach ($pbler as $pb):
-                        $o = $ozet[$pb] ?? rp_bos_set();
-                        $hucre = [
-                            'tahmini'  => rp_birlesik($o['yapildi'], $o['disari'], $o['bekleyen']),
-                            'yapildi'  => $o['yapildi'],
-                            'disari'   => $o['disari'],
-                            'gercek'   => rp_birlesik($o['yapildi'], $o['disari']),
-                            'bekleyen' => $o['bekleyen'],
-                            'hakedis'  => $hakedis[$pb] ?? ['n' => 0, 't' => 0.0],
-                        ];
-                        foreach ($hucre as $hk => $b) $topN[$hk] += $b['n']; ?>
+                        $o = $h['ozet'][$pb]; ?>
                     <tr>
                         <td><span class="rp-pb"><span class="rp-pb-sem"><?= e($pbSem[$pb] ?? $pb) ?></span><?= e($pb) ?> <span class="fw-normal text-body-secondary small"><?= e($pbAd[$pb] ?? '') ?></span></span></td>
-                        <?php foreach ($hucre as $hk => $b): ?>
-                        <td class="text-end <?= $hk === 'gercek' ? 'rp-col-gercek' : '' ?>" data-k="<?= $hk ?>" data-pb="<?= e($pb) ?>" data-t="<?= number_format($b['t'], 2, '.', '') ?>" data-n="<?= (int)$b['n'] ?>">
+                        <?php foreach ($alanlar as $alan => $ad):
+                            $b = $o[$alan];
+                            $topN[$alan] += $b['n']; ?>
+                        <td class="text-end <?= $alan === 'net' ? 'rp-col-gercek' : '' ?>" data-k="<?= $alan ?>" data-pb="<?= e($pb) ?>" data-t="<?= number_format($b['t'], 2, '.', '') ?>" data-n="<?= (int)$b['n'] ?>">
                             <?= rp_tutar($b, $pb) ?>
-                            <?php if ($b['n'] > 0): ?><span class="rp-n"><?= (int)$b['n'] ?> <?= $hk === 'hakedis' ? 'hakediş' : 'iş' ?></span><?php endif; ?>
+                            <?php if ($b['n'] > 0): ?><span class="rp-n"><?= (int)$b['n'] ?> iş</span><?php endif; ?>
+                            <?php if ($alan === 'net' && $o['netCevrim']['n'] > 0):
+                                $cv = $o['netCevrim'];
+                                $kendi = ['n' => $b['n'] - $cv['n'], 't' => $b['t'] - $cv['t']];
+                                $kaynakPb = rp_sirala_anahtar(array_keys($h['cevrimKaynak'][$pb] ?? []));
+                                $kaynakYazi = implode(', ', array_map(function ($k) use ($pbSem) { return $pbSem[$k] ?? $k; }, $kaynakPb)); ?>
+                            <span class="rp-kirilim" data-kendi="<?= number_format($kendi['t'], 2, '.', '') ?>" data-kendi-n="<?= (int)$kendi['n'] ?>" data-cevrim="<?= number_format($cv['t'], 2, '.', '') ?>" data-cevrim-n="<?= (int)$cv['n'] ?>">
+                                <span>kendi <?= e($pbSem[$pb] ?? $pb) ?> işleri: <?= e(rp_para($kendi['t'], $pb)) ?> · <?= (int)$kendi['n'] ?> iş</span>
+                                <span>+ <?= e($kaynakYazi) ?> ile satılıp <?= e($pbSem[$pb] ?? $pb) ?> verilen işlerin pass'ı: <?= e(rp_para($cv['t'], $pb)) ?> · <?= (int)$cv['n'] ?> iş</span>
+                            </span>
+                            <?php endif; ?>
                         </td>
                         <?php endforeach; ?>
                     </tr>
@@ -187,32 +141,44 @@ rp_ust('genel');
                 <tfoot>
                     <tr>
                         <td>Toplam iş sayısı</td>
-                        <td class="text-end"><?= (int)$topN['tahmini'] ?> iş</td>
-                        <td class="text-end"><?= (int)$topN['yapildi'] ?> iş</td>
-                        <td class="text-end"><?= (int)$topN['disari'] ?> iş</td>
-                        <td class="text-end"><?= (int)$topN['gercek'] ?> iş</td>
-                        <td class="text-end"><?= (int)$topN['bekleyen'] ?> iş</td>
-                        <td class="text-end"><?= (int)$topN['hakedis'] ?> hakediş</td>
+                        <?php foreach ($alanlar as $alan => $ad): ?>
+                        <td class="text-end"><?= (int)$topN[$alan] ?> iş</td>
+                        <?php endforeach; ?>
                     </tr>
                 </tfoot>
             </table>
         </div>
         <div class="rp-note">
-            <strong>Gerçekleşen</strong> = Kendimiz yaptık + Dışarıya verildi · <strong>Tahmini</strong> = Gerçekleşen + Bekleyen ·
-            Para birimleri birbirine eklenmez, kur çevrimi yapılmaz. Partner hakedişi, girildiği para biriminde sayılır.
+            <strong>Tahmini ciro</strong> = sisteme girilen işlerin bedeli, her iş kendi para biriminde (potansiyel kazanç) ·
+            <strong>Net ciro</strong> = "iş yapıldı" işlerin bedelinin tamamı + dışarıya verilen işlerin pass'ı ·
+            <strong>Partner hakedişi</strong> = işi dışarıya verdiğimiz tutar ·
+            <strong>Pass</strong> = iş bedeli − partner hakedişi (ör. 40 € iş, dışarıya 30 € → hakediş 30 €, pass 10 €).
+            Dışarıya verilen ve "iş yapıldı" da işaretli iş net ciroya bir kez (pass olarak) girer.
+            Para birimleri birbirine eklenmez.
         </div>
+        <?php if ($kur && $h['cevrilen'] > 0): ?>
+        <div class="rp-note mt-2" id="rpKur" data-kur="<?= e(json_encode($kur['kur'])) ?>" data-tarih="<?= e($kur['tarih']) ?>" data-cevrilen="<?= (int)$h['cevrilen'] ?>">
+            <i class="bi bi-currency-exchange me-1"></i><strong>Kur:</strong> <?= e($kur['kaynak']) ?><?= $kur['tarih'] !== '' ? ' ' . e($kur['tarih']) : '' ?> —
+            <?= e(rp_kur_yazi($kur, 'EUR')) ?> · <?= e(rp_kur_yazi($kur, 'USD')) ?> · <?= e(rp_kur_yazi($kur, 'GBP')) ?>.
+            <?php if (!empty($kur['eski'])): ?><span class="text-warning-emphasis" id="rpKurEski">TCMB'ye şu an ulaşılamadı; en son alınan kur kullanıldı.</span><?php endif; ?>
+            Hakedişi farklı para biriminde girilen <strong><?= (int)$h['cevrilen'] ?> işte</strong> iş bedeli bu güncel kurla hakediş para birimine çevrildi
+            (ör. 40 € iş, 1.500 ₺ hakediş: 40 € × kur − 1.500 ₺ = pass ₺); pass o para biriminde net ciroya eklendi.
+            Bu işlerin bedeli kendi para biriminin tahmini cirosunda kalır; bu yüzden bir para biriminin net cirosu tahmini cirosundan büyük olabilir
+            (net ciro hücresinin altındaki kırılımda görünür). Kurla çevrilen tutarlar kuruşlu çıkabilir.
+        </div>
+        <?php endif; ?>
     </div>
 </div>
 
 <?php rp_pb_secici($pbler, $aktifPb, $pbSayi); ?>
 
 <?php foreach ($pbler as $pb):
-    $ay = $aylar[$pb] ?? [];
+    $ay = $h['aylar'][$pb] ?? [];
     krsort($ay);
-    $tp = $tipler[$pb] ?? [];
-    $pt = $partner[$pb] ?? [];
+    $tp = $h['tipler'][$pb] ?? [];
+    $pt = $h['partner'][$pb] ?? [];
     uasort($pt, function ($a, $b) { return $b['n'] - $a['n'] ?: ($b['hakedis'] <=> $a['hakedis']); });
-    $is = $isler[$pb] ?? [];
+    $is = $h['isler'][$pb] ?? [];
     $isimPb = ($pbSem[$pb] ?? '') . ' ' . $pb; ?>
 <div class="rp-pane" data-rp-pane="<?= e($pb) ?>" <?= $pb === $aktifPb ? '' : 'hidden' ?>>
 
@@ -231,39 +197,29 @@ rp_ust('genel');
                                 <tr>
                                     <th>Ay</th>
                                     <th class="text-end">İş</th>
-                                    <th class="text-end">Tahmini</th>
-                                    <th class="text-end">Kendimiz yaptık</th>
-                                    <th class="text-end">Dışarıya verildi</th>
-                                    <th class="text-end">Gerçekleşen</th>
-                                    <th class="text-end">Bekleyen</th>
+                                    <?php foreach ($alanlar as $ad): ?><th class="text-end"><?= e($ad) ?></th><?php endforeach; ?>
                                 </tr>
                             </thead>
                             <tbody>
-                                <?php $tAy = rp_bos_set();
+                                <?php $tAy = rp_bos_alan();
                                 foreach ($ay as $ym => $a):
-                                    foreach ($a as $kk => $b) { $tAy[$kk]['n'] += $b['n']; $tAy[$kk]['t'] += $b['t']; }
-                                    $aT = rp_birlesik($a['yapildi'], $a['disari'], $a['bekleyen']); ?>
+                                    rp_alan_topla($tAy, $a); ?>
                                 <tr>
                                     <td class="fw-semibold"><?= e(rp_ay_ad($ym)) ?></td>
-                                    <td class="text-end"><?= (int)$aT['n'] ?></td>
-                                    <td class="text-end"><?= rp_tutar($aT, $pb) ?></td>
-                                    <td class="text-end"><?= rp_tutar($a['yapildi'], $pb) ?></td>
-                                    <td class="text-end"><?= rp_tutar($a['disari'], $pb) ?></td>
-                                    <td class="text-end rp-col-gercek"><?= rp_tutar(rp_birlesik($a['yapildi'], $a['disari']), $pb) ?></td>
-                                    <td class="text-end"><?= rp_tutar($a['bekleyen'], $pb) ?></td>
+                                    <td class="text-end"><?= (int)$a['tahmini']['n'] ?></td>
+                                    <?php foreach ($alanlar as $alan => $ad): ?>
+                                    <td class="text-end <?= $alan === 'net' ? 'rp-col-gercek' : '' ?>"><?= rp_tutar($a[$alan], $pb) ?></td>
+                                    <?php endforeach; ?>
                                 </tr>
-                                <?php endforeach;
-                                $tT = rp_birlesik($tAy['yapildi'], $tAy['disari'], $tAy['bekleyen']); ?>
+                                <?php endforeach; ?>
                             </tbody>
                             <tfoot>
-                                <tr data-toplam-t="<?= number_format($tT['t'], 2, '.', '') ?>" data-toplam-n="<?= (int)$tT['n'] ?>">
+                                <tr data-toplam-n="<?= (int)$tAy['tahmini']['n'] ?>"<?php foreach ($alanlar as $alan => $ad): ?> data-toplam-<?= $alan ?>="<?= number_format($tAy[$alan]['t'], 2, '.', '') ?>"<?php endforeach; ?>>
                                     <td>TOPLAM</td>
-                                    <td class="text-end"><?= (int)$tT['n'] ?></td>
-                                    <td class="text-end"><?= rp_tutar($tT, $pb) ?></td>
-                                    <td class="text-end"><?= rp_tutar($tAy['yapildi'], $pb) ?></td>
-                                    <td class="text-end"><?= rp_tutar($tAy['disari'], $pb) ?></td>
-                                    <td class="text-end rp-col-gercek"><?= rp_tutar(rp_birlesik($tAy['yapildi'], $tAy['disari']), $pb) ?></td>
-                                    <td class="text-end"><?= rp_tutar($tAy['bekleyen'], $pb) ?></td>
+                                    <td class="text-end"><?= (int)$tAy['tahmini']['n'] ?></td>
+                                    <?php foreach ($alanlar as $alan => $ad): ?>
+                                    <td class="text-end <?= $alan === 'net' ? 'rp-col-gercek' : '' ?>"><?= rp_tutar($tAy[$alan], $pb) ?></td>
+                                    <?php endforeach; ?>
                                 </tr>
                             </tfoot>
                         </table>
@@ -287,35 +243,33 @@ rp_ust('genel');
                                 <tr>
                                     <th>Tür</th>
                                     <th class="text-end">İş</th>
-                                    <th class="text-end">Tahmini</th>
-                                    <th class="text-end">Gerçekleşen</th>
-                                    <th class="text-end">Bekleyen</th>
+                                    <th class="text-end">Tahmini ciro</th>
+                                    <th class="text-end">Net ciro</th>
+                                    <th class="text-end">Pass</th>
                                 </tr>
                             </thead>
                             <tbody>
-                                <?php $tTip = rp_bos_set();
+                                <?php $tTip = rp_bos_alan();
                                 foreach (['arrival', 'depar', 'ara'] as $tk):
                                     if (!isset($tp[$tk])) continue;
                                     $t = $tp[$tk];
-                                    foreach ($t as $kk => $b) { $tTip[$kk]['n'] += $b['n']; $tTip[$kk]['t'] += $b['t']; }
-                                    $tA = rp_birlesik($t['yapildi'], $t['disari'], $t['bekleyen']); ?>
+                                    rp_alan_topla($tTip, $t); ?>
                                 <tr>
                                     <td class="fw-semibold"><?= e($tipAd[$tk]) ?></td>
-                                    <td class="text-end"><?= (int)$tA['n'] ?></td>
-                                    <td class="text-end"><?= rp_tutar($tA, $pb) ?></td>
-                                    <td class="text-end rp-col-gercek"><?= rp_tutar(rp_birlesik($t['yapildi'], $t['disari']), $pb) ?></td>
-                                    <td class="text-end"><?= rp_tutar($t['bekleyen'], $pb) ?></td>
+                                    <td class="text-end"><?= (int)$t['tahmini']['n'] ?></td>
+                                    <td class="text-end"><?= rp_tutar($t['tahmini'], $pb) ?></td>
+                                    <td class="text-end rp-col-gercek"><?= rp_tutar($t['net'], $pb) ?></td>
+                                    <td class="text-end"><?= rp_tutar($t['pass'], $pb) ?></td>
                                 </tr>
-                                <?php endforeach;
-                                $tTT = rp_birlesik($tTip['yapildi'], $tTip['disari'], $tTip['bekleyen']); ?>
+                                <?php endforeach; ?>
                             </tbody>
                             <tfoot>
                                 <tr>
                                     <td>TOPLAM</td>
-                                    <td class="text-end"><?= (int)$tTT['n'] ?></td>
-                                    <td class="text-end"><?= rp_tutar($tTT, $pb) ?></td>
-                                    <td class="text-end rp-col-gercek"><?= rp_tutar(rp_birlesik($tTip['yapildi'], $tTip['disari']), $pb) ?></td>
-                                    <td class="text-end"><?= rp_tutar($tTip['bekleyen'], $pb) ?></td>
+                                    <td class="text-end"><?= (int)$tTip['tahmini']['n'] ?></td>
+                                    <td class="text-end"><?= rp_tutar($tTip['tahmini'], $pb) ?></td>
+                                    <td class="text-end rp-col-gercek"><?= rp_tutar($tTip['net'], $pb) ?></td>
+                                    <td class="text-end"><?= rp_tutar($tTip['pass'], $pb) ?></td>
                                 </tr>
                             </tfoot>
                         </table>
@@ -331,18 +285,18 @@ rp_ust('genel');
         <div class="card-header bg-white py-3"><h6 class="mb-0 fw-bold"><i class="bi bi-people me-2"></i>Dışarıya verilen işler — partnerlere göre <span class="text-body-secondary fw-normal">· <?= e($isimPb) ?></span></h6></div>
         <div class="card-body">
             <?php if (!$pt): ?>
-            <div class="text-center text-body-secondary py-4">Bu para biriminde dışarıya verilen iş ya da hakediş yok.</div>
+            <div class="text-center text-body-secondary py-4">Bu para biriminde partner hakedişi ya da pass yok.</div>
             <?php else:
-                $pTop = ['n' => 0, 'tahsilat' => 0.0, 'hakedis' => 0.0];
-                foreach ($pt as $p) { $pTop['n'] += $p['n']; $pTop['tahsilat'] += $p['tahsilat']; $pTop['hakedis'] += $p['hakedis']; } ?>
+                $pTop = ['n' => 0, 'hakedis' => 0.0, 'pass' => 0.0, 'passN' => 0];
+                foreach ($pt as $p) foreach ($pTop as $kk => $_) $pTop[$kk] += $p[$kk]; ?>
             <div class="table-responsive">
                 <table class="table table-hover rp-table rp-dt mb-0" data-pb="<?= e($pb) ?>">
                     <thead class="table-light">
                         <tr>
                             <th>Partner</th>
                             <th class="text-end">İş</th>
-                            <th class="text-end">Müşteriden alınan</th>
                             <th class="text-end">Partner hakedişi</th>
+                            <th class="text-end">Pass</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -350,22 +304,22 @@ rp_ust('genel');
                         <tr>
                             <td class="fw-semibold"><?= e($pad) ?></td>
                             <td class="text-end"><?= (int)$p['n'] ?></td>
-                            <td class="text-end" data-order="<?= number_format($p['tahsilat'], 2, '.', '') ?>"><?= $p['tahsilat'] > 0 ? e(rp_para($p['tahsilat'], $pb)) : '<span class="text-body-secondary">—</span>' ?></td>
                             <td class="text-end" data-order="<?= number_format($p['hakedis'], 2, '.', '') ?>"><?= $p['hakedis'] > 0 ? e(rp_para($p['hakedis'], $pb)) : '<span class="text-body-secondary">—</span>' ?></td>
+                            <td class="text-end fw-semibold" data-order="<?= number_format($p['pass'], 2, '.', '') ?>"><?= rp_tutar(['n' => $p['passN'], 't' => $p['pass']], $pb) ?></td>
                         </tr>
                         <?php endforeach; ?>
                     </tbody>
                     <tfoot>
-                        <tr>
+                        <tr data-partner-toplam-n="<?= (int)$pTop['n'] ?>" data-partner-toplam-hakedis="<?= number_format($pTop['hakedis'], 2, '.', '') ?>" data-partner-toplam-pass="<?= number_format($pTop['pass'], 2, '.', '') ?>">
                             <td>TOPLAM (<?= count($pt) ?> partner)</td>
                             <td class="text-end"><?= (int)$pTop['n'] ?></td>
-                            <td class="text-end"><?= e(rp_para($pTop['tahsilat'], $pb)) ?></td>
                             <td class="text-end"><?= e(rp_para($pTop['hakedis'], $pb)) ?></td>
+                            <td class="text-end"><?= rp_tutar(['n' => $pTop['passN'], 't' => $pTop['pass']], $pb) ?></td>
                         </tr>
                     </tfoot>
                 </table>
             </div>
-            <div class="rp-note mt-2">Hakediş, girildiği para biriminin dökümünde görünür (ör. € ile alınan bir işin hakedişi ₺ girildiyse ₺ dökümünde sayılır).</div>
+            <div class="rp-note mt-2">Pass = iş bedeli − partner hakedişi. Hakediş başka para biriminde girildiyse iş bedeli güncel kurla o para birimine çevrilir; pass hakedişin para biriminde görünür.</div>
             <?php endif; ?>
         </div>
     </div>
@@ -376,7 +330,9 @@ rp_ust('genel');
         <div class="card-body">
             <?php if (!$is): ?>
             <div class="text-center text-body-secondary py-4">Bu para biriminde transfer yok.</div>
-            <?php else: ?>
+            <?php else:
+                $asilN = 0;
+                foreach ($is as $x) if (!$x['ek']) $asilN++; ?>
             <table class="table table-hover rp-table rp-isler mb-0 w-100" data-pb="<?= e($pb) ?>">
                 <thead class="table-light">
                     <tr>
@@ -386,37 +342,72 @@ rp_ust('genel');
                         <th>Müşteri</th>
                         <th>Güzergah</th>
                         <th>Durum</th>
-                        <th class="text-end">Tutar</th>
+                        <th class="text-end">İş bedeli</th>
+                        <th class="text-end">Partner hakedişi</th>
+                        <th class="text-end">Net ciroya giren</th>
                         <th>Partner</th>
-                        <th class="text-end">Hakediş</th>
                     </tr>
                 </thead>
                 <tbody>
-                    <?php foreach ($is as $x): ?>
-                    <tr data-tutar="<?= number_format($x['tutar'], 2, '.', '') ?>" data-hk="<?= number_format($x['hk'], 2, '.', '') ?>" data-hpb="<?= e($x['hpb']) ?>" data-k="<?= $x['k'] ?>" data-kad="<?= e($katAd[$x['k']]) ?>">
+                    <?php foreach ($is as $x):
+                        // Bu dökümün (pb) toplamlarına giren kısımlar
+                        $bedelBu = $x['ek'] ? 0.0 : $x['bedel'];
+                        $hkBu = $x['hakedis'] && $x['hakedis'][0] === $pb ? $x['hakedis'][1] : 0.0;
+                        $netBu = $x['net'] && $x['net'][0] === $pb ? $x['net'][1] : 0.0; ?>
+                    <tr data-bedel="<?= number_format($bedelBu, 2, '.', '') ?>" data-hk="<?= number_format($hkBu, 2, '.', '') ?>" data-net="<?= number_format($netBu, 2, '.', '') ?>" data-ek="<?= $x['ek'] ? '1' : '0' ?>" data-k="<?= $x['k'] ?>" data-kad="<?= e($katAd[$x['k']]) ?>">
                         <td data-order="<?= e((string)$x['tarih']) ?>"><?= $x['tarih'] ? e(date('d.m.Y', strtotime($x['tarih']))) : '—' ?></td>
                         <td><?= e($x['no']) ?></td>
                         <td><?= e($tipAd[$x['tip']]) ?></td>
                         <td><?= e($x['musteri']) ?></td>
                         <td><?= e($x['guzergah']) ?></td>
                         <td><span class="badge bg-<?= $katRenk[$x['k']] ?>-subtle text-<?= $katRenk[$x['k']] ?>-emphasis"><?= e($katAd[$x['k']]) ?></span></td>
-                        <td class="text-end" data-order="<?= number_format($x['tutar'], 2, '.', '') ?>"><?= e(rp_para($x['tutar'], $pb)) ?></td>
+                        <td class="text-end" data-order="<?= number_format($bedelBu, 2, '.', '') ?>">
+                            <?php if ($x['ek']): ?>
+                            <span class="text-body-secondary"><?= e(rp_para($x['bedel'], $x['pb'])) ?></span><span class="rp-n"><?= e($x['pb']) ?> dökümünde</span>
+                            <?php else: ?>
+                            <?= e(rp_para($x['bedel'], $pb)) ?>
+                            <?php endif; ?>
+                        </td>
+                        <td class="text-end" data-order="<?= number_format($hkBu, 2, '.', '') ?>">
+                            <?php if ($x['k'] !== 'disari'): ?>
+                            <?php elseif (!$x['hakedis']): ?>
+                            <span class="text-warning-emphasis" title="Verilen Tutar girilmemiş">girilmemiş</span>
+                            <?php else: ?>
+                            <?= e(rp_para($x['hakedis'][1], $x['hakedis'][0])) ?><?php if ($x['hakedis'][0] !== $pb): ?><span class="rp-n"><?= e($x['hakedis'][0]) ?> dökümünde</span><?php endif; ?>
+                            <?php endif; ?>
+                        </td>
+                        <td class="text-end fw-semibold" data-order="<?= number_format($netBu, 2, '.', '') ?>">
+                            <?php if ($x['k'] === 'bekleyen'): ?>
+                            <span class="text-body-secondary fw-normal">— bekliyor</span>
+                            <?php elseif ($x['kurYok']): ?>
+                            <span class="text-warning-emphasis fw-normal" title="Güncel kur alınamadı">kur yok</span>
+                            <?php elseif ($x['net'][0] !== $pb): ?>
+                            <span class="text-body-secondary fw-normal"><?= e(rp_para($x['net'][1], $x['net'][0])) ?></span><span class="rp-n"><?= e($x['net'][0]) ?> dökümünde</span>
+                            <?php else: ?>
+                            <span class="<?= $netBu <= -0.005 ? 'text-danger' : '' ?>"><?= e(rp_para($netBu, $pb)) ?></span>
+                            <?php if ($x['k'] === 'disari'): ?><span class="rp-n fw-normal">pass<?php if ($x['cevrim']): ?>: <?= e(rp_para($x['cevrim'][0], $x['cevrim'][1])) ?> = <?= e(rp_para($x['cevrim'][2], $x['cevrim'][3])) ?> − <?= e(rp_para($x['hk'], $x['hpb'])) ?><?php endif; ?></span><?php endif; ?>
+                            <?php endif; ?>
+                        </td>
                         <td><?= e($x['partner']) ?></td>
-                        <td class="text-end" data-order="<?= number_format($x['hk'], 2, '.', '') ?>"><?= $x['hk'] > 0 ? e(rp_para($x['hk'], $x['hpb'])) : '' ?></td>
                     </tr>
                     <?php endforeach; ?>
                 </tbody>
                 <tfoot>
                     <tr>
-                        <td colspan="2" class="rp-f-n"><?= count($is) ?> işlem</td>
+                        <td colspan="2" class="rp-f-n"><?= (int)$asilN ?> işlem</td>
                         <td colspan="4" class="rp-f-kat"></td>
-                        <td class="text-end rp-f-tutar"></td>
-                        <td></td>
+                        <td class="text-end rp-f-bedel"></td>
                         <td class="text-end rp-f-hk"></td>
+                        <td class="text-end rp-f-net"></td>
+                        <td></td>
                     </tr>
                 </tfoot>
             </table>
-            <div class="rp-note mt-2">Alttaki toplamlar, listede aradığınız / süzdüğünüz işlemlere göre güncellenir.</div>
+            <div class="rp-note mt-2">
+                Alttaki toplamlar, listede aradığınız / süzdüğünüz işlemlere göre güncellenir (bu para biriminde):
+                iş bedeli toplamı = tahmini ciro, partner hakedişi toplamı = partner hakedişi, net toplamı = net ciro.
+                "Hakediş" satırları: işin bedeli başka para biriminde, hakedişi ve pass'ı bu para biriminde.
+            </div>
             <?php endif; ?>
         </div>
     </div>
@@ -430,16 +421,17 @@ rp_ust('genel');
     <div class="card-body">
         <?php
         $kontroller = [
-            ['bi-currency-exchange', 'Tutarı 0 olan transfer', $fiyatsiz, 'Ciroya eklenemedi; rezervasyondan fiyatı girin.'],
-            ['bi-receipt', 'Dışarıya verilmiş, hakediş girilmemiş', $hakedisEksik, 'Partnerin hakedişi bilinmiyor.'],
-            ['bi-person-x', 'Dışarıya verilmiş, partner seçilmemiş', $partnerYok, 'Partner dökümünde "(Partner girilmemiş)" olarak görünür.'],
+            ['bi-currency-exchange', 'Tutarı 0 olan transfer', $h['fiyatsiz'], 'Ciroya 0 olarak girdi; rezervasyondan fiyatı girin.'],
+            ['bi-receipt', 'Dışarıya verilmiş, Verilen Tutar girilmemiş', $h['verilenEksik'], 'Hakediş düşülemedi, pass\'a işin bedelinin tamamı girdi; İş Durumu\'ndan Verilen Tutar\'ı girin.'],
+            ['bi-exclamation-triangle', 'Pass eksi çıkan iş', $h['passEksi'], 'Verilen Tutar iş bedelinden fazla; tutar ya da para birimi yanlış girilmiş olabilir.'],
+            ['bi-person-x', 'Dışarıya verilmiş, partner seçilmemiş', $h['partnerYok'], 'Partner dökümünde "(Partner girilmemiş)" olarak görünür.'],
             ['bi-x-circle', 'İptal edilen (hesaba katılmadı)', $say['iptal'], 'Silinen rezervasyonlar zaten hariç.'],
         ];
         ?>
         <div class="row g-3">
             <?php foreach ($kontroller as $kt): ?>
-            <div class="col-12 col-md-6 col-xl-3">
-                <div class="d-flex justify-content-between align-items-start gap-2 h-100 p-3 rounded border">
+            <div class="col-12 col-md-6 col-xl">
+                <div class="d-flex justify-content-between align-items-start gap-2 h-100 p-3 rounded border" data-kontrol="<?= e($kt[1]) ?>">
                     <div>
                         <div class="fw-semibold"><i class="bi <?= e($kt[0]) ?> me-2 text-body-secondary"></i><?= e($kt[1]) ?></div>
                         <div class="rp-note"><?= e($kt[3]) ?></div>
