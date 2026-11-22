@@ -9,7 +9,7 @@ $fb = 'https://images.unsplash.com/photo-1507525428034-b723cf961d3e?w=800&h=600&
 ?>
 <article class="rc" data-r="<?= e($d['region'] !== '' ? $d['region'] : 'x') ?>">
   <a class="rc-media" href="<?= e($d['url']) ?>" data-book="<?= (int)$d['id'] ?>" title="<?= e($d['title']) ?>">
-    <img src="<?= e($d['img']) ?>" alt="<?= e($d['place']) ?> VIP Transfer" width="640" height="420" loading="lazy" decoding="async" onerror="this.onerror=null;this.src='<?= e($fb) ?>'">
+    <img src="<?= e(sl_card_img($d['img'])) ?>" alt="<?= e($d['place']) ?> VIP Transfer" width="640" height="420" loading="lazy" decoding="async" onerror="this.onerror=null;this.src='<?= e($fb) ?>'">
     <?php if ($badge !== '' && $pp): ?><span class="rc-badge"><?= e($badge) ?></span><?php endif; ?>
     <div class="rc-ov"><h3><?= e($d['place']) ?></h3></div>
   </a>

@@ -112,7 +112,7 @@ function sl_render_home() {
     <div class="row g-4 mt-2">
       <?php foreach ($posts as $p): ?>
       <div class="col-md-6 col-lg-4"><article class="blog-c">
-        <?php if ($p['img'] !== ''): ?><a class="bimg" href="<?= e($p['url']) ?>" tabindex="-1" aria-hidden="true"><img src="<?= e($p['img']) ?>" alt="" loading="lazy" decoding="async" width="640" height="360"></a><?php else: ?><div class="ph"><?= e($blog['title'] ?? '') ?></div><?php endif; ?>
+        <?php if ($p['img'] !== ''): ?><a class="bimg" href="<?= e($p['url']) ?>" tabindex="-1" aria-hidden="true"><img src="<?= e(sl_card_img($p['img'])) ?>" alt="" loading="lazy" decoding="async" width="640" height="360"></a><?php else: ?><div class="ph"><?= e($blog['title'] ?? '') ?></div><?php endif; ?>
         <h3><a href="<?= e($p['url']) ?>"><?= e($p['title']) ?></a></h3>
         <a href="<?= e($p['url']) ?>"><?= sl_e('read') ?></a>
       </article></div>

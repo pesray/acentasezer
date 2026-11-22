@@ -839,6 +839,25 @@ function sl_region_key($haystack) {
     return '';
 }
 
+/**
+ * Kart görseli: aynı klasördeki kart/ alt klasöründe hafif kopyası varsa (1200 px, aynı ad;
+ * PNG için ad + ".jpg") onu, yoksa aslını döndürür. Yalnız kartlarda kullanılır; transfer
+ * sayfası kapağı, blog kapağı ve misafir fotoğrafları her zaman aslını gösterir.
+ */
+function sl_card_img($url) {
+    $url = (string)$url;
+    if ($url === '' || strpos($url, UPLOADS_URL) !== 0) return $url;
+    $rel = substr($url, strlen(UPLOADS_URL));
+    if (strpos($rel, '..') !== false || strpos($rel, '?') !== false) return $url;
+    $dir = dirname($rel);
+    if ($dir === '.' || $dir === '') return $url;
+    $file = basename($rel);
+    foreach ([$file, $file . '.jpg'] as $k) {
+        if (is_file(UPLOADS_PATH . $dir . '/kart/' . $k)) return UPLOADS_URL . $dir . '/kart/' . rawurlencode($k);
+    }
+    return $url;
+}
+
 /** Tüm yayındaki bölgeler (aktif dil için), sort_order sırasıyla */
 function sl_destinations() {
     static $cache = [];
