@@ -1,12 +1,55 @@
 <?php
 /**
  * Sunline anasayfa — temadaki bölümlerin birebir PHP karşılığı
- * Sıra: Hero → Hızlı form → Bölgeler & Fiyatlar → Bilgilendirme → Misafirlerimiz → Blog → SSS
+ * Sıra: Hero (tek görsel ya da misafir fotoğraf mozaiği) → Hızlı form → Bölgeler & Fiyatlar → Bilgilendirme → Misafirlerimiz → Blog → SSS
  *       + Google Yorumları (panelden seçilen yerde: Bilgilendirme sonrası / SSS öncesi (varsayılan) / en alt)
  * İçerik: Admin > Anasayfa & Tema
  */
 
 require_once __DIR__ . '/core.php';
+
+/**
+ * Giriş mozaiği açık mı? Açıksa (Hero aktif + "Misafir fotoğraf mozaiği" seçili + en az 1 fotoğraf)
+ * fotoğraf yollarını, değilse [] döndürür. index.php de bunu kullanır (mozaikte büyük görsel ön yüklenmez).
+ */
+function sl_hero_mosaic_photos($hero) {
+    if (empty($hero['_active']) || (string)($hero['style'] ?? 'image') !== 'mosaic') return [];
+    $out = [];
+    foreach ((array)($hero['mosaic'] ?? []) as $p) {
+        $p = trim((string)$p);
+        if ($p !== '') $out[] = $p;
+    }
+    return $out;
+}
+
+/**
+ * Mozaik kare sırası: $tiles kareye $n fotoğraf dağıtılır.
+ * - Her fotoğraf eşit sayıda kullanılır (önce hiç kullanılmamışlar)
+ * - Son 13 karede kullanılan foto tekrar seçilmez → 4/6/10/12 sütunda yan yana ya da alt alta aynı foto gelmez
+ * - Sonuç her istekte aynıdır (rastgele değil)
+ */
+function sl_mosaic_order($n, $tiles) {
+    $n = (int)$n;
+    if ($n < 1) return [];
+    $seq = [];
+    $used = array_fill(0, $n, 0);
+    for ($k = 0; $k < $tiles; $k++) {
+        $ban = [];
+        for ($d = 1; $d <= 13 && $d <= $k; $d++) $ban[$seq[$k - $d]] = true;
+        $best = -1;
+        $bestKey = 0;
+        for ($pass = 0; $pass < 2 && $best < 0; $pass++) {
+            for ($i = 0; $i < $n; $i++) {
+                if ($pass === 0 && isset($ban[$i])) continue;
+                $key = $used[$i] * 1000 + ((($i - $k * 7) % $n) + $n) % $n;
+                if ($best < 0 || $key < $bestKey) { $best = $i; $bestKey = $key; }
+            }
+        }
+        $seq[] = $best;
+        $used[$best]++;
+    }
+    return $seq;
+}
 
 function sl_render_home() {
     $lang = sl_lang();
@@ -43,7 +86,22 @@ function sl_render_home() {
     $showGuests = $guests['_active'] && $photos;
     $posts = $blog['_active'] ? sl_blog_posts((int)($blog['limit'] ?? 6)) : [];
     $faqItems = $faq['_active'] ? array_values(array_filter((array)($faq['items'] ?? []), function ($i) { return trim((string)($i['q'] ?? '')) !== '' && trim((string)($i['a'] ?? '')) !== ''; })) : [];
+    $mz = sl_hero_mosaic_photos($hero);
     ?>
+<?php if ($mz):
+    // Mozaik: büyük marka yazısı + altında H1 başlığı (yıldızsız) tek satır; alt başlık gösterilmez
+    $mzBrand = trim((string)($hero['brand'] ?? '')) !== '' ? (string)$hero['brand'] : 'SUNLINE *VIP*';
+    $mzKw = trim(str_replace('*', '', (string)($hero['title'] ?? '')));
+    $mzN = count($mz);
+?>
+<header class="hero hero-mz">
+  <div class="mz-grid" aria-hidden="true"><?php foreach (sl_mosaic_order($mzN, 72) as $k => $i): ?><i><img src="<?= e(getMediaUrl($mz[$i])) ?>" alt="" width="360" height="360" decoding="async" fetchpriority="low"<?= $k < $mzN ? '' : ' loading="lazy"' ?>></i><?php endforeach; ?></div>
+  <div class="container hero-in">
+    <?php if (trim((string)($hero['eyebrow'] ?? '')) !== ''): ?><div class="eyebrow"><?= e($hero['eyebrow']) ?></div><?php endif; ?>
+    <h1 class="mz-h1"><span class="mz-brand"><?= sl_rich($mzBrand) ?></span><?php if ($mzKw !== ''): ?><span class="mz-kw"><?= e($mzKw) ?></span><?php endif; ?></h1>
+  </div>
+</header>
+<?php else: ?>
 <header class="hero"<?= $hero['_active'] ? '' : ' style="min-height:420px"' ?>>
   <div class="hero-bg" style="background-image:url('<?= e($heroImg) ?>')"></div>
   <div class="container hero-in">
@@ -52,6 +110,7 @@ function sl_render_home() {
     <?php if (trim((string)($hero['subtitle'] ?? '')) !== ''): ?><p><?= e($hero['subtitle']) ?></p><?php endif; ?>
   </div>
 </header>
+<?php endif; ?>
 <div class="container">
   <?php sl_partial('quickform'); ?>
 </div>

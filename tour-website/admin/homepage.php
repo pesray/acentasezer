@@ -139,7 +139,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $homepage) {
                     'booster_fee' => $feeMap($b['booster_fee'] ?? []),
                 ];
             } elseif ($type === 'hero') {
-                $base = ['image' => hp_str($b['image'] ?? '', 500)];
+                $mz = [];
+                foreach ((array)($b['mosaic'] ?? []) as $p) {
+                    $p = hp_str($p, 500);
+                    if ($p !== '' && !in_array($p, $mz, true)) $mz[] = $p;
+                }
+                $base = [
+                    'image' => hp_str($b['image'] ?? '', 500),
+                    'style' => (string)($b['style'] ?? '') === 'mosaic' ? 'mosaic' : 'image',
+                    'brand' => hp_str($b['brand'] ?? '', 60),
+                    'mosaic' => array_slice($mz, 0, 60),
+                ];
             } elseif ($type === 'regions') {
                 $filters = [];
                 foreach ((array)($b['filters'] ?? []) as $f) {
@@ -425,6 +435,8 @@ input:checked+.toggle-slider:before{transform:translateX(20px)}
 .gst-it button{position:absolute;top:4px;right:4px;width:24px;height:24px;border-radius:50%;border:0;background:rgba(0,0,0,.65);color:#fff;font-size:.8rem;line-height:1}
 .gst-add{width:96px;height:128px;border-radius:10px;border:2px dashed var(--sidebar-border);background:transparent;color:var(--text-muted);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;font-size:.8rem}
 .img-prev{max-height:70px;border-radius:8px;margin-top:6px;border:1px solid var(--sidebar-border)}
+.gst-list .mz-it,.gst-list .mz-add{width:84px;height:84px}
+.mz-big{position:absolute;left:4px;bottom:4px;background:#dc3545;color:#fff;font-size:.65rem;font-weight:600;padding:1px 6px;border-radius:6px}
 .char-count{font-size:11px;color:var(--text-muted)}
 .char-count.over{color:#dc2626;font-weight:700}
 .cur-chk{border:1px solid var(--sidebar-border);border-radius:10px;padding:8px 12px;cursor:pointer;font-weight:600;font-size:.88rem;display:inline-flex;align-items:center;gap:8px;margin:0}
@@ -644,7 +656,7 @@ input:checked+.toggle-slider:before{transform:translateX(20px)}
   </div></div>
 
   <?php /* ============================ HERO + HIZLI FORM ============================ */ ?>
-  <?= hp_card_open('hero', 'bi-image', '#6366f1', 'Hero & Hızlı Fiyat Formu', 'Büyük görsel, başlık, alt başlık · form altı not ve güven rozetleri', 'active[hero]', $baseVal['hero']['_active']) ?>
+  <?= hp_card_open('hero', 'bi-image', '#6366f1', 'Hero & Hızlı Fiyat Formu', 'Büyük görsel ya da misafir fotoğraf mozaiği, başlık, alt başlık · form altı not ve güven rozetleri', 'active[hero]', $baseVal['hero']['_active']) ?>
     <div class="row g-3 mb-2">
       <div class="col-md-8">
         <label class="form-label-sm">Hero arka plan görseli (tüm diller)</label>
@@ -653,6 +665,36 @@ input:checked+.toggle-slider:before{transform:translateX(20px)}
       </div>
       <div class="col-md-4"><img src="<?= e(trim((string)($baseVal['hero']['image'] ?? '')) !== '' ? getMediaUrl($baseVal['hero']['image']) : '') ?>" class="img-prev" id="heroImgPrev" alt="" <?= trim((string)($baseVal['hero']['image'] ?? '')) === '' ? 'hidden' : '' ?>></div>
     </div>
+    <?php
+      $mzSel = (string)($baseVal['hero']['style'] ?? 'image') === 'mosaic';
+      $mzPhotos = array_values(array_filter((array)($baseVal['hero']['mosaic'] ?? []), function ($p) { return trim((string)$p) !== ''; }));
+      // 150 KB'dan büyük dosya girişi yavaşlatır → panelde "büyük" etiketi
+      $mzBig = function ($p) {
+          $p = (string)$p;
+          if ($p === '' || strpos($p, 'http') === 0 || strpos($p, '..') !== false) return false;
+          $f = UPLOADS_PATH . $p;
+          return is_file($f) && filesize($f) > 150 * 1024;
+      };
+    ?>
+    <div class="hp-sub">Giriş görünümü</div>
+    <div class="row g-3 mb-2">
+      <div class="col-md-5">
+        <label class="form-label-sm">Görünüm</label>
+        <select class="form-select" name="base[hero][style]">
+          <option value="image"<?= $mzSel ? '' : ' selected' ?>>Tek arka plan görseli</option>
+          <option value="mosaic"<?= $mzSel ? ' selected' : '' ?>>Misafir fotoğraf mozaiği</option>
+        </select>
+      </div>
+      <div class="col-md-7"><label class="form-label-sm">Mozaikte büyük yazı (tüm diller) — vurgulanacak kısmı *yıldız* içine alın</label><?= hp_text('base[hero][brand]', $baseVal['hero']['brand'] ?? '', 'SUNLINE *VIP*', 60) ?></div>
+    </div>
+    <label class="form-label-sm">Mozaik fotoğrafları (tüm diller) — <span id="mzCount"><?= count($mzPhotos) ?></span> / 60</label>
+    <div class="gst-list" id="mzList">
+      <?php foreach ($mzPhotos as $p): ?>
+      <div class="gst-it mz-it"><img src="<?= e(getMediaUrl($p)) ?>" alt="" loading="lazy"><input type="hidden" name="base[hero][mosaic][]" value="<?= e($p) ?>"><button type="button" class="gst-del" title="Kaldır">×</button><?php if ($mzBig($p)): ?><span class="mz-big" title="Dosya 150 KB'dan büyük — giriş yavaşlar">büyük</span><?php endif; ?></div>
+      <?php endforeach; ?>
+      <button type="button" class="gst-add mz-add" id="mzAdd"><i class="bi bi-plus-lg"></i>Ekle</button>
+    </div>
+    <div class="hp-note mt-1 mb-3">Kare, yaklaşık 400 px ve küçük boyutlu (50 KB altı) fotoğraflar önerilir; birden çok fotoğraf aynı anda seçilebilir. En az 15–20 fotoğraf önerilir; aynı foto yan yana gelmeyecek şekilde otomatik dizilir. Mozaik seçiliyken arka plan görseli ve alt başlık kullanılmaz, "Başlık (H1)" büyük yazının altında küçük satır olarak görünür. Fotoğraf yoksa tek görsel gösterilir.</div>
     <?php foreach ($languages as $i => $l): $c = $l['code']; $v = $val[$c]['hero']; $gv = $val[$c]['global']; $n = 'tr[' . $c . ']'; ?>
     <div class="lang-pane <?= $i === 0 ? 'active' : '' ?>" data-lang-pane="<?= e($c) ?>">
       <div class="row g-3">
@@ -951,6 +993,28 @@ input:checked+.toggle-slider:before{transform:translateX(20px)}
     };
   });
   gstList.addEventListener('click', function (e) { if (e.target.classList.contains('gst-del')) e.target.closest('.gst-it').remove(); });
+
+  // Giriş mozaiği fotoğrafları (çoklu seçim; aynı foto iki kez eklenmez; en fazla 60)
+  var mzList = document.getElementById('mzList'), mzAdd = document.getElementById('mzAdd'), mzCount = document.getElementById('mzCount');
+  var mzSync = function () { mzCount.textContent = mzList.querySelectorAll('.mz-it').length; };
+  mzAdd.addEventListener('click', function () {
+    openMediaPickerMulti('image', function (items) {
+      var have = {};
+      mzList.querySelectorAll('.mz-it input').forEach(function (i) { have[i.value] = true; });
+      items.forEach(function (m) {
+        if (!m || !m.file_path || have[m.file_path] || mzList.querySelectorAll('.mz-it').length >= 60) return;
+        have[m.file_path] = true;
+        var d = document.createElement('div');
+        d.className = 'gst-it mz-it';
+        d.innerHTML = '<img alt=""><input type="hidden" name="base[hero][mosaic][]"><button type="button" class="gst-del" title="Kaldır">×</button>';
+        d.querySelector('img').src = m.url;
+        d.querySelector('input').value = m.file_path;
+        mzList.insertBefore(d, mzAdd);
+      });
+      mzSync();
+    });
+  });
+  mzList.addEventListener('click', function (e) { if (e.target.classList.contains('gst-del')) { e.target.closest('.gst-it').remove(); mzSync(); } });
 
   // ===== Tema renkleri (Claude Design Tweaks paneli ile aynı hesaplama) =====
   function rgb(h) { h = h.replace('#', ''); return [0, 2, 4].map(function (i) { return parseInt(h.substr(i, 2), 16); }); }

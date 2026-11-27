@@ -1280,6 +1280,10 @@ function sl_default_base() {
         ],
         'hero' => [
             'image' => 'https://images.unsplash.com/photo-1507525428034-b723cf961d3e?w=1800&q=80',
+            // Giriş görünümü: 'image' = tek arka plan görseli, 'mosaic' = misafir fotoğraf mozaiği (panelden seçilir)
+            'style' => 'image',
+            'brand' => 'SUNLINE *VIP*',
+            'mosaic' => [],
         ],
         'regions' => [
             'only_featured' => 1,

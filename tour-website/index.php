@@ -192,7 +192,8 @@ if (empty($path)) {
     $canonicalUrl = langUrl('');
     $bodyClass = 'sl-home';
     $slHeroCfg = sl_section('hero');
-    $preloadImage = trim((string)($slHeroCfg['image'] ?? '')) !== '' ? getMediaUrl($slHeroCfg['image']) : '';
+    // Mozaik açıksa büyük arka plan görseli kullanılmaz → ön yüklenmez
+    $preloadImage = (!sl_hero_mosaic_photos($slHeroCfg) && trim((string)($slHeroCfg['image'] ?? '')) !== '') ? getMediaUrl($slHeroCfg['image']) : '';
 
     require_once INCLUDES_PATH . 'header.php';
     $slHome = sl_render_home();
