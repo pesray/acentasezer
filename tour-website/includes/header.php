@@ -179,7 +179,7 @@ $slFont .= '&display=swap';
     <button class="navbar-toggler<?= $slShowToggle ? '' : ' ms-auto' ?>" type="button" data-bs-toggle="collapse" data-bs-target="#nv" aria-controls="nv" aria-expanded="false" aria-label="<?= sl_e('menu') ?>"><i class="bi bi-list" style="font-size:1.5rem"></i></button>
     <div class="collapse navbar-collapse" id="nv">
       <ul class="navbar-nav mx-auto">
-        <?php foreach ($slNav as $slItem): if (trim((string)($slItem['l'] ?? '')) === '') continue; $slHref = sl_link($slItem['u'] ?? ''); if ($slHref === '') continue; ?>
+        <?php foreach ($slNav as $slItem): if (trim((string)($slItem['l'] ?? '')) === '' || !sl_link_visible($slItem['u'] ?? '')) continue; $slHref = sl_link($slItem['u'] ?? ''); if ($slHref === '') continue; ?>
         <li class="nav-item"><a class="nav-link<?= ($slHref === $slReqUrl) ? ' active' : '' ?>" href="<?= e($slHref) ?>"<?= ($slHref === $slReqUrl) ? ' aria-current="page"' : '' ?>><?= e($slItem['l']) ?></a></li>
         <?php endforeach; ?>
       </ul>

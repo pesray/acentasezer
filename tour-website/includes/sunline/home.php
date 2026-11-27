@@ -2,6 +2,7 @@
 /**
  * Sunline anasayfa — temadaki bölümlerin birebir PHP karşılığı
  * Sıra: Hero → Hızlı form → Bölgeler & Fiyatlar → Bilgilendirme → Misafirlerimiz → Blog → SSS
+ *       + Google Yorumları (panelden seçilen yerde: Bilgilendirme sonrası / SSS öncesi (varsayılan) / en alt)
  * İçerik: Admin > Anasayfa & Tema
  */
 
@@ -13,6 +14,9 @@ function sl_render_home() {
     $reg = sl_section('regions');
     $info = sl_section('info');
     $guests = sl_section('guests');
+    $rv = sl_section('reviews');
+    $rvOn = !empty($rv['_active']);
+    $rvPos = in_array($rv['position'] ?? '', ['after_info', 'after_blog', 'after_faq'], true) ? $rv['position'] : 'after_blog';
     $blog = sl_section('blog');
     $faq = sl_section('faq');
 
@@ -90,8 +94,14 @@ function sl_render_home() {
 </section>
 <?php endif; ?>
 
+<?php
+    // Önceki bölüm düz (bantsız) ise sonrakinin üst boşluğu kaldırılır (pt-0).
+    // Yorum alanı kapalıyken çıktı eskisiyle birebir aynıdır.
+    $plain = false;
+    if ($rvOn && $rvPos === 'after_info' && sl_render_reviews($rv, $plain)) $plain = true;
+?>
 <?php if ($showGuests): ?>
-<section class="sec" id="misafir">
+<section class="sec<?= $plain ? ' pt-0' : '' ?>" id="misafir">
   <div class="container">
     <?php if (trim((string)($guests['eyebrow'] ?? '')) !== ''): ?><div class="eyebrow"><?= e($guests['eyebrow']) ?></div><?php endif; ?>
     <h2 class="sec-t"><?= e($guests['title'] ?? '') ?></h2>
@@ -104,8 +114,9 @@ function sl_render_home() {
 </section>
 <?php endif; ?>
 
+<?php if ($showGuests) $plain = true; ?>
 <?php if ($posts): ?>
-<section class="sec<?= $showGuests ? ' pt-0' : '' ?>" id="blog">
+<section class="sec<?= $plain ? ' pt-0' : '' ?>" id="blog">
   <div class="container">
     <?php if (trim((string)($blog['eyebrow'] ?? '')) !== ''): ?><div class="eyebrow"><?= e($blog['eyebrow']) ?></div><?php endif; ?>
     <h2 class="sec-t"><?= e($blog['title'] ?? '') ?></h2>
@@ -122,8 +133,12 @@ function sl_render_home() {
 </section>
 <?php endif; ?>
 
+<?php
+    if ($posts) $plain = true;
+    if ($rvOn && $rvPos === 'after_blog' && sl_render_reviews($rv, $plain)) $plain = true;
+?>
 <?php if ($faqItems): ?>
-<section class="sec<?= ($posts || $showGuests) ? ' pt-0' : '' ?>" id="sss">
+<section class="sec<?= $plain ? ' pt-0' : '' ?>" id="sss">
   <div class="container" style="max-width:920px">
     <?php if (trim((string)($faq['eyebrow'] ?? '')) !== ''): ?><div class="eyebrow"><?= e($faq['eyebrow']) ?></div><?php endif; ?>
     <h2 class="sec-t"><?= e($faq['title'] ?? '') ?></h2>
@@ -132,5 +147,7 @@ function sl_render_home() {
 </section>
 <?php endif; ?>
 <?php
+    if ($faqItems) $plain = true;
+    if ($rvOn && $rvPos === 'after_faq') sl_render_reviews($rv, $plain);
     return ['faq' => $faqItems, 'cards' => $cards, 'hero_img' => $heroImg];
 }

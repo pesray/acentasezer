@@ -57,7 +57,7 @@ $slOlF = sl_olcum();
       <div class="col-6 col-lg-2">
         <h6><?= sl_e('f_quick') ?></h6>
         <ul>
-          <?php foreach ((array)($slGlobalF['footer_links'] ?? []) as $slL): if (trim((string)($slL['l'] ?? '')) === '') continue; $slH = sl_link($slL['u'] ?? ''); if ($slH === '') continue; ?>
+          <?php foreach ((array)($slGlobalF['footer_links'] ?? []) as $slL): if (trim((string)($slL['l'] ?? '')) === '' || !sl_link_visible($slL['u'] ?? '')) continue; $slH = sl_link($slL['u'] ?? ''); if ($slH === '') continue; ?>
           <li><a href="<?= e($slH) ?>"><?= e($slL['l']) ?></a></li>
           <?php endforeach; ?>
           <li><a href="<?= e(sl_page_url('destinations')) ?>"><?= sl_e('all_transfers') ?></a></li>

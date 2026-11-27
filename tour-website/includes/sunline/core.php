@@ -12,9 +12,10 @@
  */
 
 // Not: Bu dosya her zaman require_once ile yüklenmelidir.
-if (!defined('SL_ASSET_VER')) define('SL_ASSET_VER', '1.2.7');
+if (!defined('SL_ASSET_VER')) define('SL_ASSET_VER', '1.2.8');
 
 require_once __DIR__ . '/defaults.php';
+require_once __DIR__ . '/reviews.php';
 
 /* ------------------------------------------------------------------ */
 /*  Dil & metin                                                        */
@@ -80,7 +81,12 @@ function sl_e($key, $vars = []) {
 /* ------------------------------------------------------------------ */
 
 function sl_section_types() {
-    return ['global', 'hero', 'regions', 'info', 'guests', 'blog', 'faq'];
+    return ['global', 'hero', 'regions', 'info', 'guests', 'reviews', 'blog', 'faq'];
+}
+
+/** Panelde hiç kaydedilmemiş bölüm kapalı mı başlasın? (sonradan eklenen bölümler canlıda kendiliğinden açılmasın) */
+function sl_section_default_off($key) {
+    return in_array($key, ['reviews'], true);
 }
 
 function sl_home_page_id() {
@@ -151,7 +157,7 @@ function sl_section($key, $lang = null) {
         }
     }
     $data = array_merge($defBase, $base, $defLang, $trans);
-    $data['_active'] = $row ? ((int)$row['is_active'] === 1) : true;
+    $data['_active'] = $row ? ((int)$row['is_active'] === 1) : !sl_section_default_off($key);
     $data['_id'] = $row ? (int)$row['id'] : 0;
     $cache[$ck] = $data;
     return $data;
@@ -500,6 +506,27 @@ function sl_link($u) {
         return (sl_is_home() ? '' : langUrl('')) . $m[1];
     }
     return langUrl(ltrim($u, '/'));
+}
+
+/**
+ * Menü / alt bilgi bağlantısı anasayfadaki bir bölüme (#misafir, #yorumlar ...) gidiyorsa
+ * ve o bölüm şu an sitede görünmüyorsa false → bağlantı gösterilmez (ölü bağlantı olmasın).
+ * Diğer bütün bağlantılar için true.
+ */
+function sl_link_visible($u) {
+    $u = trim((string)$u);
+    if (!preg_match('/^(?:\{home\})?#([\w-]+)$/', $u, $m)) return true;
+    $map = ['bolgeler' => 'regions', 'bilgi' => 'info', 'misafir' => 'guests', 'yorumlar' => 'reviews', 'blog' => 'blog', 'sss' => 'faq'];
+    if (!isset($map[$m[1]])) return true;
+    $key = $map[$m[1]];
+    $sec = sl_section($key);
+    if (empty($sec['_active'])) return false;
+    if ($key === 'guests') {
+        foreach ((array)($sec['photos'] ?? []) as $p) if (trim((string)$p) !== '') return true;
+        return false;
+    }
+    if ($key === 'reviews') return count(sl_reviews_visible()) > 0;
+    return true;
 }
 
 function sl_whatsapp_number() {

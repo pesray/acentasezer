@@ -21,7 +21,7 @@ foreach ($languages as $l) { if ($l['is_default']) { $defaultLang = $l['code']; 
 $types = sl_section_types();
 $typeLabels = [
     'global' => 'Genel', 'hero' => 'Hero', 'regions' => 'Bölgeler & Fiyatlar', 'info' => 'Bilgilendirme',
-    'guests' => 'Misafirlerimiz', 'blog' => 'Blog', 'faq' => 'Sıkça Sorulan Sorular',
+    'guests' => 'Misafirlerimiz', 'reviews' => 'Google Yorumları', 'blog' => 'Blog', 'faq' => 'Sıkça Sorulan Sorular',
 ];
 
 function hp_str($v, $max = 2000) {
@@ -160,6 +160,19 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $homepage) {
                     if ($p !== '') $photos[] = $p;
                 }
                 $base = ['photos' => array_slice($photos, 0, 40)];
+            } elseif ($type === 'reviews') {
+                $pos = (string)($b['position'] ?? 'after_blog');
+                $rt = str_replace(',', '.', trim((string)($b['rating'] ?? '')));
+                $rt = ($rt !== '' && is_numeric($rt) && (float)$rt > 0) ? number_format(min(5, (float)$rt), 1, '.', '') : '';
+                $url = hp_str($b['url'] ?? '', 500);
+                if ($url !== '' && !preg_match('#^https://#i', $url)) $url = '';
+                $base = [
+                    'position' => in_array($pos, ['after_info', 'after_blog', 'after_faq'], true) ? $pos : 'after_blog',
+                    'rating' => $rt,
+                    'count' => max(0, min(100000, (int)($b['count'] ?? 0))),
+                    'url' => $url,
+                    'limit' => max(1, min(50, (int)($b['limit'] ?? 12))),
+                ];
             } elseif ($type === 'blog') {
                 $base = ['limit' => max(1, min(12, (int)($b['limit'] ?? 6)))];
             }
@@ -201,6 +214,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $homepage) {
                     case 'guests':
                     case 'blog':
                         $s = ['eyebrow' => hp_str($L['eyebrow'] ?? '', 120), 'title' => hp_str($L['title'] ?? '', 160)];
+                        break;
+                    case 'reviews':
+                        $s = [
+                            'eyebrow' => hp_str($L['eyebrow'] ?? '', 120), 'title' => hp_str($L['title'] ?? '', 160),
+                            'subtitle' => hp_str($L['subtitle'] ?? '', 400), 'link_label' => hp_str($L['link_label'] ?? '', 80),
+                        ];
                         break;
                     case 'faq':
                         $s = ['eyebrow' => hp_str($L['eyebrow'] ?? '', 120), 'title' => hp_str($L['title'] ?? '', 160), 'items' => hp_rows($L['items'] ?? [], ['q' => 300, 'a' => 3000], 30)];
@@ -716,6 +735,64 @@ input:checked+.toggle-slider:before{transform:translateX(20px)}
       <div class="row g-3">
         <div class="col-md-4"><label class="form-label-sm">Üst küçük yazı</label><?= hp_text($n . '[eyebrow]', $v['eyebrow'] ?? '') ?></div>
         <div class="col-md-8"><label class="form-label-sm">Başlık</label><?= hp_text($n . '[title]', $v['title'] ?? '') ?></div>
+      </div>
+    </div>
+    <?php endforeach; ?>
+  </div></div>
+
+  <?php /* ============================ GOOGLE YORUMLARI ============================ */
+  $rvB = $baseVal['reviews'];
+  $rvAll = 0; $rvVis = 0; $rvTbl = true;
+  try {
+      $rq = $db->query("SELECT COUNT(*) AS a, COALESCE(SUM(is_visible = 1 AND TRIM(content) <> ''), 0) AS v FROM google_reviews")->fetch();
+      $rvAll = (int)$rq['a']; $rvVis = (int)$rq['v'];
+  } catch (Exception $e) { $rvTbl = false; }
+  $rvPos = $rvB['position'] ?? 'after_blog';
+  ?>
+  <?= hp_card_open('gyorum', 'bi-google', '#ea4335', 'Google Yorumları', 'Müşteri yorumları alanı — aç/kapat, yeri, puan ve başlıklar (yorumların kendisi İçerik › Google Yorumları ekranından)', 'active[reviews]', $rvB['_active']) ?>
+    <?php if (!$rvTbl): ?>
+    <div class="alert alert-warning small"><i class="bi bi-exclamation-triangle me-1"></i>Yorum tablosu veritabanında yok — <code>migrations/036_google_yorumlari.sql</code> çalıştırılmalı. O zamana kadar alan sitede görünmez.</div>
+    <?php else: ?>
+    <div class="alert alert-secondary small d-flex flex-wrap align-items-center gap-2">
+      <span><i class="bi bi-chat-square-quote me-1"></i>Sitede görünen yorum: <b><?= $rvVis ?></b> / toplam <?= $rvAll ?></span>
+      <a class="btn btn-sm btn-outline-primary ms-auto" href="<?= ADMIN_URL ?>/google-reviews.php"><i class="bi bi-pencil-square me-1"></i>Yorumları yönet (ekle · gizle · sırala)</a>
+    </div>
+    <?php endif; ?>
+    <div class="hp-note mb-3">Sağ üstteki anahtar alanı açar/kapatır. Görünür yorum yoksa alan sitede kendiliğinden gizlenir. Menüde <code>#yorumlar</code> bağlantısı varsa alan kapalıyken menüde de görünmez.</div>
+    <div class="row g-3 mb-2">
+      <div class="col-md-4">
+        <label class="form-label-sm">Anasayfadaki yeri</label>
+        <select class="form-select" name="base[reviews][position]">
+          <option value="after_info" <?= $rvPos === 'after_info' ? 'selected' : '' ?>>Bilgilendirme'den sonra (Misafirlerimiz'in yeri)</option>
+          <option value="after_blog" <?= $rvPos === 'after_blog' ? 'selected' : '' ?>>Blog'dan sonra, SSS'den önce</option>
+          <option value="after_faq" <?= $rvPos === 'after_faq' ? 'selected' : '' ?>>En alt (SSS'den sonra)</option>
+        </select>
+      </div>
+      <div class="col-6 col-md-2">
+        <label class="form-label-sm">Google puanı</label>
+        <input class="form-control" name="base[reviews][rating]" value="<?= e(str_replace('.', ',', (string)($rvB['rating'] ?? ''))) ?>" placeholder="5,0" inputmode="decimal" maxlength="4">
+      </div>
+      <div class="col-6 col-md-3">
+        <label class="form-label-sm">Google'daki yorum sayısı</label>
+        <input class="form-control" type="number" min="0" name="base[reviews][count]" value="<?= (int)($rvB['count'] ?? 0) ?: '' ?>" placeholder="34">
+      </div>
+      <div class="col-md-3">
+        <label class="form-label-sm">Kaydırmada en fazla kart</label>
+        <input class="form-control" type="number" min="1" max="50" name="base[reviews][limit]" value="<?= (int)($rvB['limit'] ?? 12) ?>">
+      </div>
+      <div class="col-12">
+        <label class="form-label-sm">Google'daki yorum sayfası (isteğe bağlı)</label>
+        <input class="form-control" name="base[reviews][url]" value="<?= e($rvB['url'] ?? '') ?>" placeholder="https://www.google.com/maps?cid=...">
+        <div class="hp-note mt-1">Doluysa alanın altında "Google'da tüm yorumları gör" düğmesi çıkar. Boş bırakılırsa düğme gösterilmez. Puan boşsa üstteki puan satırı gizlenir; sayı boşsa yalnız sayı gizlenir.</div>
+      </div>
+    </div>
+    <?php foreach ($languages as $i => $l): $c = $l['code']; $v = $val[$c]['reviews']; $n = 'tr[' . $c . '][reviews]'; ?>
+    <div class="lang-pane <?= $i === 0 ? 'active' : '' ?> mt-2" data-lang-pane="<?= e($c) ?>">
+      <div class="row g-3">
+        <div class="col-md-4"><label class="form-label-sm">Üst küçük yazı</label><?= hp_text($n . '[eyebrow]', $v['eyebrow'] ?? '') ?></div>
+        <div class="col-md-8"><label class="form-label-sm">Başlık</label><?= hp_text($n . '[title]', $v['title'] ?? '') ?></div>
+        <div class="col-md-8"><label class="form-label-sm">Açıklama</label><?= hp_text($n . '[subtitle]', $v['subtitle'] ?? '') ?></div>
+        <div class="col-md-4"><label class="form-label-sm">Google düğmesinin yazısı</label><?= hp_text($n . '[link_label]', $v['link_label'] ?? '') ?></div>
       </div>
     </div>
     <?php endforeach; ?>

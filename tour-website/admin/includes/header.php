@@ -913,6 +913,10 @@ $profileUrl = hasPermission('admin') ? ADMIN_URL . '/users.php?action=edit&id=' 
             <i class="bi bi-question-circle nav-link-icon"></i>
             <span class="nav-link-text">SSS</span>
         </a>
+        <a href="<?= ADMIN_URL ?>/google-reviews.php" class="nav-link <?= $currentPage === 'google-reviews' ? 'active' : '' ?>" title="Google Yorumları">
+            <i class="bi bi-google nav-link-icon"></i>
+            <span class="nav-link-text">Google Yorumları</span>
+        </a>
         <a href="<?= ADMIN_URL ?>/pages.php" class="nav-link <?= $currentPage === 'pages' ? 'active' : '' ?>" title="Sayfalar">
             <i class="bi bi-file-earmark-text nav-link-icon"></i>
             <span class="nav-link-text">Sayfalar</span>
