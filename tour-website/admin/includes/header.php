@@ -18,6 +18,31 @@ if ($siteLogo && defined('UPLOADS_URL')) {
 }
 // Profil = kendi kullanıcı kaydını düzenleme (ad, e-posta, şifre). Kullanıcılar sayfası yalnız admin rolüne açık.
 $profileUrl = hasPermission('admin') ? ADMIN_URL . '/users.php?action=edit&id=' . (int)($_SESSION['admin_id'] ?? 0) : '';
+
+// Üst çubuktaki tarih Türkçe (date('F/l') İngilizce yazıyordu)
+$panelAylar  = ['', 'Ocak', 'Şubat', 'Mart', 'Nisan', 'Mayıs', 'Haziran', 'Temmuz', 'Ağustos', 'Eylül', 'Ekim', 'Kasım', 'Aralık'];
+$panelGunler = ['Pazar', 'Pazartesi', 'Salı', 'Çarşamba', 'Perşembe', 'Cuma', 'Cumartesi'];
+$panelTarih  = date('j') . ' ' . $panelAylar[(int)date('n')] . ' ' . date('Y') . ', ' . $panelGunler[(int)date('w')];
+
+// Sol üst logo: sitenin koyu zemin logosu (Anasayfa & Tema > koyu zemin logosu; boşsa assets/img/sunline-logo-dark.webp,
+// sitenin kendi başlığındakiyle aynı dosya). Eski "site_logo" (uploads) dosyası canlıda yok → panelde kırık görünüyordu.
+$panelLogo = '';
+try {
+    $panelGlobal = getDB()->query("SELECT settings FROM sections WHERE section_type = 'sun_global' ORDER BY id LIMIT 1")->fetchColumn();
+    $panelGlobal = $panelGlobal ? json_decode((string)$panelGlobal, true) : null;
+    $panelLogoAyar = is_array($panelGlobal) ? trim((string)($panelGlobal['logo_dark'] ?? '')) : '';
+    if ($panelLogoAyar !== '' && function_exists('getMediaUrl')) $panelLogo = getMediaUrl($panelLogoAyar);
+} catch (Throwable $e) {
+    $panelLogo = '';
+}
+if ($panelLogo === '') {
+    $panelLogoDosya = ROOT_PATH . 'assets/img/sunline-logo-dark.webp';
+    $panelLogo = ASSETS_URL . 'img/sunline-logo-dark.webp?v=' . (is_file($panelLogoDosya) ? filemtime($panelLogoDosya) : 1);
+}
+
+// Panel teması (Kurumsal Lacivert) — yalnız görünüm; sürüm = dosya tarihi (tarayıcı önbelleği eski CSS'i tutmasın)
+$panelTemaCss = __DIR__ . '/../assets/css/panel-tema.css';
+$panelTemaVer = is_file($panelTemaCss) ? filemtime($panelTemaCss) : 1;
 ?>
 <!DOCTYPE html>
 <html lang="tr">
@@ -25,6 +50,7 @@ $profileUrl = hasPermission('admin') ? ADMIN_URL . '/users.php?action=edit&id=' 
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="csrf-token" content="<?= generateCSRFToken() ?>">
+    <meta name="theme-color" content="#0f1b2d">
     <title><?= isset($pageTitle) ? e($pageTitle) . ' — ' : '' ?><?= e($siteName) ?> Yönetim Paneli</title>
     <script>
         window.ADMIN_URL = '<?= ADMIN_URL ?>';
@@ -738,25 +764,20 @@ $profileUrl = hasPermission('admin') ? ADMIN_URL . '/users.php?action=edit&id=' 
             .form-check-input { width: 1.2em; height: 1.2em; }
         }
     </style>
+    <!-- Panel teması (Kurumsal Lacivert): yukarıdaki temel stillerin ÜZERİNE yalnız renk/görünüm -->
+    <link href="<?= ADMIN_URL ?>/assets/css/panel-tema.css?v=<?= (int)$panelTemaVer ?>" rel="stylesheet">
 </head>
-<body>
+<body class="tema-lacivert sayfa-<?= e(preg_replace('/[^a-z0-9_-]/i', '', $currentPage)) ?>">
 
 <!-- Mobile Overlay -->
 <div class="sidebar-overlay" id="sidebarOverlay"></div>
 
 <!-- Sidebar -->
 <nav class="sidebar" id="mainSidebar">
-    <a href="<?= ADMIN_URL ?>" class="sidebar-brand" title="<?= e($siteName) ?>">
-        <span class="sidebar-brand-logo">
-            <?php if ($logoUrl): ?>
-                <img src="<?= e($logoUrl) ?>" alt="<?= e($siteName) ?>">
-            <?php else: ?>
-                <i class="bi bi-globe2"></i>
-            <?php endif; ?>
-        </span>
+    <a href="<?= ADMIN_URL ?>" class="sidebar-brand sidebar-brand--logo" title="<?= e($siteName) ?> — Yönetim Paneli">
+        <img class="sidebar-brand-img" src="<?= e($panelLogo) ?>" alt="<?= e($siteName) ?>" width="128" height="52">
         <span class="sidebar-brand-text">
-            <?= e($siteName) ?>
-            <small>Yönetim Paneli</small>
+            <small>Yönetim<br>Paneli</small>
         </span>
     </a>
 
@@ -875,9 +896,9 @@ $profileUrl = hasPermission('admin') ? ADMIN_URL . '/users.php?action=edit&id=' 
             <i class="bi bi-car-front nav-link-icon"></i>
             <span class="nav-link-text">Araçlar</span>
         </a>
-        <a href="<?= ADMIN_URL ?>/drivers.php" class="nav-link <?= $currentPage === 'drivers' ? 'active' : '' ?>" title="Şöförler">
+        <a href="<?= ADMIN_URL ?>/drivers.php" class="nav-link <?= $currentPage === 'drivers' ? 'active' : '' ?>" title="Şoförler">
             <i class="bi bi-person-badge nav-link-icon"></i>
-            <span class="nav-link-text">Şöförler</span>
+            <span class="nav-link-text">Şoförler</span>
         </a>
         <a href="<?= ADMIN_URL ?>/hotels.php" class="nav-link <?= $currentPage === 'hotels' ? 'active' : '' ?>" title="Oteller">
             <i class="bi bi-building nav-link-icon"></i>
@@ -980,7 +1001,7 @@ $profileUrl = hasPermission('admin') ? ADMIN_URL . '/users.php?action=edit&id=' 
             <?php if (isset($pageTitle)): ?>
             <div class="d-none d-md-block">
                 <div class="fw-semibold" style="font-size:.95rem;line-height:1.1;"><?= e($pageTitle) ?></div>
-                <div style="font-size:.7rem;color:var(--text-muted);"><?= date('d F Y, l') ?></div>
+                <div style="font-size:.7rem;color:var(--text-muted);"><?= e($panelTarih) ?></div>
             </div>
             <?php endif; ?>
         </div>

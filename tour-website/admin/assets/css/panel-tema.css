@@ -1,0 +1,378 @@
+/* =====================================================================
+   SunLine Yönetim Paneli — "Kurumsal Lacivert" teması (2026-11-28)
+   - Yalnız görünüm: sayfaların HTML'i, JavaScript'i ve işleyişi değişmez.
+   - includes/header.php'deki temel stillerden SONRA yüklenir; <body class="tema-lacivert">.
+   - Bootstrap'in anlam renkleri (yeşil = tamam, kırmızı = sil/iptal, camgöbeği, sarı) aynen kalır;
+     yalnız ana renk (mavi/mor) lacivert-maviye döner.
+   - Gece modu (ay düğmesi) aynı değişkenlerle çalışır.
+   ===================================================================== */
+
+/* ---------- Renk değişkenleri: gündüz ---------- */
+:root:not([data-bs-theme="dark"]) {
+    --primary: #2563eb;
+    --primary-dark: #1d4ed8;
+    --primary-light: rgba(37, 99, 235, .08);
+    --sidebar-border: #e2e8f0;
+    --text-base: #0f172a;
+    --text-muted: #5b6b80;
+    --text-soft: #94a3b8;
+    --hover-bg: #f1f5f9;
+    --active-bg: #eaf1ff;
+    --active-text: #1d4ed8;
+
+    --bs-primary: #2563eb;
+    --bs-primary-rgb: 37, 99, 235;
+    --bs-primary-text-emphasis: #1e3a8a;
+    --bs-primary-bg-subtle: #dbe7ff;
+    --bs-primary-border-subtle: #bfd3fb;
+    --bs-link-color: #1d4ed8;
+    --bs-link-color-rgb: 29, 78, 216;
+    --bs-link-hover-color: #1e40af;
+    --bs-link-hover-color-rgb: 30, 64, 175;
+    --bs-body-color: #0f172a;
+    --bs-body-color-rgb: 15, 23, 42;
+    --bs-border-color: #e2e8f0;
+    --bs-focus-ring-color: rgba(37, 99, 235, .25);
+
+    --tl-nav: #0f1b2d;          /* sol menü */
+    --tl-nav-2: #172840;        /* menü üzerine gelince */
+    --tl-nav-line: #1f2f48;     /* menü çizgileri */
+    --tl-nav-text: #b3c1d4;     /* menü yazısı */
+    --tl-nav-head: #8296b1;     /* menü bölüm başlığı */
+    --tl-nav-active: #1e3c6b;   /* seçili menü */
+    --tl-bg: #f2f5f9;           /* sayfa zemini */
+    --tl-top: #ffffff;          /* üst çubuk */
+    --tl-line: #e2e8f0;         /* kart/tablo çizgisi */
+    --tl-head-bg: #f8fafc;      /* tablo başlığı */
+    --tl-zebra: #f8fafc;        /* tablo çift satır */
+    --tl-hover: #eaf1ff;        /* satır üzerine gelince */
+    --tl-done: #d4f1dd;         /* iş yapıldı satırı */
+    --tl-done-hover: #c3ead0;
+    --tl-done-bar: #16a34a;
+    --tl-arr-bg: #dbe7ff;  --tl-arr-text: #1e3a8a;   /* Arrival */
+    --tl-dep-bg: #cff4fc;  --tl-dep-text: #055160;   /* Depar */
+    --tl-ara-bg: #fde2e4;  --tl-ara-text: #9f1239;   /* Ara Transfer */
+    --tl-shadow: 0 1px 2px rgba(15, 23, 42, .05);
+}
+
+/* ---------- Renk değişkenleri: gece ---------- */
+[data-bs-theme="dark"] {
+    --primary: #60a5fa;
+    --primary-dark: #3b82f6;
+    --primary-light: rgba(96, 165, 250, .15);
+    --active-bg: rgba(96, 165, 250, .16);
+    --active-text: #93c5fd;
+
+    --bs-primary: #3b82f6;
+    --bs-primary-rgb: 59, 130, 246;
+    --bs-link-color: #93c5fd;
+    --bs-link-color-rgb: 147, 197, 253;
+    --bs-link-hover-color: #bfdbfe;
+    --bs-link-hover-color-rgb: 191, 219, 254;
+    --bs-focus-ring-color: rgba(96, 165, 250, .3);
+
+    --tl-nav: #0a1322;
+    --tl-nav-2: #12203a;
+    --tl-nav-line: #1a2a44;
+    --tl-nav-text: #a9b8cc;
+    --tl-nav-head: #7d90aa;
+    --tl-nav-active: #1b3561;
+    --tl-bg: #0b1220;
+    --tl-top: #111827;
+    --tl-line: #1f2937;
+    --tl-head-bg: rgba(255, 255, 255, .03);
+    --tl-zebra: rgba(255, 255, 255, .035);
+    --tl-hover: rgba(96, 165, 250, .12);
+    --tl-done: rgba(34, 197, 94, .20);
+    --tl-done-hover: rgba(34, 197, 94, .27);
+    --tl-done-bar: #22c55e;
+    --tl-arr-bg: rgba(59, 130, 246, .22);  --tl-arr-text: #bfdbfe;
+    --tl-dep-bg: rgba(13, 202, 240, .18);  --tl-dep-text: #a5f3fc;
+    --tl-ara-bg: rgba(244, 63, 94, .20);   --tl-ara-text: #fecdd3;
+    --tl-shadow: 0 1px 2px rgba(0, 0, 0, .4);
+}
+
+/* ---------- Sayfa zemini ---------- */
+body.tema-lacivert { background-color: var(--tl-bg); }
+
+/* ---------- Sol menü (lacivert) ---------- */
+.tema-lacivert .sidebar { background: var(--tl-nav); border-right-color: var(--tl-nav-line); }
+.tema-lacivert .sidebar-brand { color: #fff; border-bottom-color: var(--tl-nav-line); }
+.tema-lacivert .sidebar-brand:hover { color: #fff; }
+.tema-lacivert .sidebar-brand-text small { color: var(--tl-nav-head); }
+/* Sol üst logo: sitenin koyu zemin logosu (beyaz yazı + turuncu güneş), yanında "Yönetim Paneli" */
+.tema-lacivert .sidebar-brand--logo { gap: .7rem; padding: 0 1rem; }
+.tema-lacivert .sidebar-brand-img { display: block; flex-shrink: 0; height: 54px; width: auto; max-width: 150px; object-fit: contain; }
+.tema-lacivert .sidebar-brand--logo .sidebar-brand-text small {
+    margin-top: 0; padding-left: .7rem; border-left: 1px solid var(--tl-nav-line);
+    font-size: .62rem; line-height: 1.3; letter-spacing: .9px;
+}
+@media (max-width: 575.98px) {
+    .tema-lacivert .sidebar-brand-img { height: 44px; }
+}
+/* Menü daraltılınca (masaüstü, 76 px): logonun yalnız güneş + araç kısmı */
+@media (min-width: 992px) {
+    .tema-lacivert .sidebar.collapsed .sidebar-brand-img { width: 48px; height: 48px; object-fit: cover; object-position: 0 50%; }
+}
+.tema-lacivert .nav-section { color: var(--tl-nav-head); }
+.tema-lacivert .sidebar-nav .nav-link { color: var(--tl-nav-text); }
+.tema-lacivert .sidebar-nav .nav-link:hover { background: var(--tl-nav-2); color: #fff; }
+.tema-lacivert .sidebar-nav .nav-link.active { background: var(--tl-nav-active); color: #fff; }
+.tema-lacivert .sidebar-nav .nav-link.active::before { background: #60a5fa; }
+.tema-lacivert .sidebar-nav .nav-link.active i.nav-link-icon { color: #93c5fd; }
+/* Açılır grup başlığı (Rezervasyonlar, Raporlar): alt sayfa seçiliyken yalnız yazı beyaz */
+.tema-lacivert .sidebar:not(.collapsed) .sidebar-nav .nav-link.active[data-bs-toggle] { background: transparent; }
+.tema-lacivert .sidebar:not(.collapsed) .sidebar-nav .nav-link.active[data-bs-toggle]::before { display: none; }
+.tema-lacivert .sidebar-nav .nav-link[data-bs-toggle]:hover { background: var(--tl-nav-2); }
+/* Alt menü yazıları kesilmesin ("Silinen Rezervasyonlar" sağdan kırpılıyordu): girinti biraz az,
+   yine sığmazsa ikinci satıra geçer (menü dar moddayken yazılar zaten gizli) */
+.tema-lacivert .sidebar:not(.collapsed) .nav-submenu .nav-link { padding-left: 2.3rem; white-space: normal; line-height: 1.3; }
+.tema-lacivert .sidebar .text-info { color: #7dd3fc !important; }
+.tema-lacivert .sidebar .text-danger { color: #fca5a5 !important; }
+.tema-lacivert .sidebar-footer { border-top-color: var(--tl-nav-line); }
+.tema-lacivert .sidebar-user,
+.tema-lacivert .sidebar-user:hover { color: #fff; }
+.tema-lacivert .sidebar-user:hover { background: var(--tl-nav-2); }
+.tema-lacivert .sidebar-user-info .role { color: var(--tl-nav-head); }
+.tema-lacivert .sidebar-user-avatar,
+.tema-lacivert .top-user-avatar { background: #2563eb; }
+.tema-lacivert .sidebar-nav::-webkit-scrollbar-thumb { background: rgba(255, 255, 255, .18); }
+.tema-lacivert .sidebar-nav { scrollbar-color: rgba(255, 255, 255, .18) transparent; }
+.tema-lacivert .sidebar-overlay { background: rgba(15, 27, 45, .55); }
+
+/* ---------- Üst çubuk ---------- */
+.tema-lacivert .top-navbar { background: var(--tl-top); border-bottom-color: var(--tl-line); box-shadow: var(--tl-shadow); }
+.tema-lacivert .topbar-icon-btn .badge-dot { border-color: var(--tl-top); }
+
+/* ---------- Kartlar ---------- */
+.tema-lacivert .card {
+    --bs-card-border-color: var(--tl-line);
+    --bs-card-border-radius: 12px;
+    --bs-card-inner-border-radius: 11px;
+}
+.tema-lacivert .stat-card,
+.tema-lacivert .table-card { border: 1px solid var(--tl-line); border-radius: 12px; box-shadow: var(--tl-shadow); }
+.tema-lacivert .card-header { border-bottom-color: var(--tl-line); }
+
+/* ---------- Sayfa başlığı ---------- */
+.tema-lacivert h1.h3 { font-weight: 700; letter-spacing: -.01em; }
+
+/* ---------- Tablolar ---------- */
+.tema-lacivert .table { --bs-table-border-color: var(--tl-line); }
+.tema-lacivert .table > thead > tr > th {
+    background-color: var(--tl-head-bg);
+    color: var(--text-muted);
+    font-size: .75rem;
+    font-weight: 700;
+    letter-spacing: .02em;
+    text-transform: uppercase;
+}
+/* Çift satır gölgesi: mor yerine çok açık gri; üzerine gelince açık mavi */
+.tema-lacivert .table-hover > tbody > tr:nth-of-type(even) > * { background-color: var(--tl-zebra); }
+.tema-lacivert .table-hover > tbody > tr:nth-of-type(odd) > * { background-color: transparent; }
+.tema-lacivert .table-hover > tbody > tr:hover > * { background-color: var(--tl-hover) !important; }
+
+/* Rezervasyonlar: "İş yapıldı" satırı — neon yeşil yerine belirgin ama göz yormayan yeşil + solda yeşil çizgi */
+.tema-lacivert #bookingsTable > tbody > tr.row-completed > td { background-color: var(--tl-done) !important; }
+.tema-lacivert #bookingsTable > tbody > tr.row-completed:hover > td { background-color: var(--tl-done-hover) !important; }
+.tema-lacivert #bookingsTable > tbody > tr.row-completed > td:first-child { box-shadow: inset 3px 0 0 var(--tl-done-bar); }
+
+/* Rezervasyonlar: Yön etiketleri yumuşak hap görünümü (renk ailesi aynı: Arrival mavi, Depar camgöbeği, Ara Transfer kırmızı) */
+/* (satırdaki etiket + telefonda satır açılınca altta çıkan detaydaki "Yön" etiketi: data-dtr-index="0") */
+.tema-lacivert #bookingsTable > tbody > tr > td:first-child > .badge,
+.tema-lacivert #bookingsTable .dtr-details > li[data-dtr-index="0"] .badge {
+    border-radius: 999px;
+    padding: .4em .72em;
+    font-size: .74rem;
+    font-weight: 600;
+}
+.tema-lacivert #bookingsTable > tbody > tr > td:first-child > .badge.bg-primary,
+.tema-lacivert #bookingsTable .dtr-details > li[data-dtr-index="0"] .badge.bg-primary { background-color: var(--tl-arr-bg) !important; color: var(--tl-arr-text) !important; }
+.tema-lacivert #bookingsTable > tbody > tr > td:first-child > .badge.bg-info,
+.tema-lacivert #bookingsTable .dtr-details > li[data-dtr-index="0"] .badge.bg-info    { background-color: var(--tl-dep-bg) !important; color: var(--tl-dep-text) !important; }
+.tema-lacivert #bookingsTable > tbody > tr > td:first-child > .badge.bg-danger,
+.tema-lacivert #bookingsTable .dtr-details > li[data-dtr-index="0"] .badge.bg-danger  { background-color: var(--tl-ara-bg) !important; color: var(--tl-ara-text) !important; }
+
+/* Gece modu: Ara Transfer satırındaki otel adı koda gömülü koyu camgöbeği (#0c5460); koyu zeminde okunmuyordu */
+[data-bs-theme="dark"] .tema-lacivert #bookingsTable .hotel-full[style],
+[data-bs-theme="dark"] .tema-lacivert #bookingsTable .hotel-short[style],
+[data-bs-theme="dark"] .tema-lacivert #ob-price,
+[data-bs-theme="dark"] .tema-lacivert #ob-pickup-time { color: #67e8f9 !important; }
+
+/* Rezervasyon penceresi başlığı ve bekleyen kartlar */
+.tema-lacivert .modal-booking .modal-header { background: linear-gradient(135deg, #0f1b2d, #1e3c6b); }
+.tema-lacivert .pending-card .booking-number { color: var(--active-text); }
+
+/* ---------- Butonlar ---------- */
+.tema-lacivert .btn { --bs-btn-border-radius: .5rem; }
+.tema-lacivert .btn-sm { --bs-btn-border-radius: .45rem; }
+.tema-lacivert .btn-primary {
+    --bs-btn-bg: #2563eb; --bs-btn-border-color: #2563eb;
+    --bs-btn-hover-bg: #1d4ed8; --bs-btn-hover-border-color: #1d4ed8;
+    --bs-btn-active-bg: #1e40af; --bs-btn-active-border-color: #1e40af;
+    --bs-btn-disabled-bg: #2563eb; --bs-btn-disabled-border-color: #2563eb;
+    --bs-btn-focus-shadow-rgb: 37, 99, 235;
+}
+.tema-lacivert .btn-outline-primary {
+    --bs-btn-color: #2563eb; --bs-btn-border-color: #2563eb;
+    --bs-btn-hover-bg: #2563eb; --bs-btn-hover-border-color: #2563eb;
+    --bs-btn-active-bg: #1d4ed8; --bs-btn-active-border-color: #1d4ed8;
+    --bs-btn-disabled-color: #2563eb; --bs-btn-disabled-border-color: #2563eb;
+    --bs-btn-focus-shadow-rgb: 37, 99, 235;
+}
+[data-bs-theme="dark"] .tema-lacivert .btn-outline-primary { --bs-btn-color: #60a5fa; --bs-btn-border-color: #3b82f6; }
+/* Camgöbeği dolu buton (ör. "+ Ara Transfer"): beyaz yazı okunsun diye koyu ton (önceki açık camgöbeğinde beyaz yazı zor okunuyordu) */
+.tema-lacivert .btn-info {
+    --bs-btn-color: #fff; --bs-btn-bg: #0e7490; --bs-btn-border-color: #0e7490;
+    --bs-btn-hover-color: #fff; --bs-btn-hover-bg: #155e75; --bs-btn-hover-border-color: #155e75;
+    --bs-btn-active-color: #fff; --bs-btn-active-bg: #164e63; --bs-btn-active-border-color: #164e63;
+    --bs-btn-disabled-color: #fff; --bs-btn-disabled-bg: #0e7490; --bs-btn-disabled-border-color: #0e7490;
+    --bs-btn-focus-shadow-rgb: 14, 116, 144;
+}
+
+/* ---------- Form alanları ---------- */
+.tema-lacivert .form-control:focus,
+.tema-lacivert .form-select:focus,
+.tema-lacivert .form-check-input:focus { border-color: #93b4f5; box-shadow: 0 0 0 .2rem rgba(37, 99, 235, .18); }
+.tema-lacivert .form-check-input:checked { background-color: #2563eb; border-color: #2563eb; }
+/* Rezervasyonlar: İş Durumu onay kutuları ("İş yapıldı", "Dışarıya verildi") işaretliyken yeşil */
+.tema-lacivert .ops-cell .form-check-input:checked { background-color: #16a34a; border-color: #16a34a; }
+
+/* ---------- Sekmeler (dil sekmeleri hariç): alt çizgili ---------- */
+.tema-lacivert .nav-tabs:not(.lang-tabs) { --bs-nav-tabs-border-color: var(--tl-line); border-bottom-color: var(--tl-line); }
+.tema-lacivert .nav-tabs:not(.lang-tabs) .nav-link {
+    border: 0;
+    border-bottom: 2px solid transparent;
+    border-radius: 0;
+    margin-bottom: -1px;
+    background: transparent;
+    color: var(--text-muted);
+    font-weight: 500;
+}
+.tema-lacivert .nav-tabs:not(.lang-tabs) .nav-link:hover { color: var(--text-base); border-bottom-color: var(--tl-line); }
+.tema-lacivert .nav-tabs:not(.lang-tabs) .nav-link.active {
+    color: var(--text-base);
+    font-weight: 600;
+    background: transparent;
+    border-bottom-color: var(--primary);
+}
+
+/* ---------- Diğer Bootstrap parçaları: ana renk ---------- */
+.tema-lacivert .pagination {
+    --bs-pagination-active-bg: var(--bs-primary);
+    --bs-pagination-active-border-color: var(--bs-primary);
+    --bs-pagination-color: var(--bs-link-color);
+    --bs-pagination-hover-color: var(--bs-link-hover-color);
+    --bs-pagination-focus-box-shadow: 0 0 0 .2rem rgba(37, 99, 235, .2);
+}
+.tema-lacivert .dropdown-menu { --bs-dropdown-link-active-bg: #2563eb; }
+.tema-lacivert .nav-pills { --bs-nav-pills-link-active-bg: #2563eb; }
+.tema-lacivert .progress,
+.tema-lacivert .progress-stacked { --bs-progress-bar-bg: #2563eb; }
+.tema-lacivert .list-group { --bs-list-group-active-bg: #2563eb; --bs-list-group-active-border-color: #2563eb; }
+.tema-lacivert .modal-content { border-color: var(--tl-line); }
+
+/* ---------- Telefon: başlıktaki buton yazıları iki satıra bölünmesin ---------- */
+@media (max-width: 575.98px) {
+    .tema-lacivert .content-wrapper > .d-flex.justify-content-between.align-items-center > .d-flex { flex-wrap: wrap; }
+    .tema-lacivert .content-wrapper > .d-flex.justify-content-between.align-items-center > .d-flex > .btn,
+    .tema-lacivert .content-wrapper > .d-flex.justify-content-between.align-items-center > .d-flex > .badge {
+        flex: 1 1 auto;
+        white-space: nowrap;
+    }
+    .tema-lacivert .content-wrapper > .d-flex.justify-content-between.align-items-center > .d-flex > .badge {
+        display: inline-flex; align-items: center; justify-content: center;
+    }
+}
+
+/* ---------- Telefon: rezervasyon tablosu kelime bölmeden ekrana sığsın ----------
+   Telefonda her zaman görünen 4 sütun (Yön, Alış Saati, Saat/Otel, Bölge) "BOĞAZKENT", "MURATPAŞA"
+   gibi bölünmeyen kelimelerle 330 px'e sığmıyordu. Yazı bir tık küçülür, yön etiketi sıkılaşır
+   (okunu gizler; renk + yazı kalır). Çok dar ekranda satır açma düğmesi etiketin üstüne geçer. */
+@media (max-width: 575.98px) {
+    .tema-lacivert #bookingsTable > tbody > tr > td:first-child > .badge { font-size: .68rem; padding: .35em .55em; }
+    .tema-lacivert #bookingsTable > tbody > tr > td:first-child > .badge > i { display: none; }
+    .tema-lacivert #bookingsTable > tbody > tr > td,
+    .tema-lacivert #bookingsTable .hotel-short,
+    .tema-lacivert #bookingsTable .hotel-full { font-size: .8rem !important; }
+    /* "Sayfada 25 kayıt göster" kutusu: ok işareti rakamın üstüne binmesin */
+    .tema-lacivert .dataTables_length select { padding-right: 1.9rem; background-position: right .45rem center; }
+    /* Sekmeler parmakla kayar; altındaki gri kaydırma çubuğu gizli */
+    .tema-lacivert .nav-tabs { scrollbar-width: none; }
+    .tema-lacivert .nav-tabs::-webkit-scrollbar { display: none; }
+}
+/* (kenar boşluğu daraltmaları yalnız rezervasyon sayfalarında: body.sayfa-bookings / sayfa-index = Dashboard) */
+@media (max-width: 374.98px) {
+    .tema-lacivert:is(.sayfa-bookings, .sayfa-index) .content-wrapper { padding-left: .5rem; padding-right: .5rem; }
+    .tema-lacivert:is(.sayfa-bookings, .sayfa-index) .table-card > .card-body { padding-left: .5rem; padding-right: .5rem; }
+    .tema-lacivert #bookingsTable > thead > tr > th,
+    .tema-lacivert #bookingsTable > tbody > tr > td { padding-left: .2rem; padding-right: .2rem; }
+}
+@media (max-width: 339.98px) {
+    .tema-lacivert:is(.sayfa-bookings, .sayfa-index) .content-wrapper { padding-left: .35rem; padding-right: .35rem; }
+    .tema-lacivert:is(.sayfa-bookings, .sayfa-index) .table-card > .card-body { padding-left: .35rem; padding-right: .35rem; }
+    .tema-lacivert #bookingsTable > thead > tr > th,
+    .tema-lacivert #bookingsTable > tbody > tr > td { padding-left: .15rem; padding-right: .15rem; }
+    .tema-lacivert #bookingsTable > tbody > tr > td,
+    .tema-lacivert #bookingsTable .hotel-short,
+    .tema-lacivert #bookingsTable .hotel-full { font-size: .76rem !important; }
+    .tema-lacivert #bookingsTable > tbody > tr > td:first-child > .badge { font-size: .64rem; padding: .35em .45em; }
+}
+/* ---------- Masaüstü: rezervasyon tablosu (13 sütun) kelime bölmeden sığsın ----------
+   Eskiden sütunlar kelimeler harf harf bölünerek sığdırılıyordu. Bölme kalkınca 1600 px'ten dar
+   ekranlarda tablo yana taşıyordu; yazı ve boşluklar kademeli olarak sıkılaşır (1280 px'e kadar ölçüldü). */
+@media (min-width: 992px) and (max-width: 1599.98px) {
+    .tema-lacivert #bookingsTable > tbody > tr > td { font-size: .84rem; padding: .45rem .4rem; }
+    .tema-lacivert #bookingsTable .hotel-full,
+    .tema-lacivert #bookingsTable .hotel-short { font-size: .8rem !important; }
+    .tema-lacivert #bookingsTable > thead > tr > th { padding-left: .4rem; }
+    .tema-lacivert table.dataTable#bookingsTable > thead > tr > th.sorting,
+    .tema-lacivert table.dataTable#bookingsTable > thead > tr > th.sorting_asc,
+    .tema-lacivert table.dataTable#bookingsTable > thead > tr > th.sorting_desc { padding-right: 20px; }
+    .tema-lacivert table.dataTable#bookingsTable > thead > tr > th:before,
+    .tema-lacivert table.dataTable#bookingsTable > thead > tr > th:after { right: 6px; }
+}
+@media (min-width: 992px) and (max-width: 1439.98px) {
+    .tema-lacivert #bookingsTable > tbody > tr > td { font-size: .8rem; padding: .4rem .3rem; }
+    .tema-lacivert #bookingsTable .hotel-full,
+    .tema-lacivert #bookingsTable .hotel-short { font-size: .76rem !important; }
+    .tema-lacivert #bookingsTable > thead > tr > th { padding-left: .3rem; font-size: .7rem; }
+    .tema-lacivert table.dataTable#bookingsTable > thead > tr > th.sorting,
+    .tema-lacivert table.dataTable#bookingsTable > thead > tr > th.sorting_asc,
+    .tema-lacivert table.dataTable#bookingsTable > thead > tr > th.sorting_desc { padding-right: 15px; }
+    .tema-lacivert table.dataTable#bookingsTable > thead > tr > th:before,
+    .tema-lacivert table.dataTable#bookingsTable > thead > tr > th:after { right: 3px; }
+    .tema-lacivert #bookingsTable > tbody > tr > td:first-child > .badge { font-size: .68rem; padding: .35em .55em; }
+    .tema-lacivert #bookingsTable > tbody > tr > td:first-child > .badge > i { display: none; }
+}
+@media (min-width: 992px) and (max-width: 1299.98px) {
+    .tema-lacivert:is(.sayfa-bookings, .sayfa-index) .content-wrapper { padding-left: 1rem; padding-right: 1rem; }
+    .tema-lacivert #bookingsTable > tbody > tr > td { padding: .4rem .25rem; }
+}
+
+/* ---------- Eski küçük yazı kusurları ---------- */
+/* Silinen Rezervasyonlar: rezervasyon numarası (TRF-20261115-0639) tire yerinden iki satıra bölünmesin
+   (yalnız geniş ekranda; dar ekranda tabloyu yana kaydırmasın diye eskisi gibi) */
+@media (min-width: 1200px) {
+    .tema-lacivert.sayfa-deleted_bookings td > small.d-inline-block { white-space: nowrap; }
+}
+/* Telefonda kart başlığındaki kutu (ör. Transfer düzenle > "Araç Fiyatlandırması" + para birimi) sığmazsa alt satıra geçsin;
+   önceden 320 px ekranda sayfayı yana taşırıyordu */
+@media (max-width: 575.98px) {
+    .tema-lacivert .card-header.d-flex.justify-content-between { flex-wrap: wrap; row-gap: .5rem; }
+    .tema-lacivert .card-header.d-flex.justify-content-between > .form-select { max-width: 100%; }
+}
+
+/* Telefon/tablet: tablo üstündeki "Ara:" kutusu satıra sığsın (önceden genişlik %100 + "Ara:" yazısı
+   yüzünden 320 px'te tüm liste sayfalarında ~26 px yana taşıyordu) */
+@media (max-width: 991.98px) {
+    .tema-lacivert .dataTables_wrapper .dataTables_filter label { display: flex; align-items: center; gap: .5rem; width: 100%; margin: 0; }
+    .tema-lacivert .dataTables_wrapper .dataTables_filter input { width: auto !important; flex: 1 1 auto; min-width: 0; margin-left: 0 !important; }
+}
+
+/* Telefon/tablet: çok sayfalı listelerde sayfa numaraları alt satıra geçsin (önceden tabloyu yana kaydırıyordu) */
+@media (max-width: 767.98px) {
+    .tema-lacivert .dataTables_wrapper .dataTables_paginate { display: flex; justify-content: center; }
+    .tema-lacivert .dataTables_wrapper .dataTables_paginate .pagination { flex-wrap: wrap; justify-content: center; row-gap: 4px; }
+    .tema-lacivert .dataTables_wrapper .dataTables_paginate .paginate_button { padding: 0; }
+}

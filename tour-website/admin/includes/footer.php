@@ -10,6 +10,9 @@
 <script src="https://cdn.datatables.net/1.13.6/js/dataTables.bootstrap5.min.js"></script>
 <script src="https://cdn.datatables.net/responsive/2.5.0/js/dataTables.responsive.min.js"></script>
 <script src="https://cdn.datatables.net/responsive/2.5.0/js/responsive.bootstrap5.min.js"></script>
+<!-- DataTables Türkçe metinler sayfada (dil dosyası beklenmeden tablo hemen çizilir) -->
+<?php $dtTrJs = __DIR__ . '/../assets/js/dt-tr.js'; ?>
+<script src="<?= ADMIN_URL ?>/assets/js/dt-tr.js?v=<?= is_file($dtTrJs) ? filemtime($dtTrJs) : 1 ?>"></script>
 <!-- Select2 -->
 <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
 <!-- Summernote -->
@@ -152,7 +155,7 @@ $(document).ready(function() {
     // DataTables default config
     if ($.fn.DataTable) {
         $.extend($.fn.dataTable.defaults, {
-            language: {
+            language: window.DT_TR || {
                 url: 'https://cdn.datatables.net/plug-ins/1.13.6/i18n/tr.json'
             },
             pageLength: 25,

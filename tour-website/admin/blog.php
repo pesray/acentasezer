@@ -206,6 +206,7 @@ $posts = $db->query("SELECT bp.*, bc.name as category_name, u.full_name as autho
 <?php else: ?>
 <div class="card table-card">
     <div class="card-body">
+        <div class="table-responsive">
         <table class="table table-hover datatable">
             <thead>
                 <tr>
@@ -219,7 +220,7 @@ $posts = $db->query("SELECT bp.*, bc.name as category_name, u.full_name as autho
             <tbody>
                 <?php foreach ($posts as $post): ?>
                 <tr>
-                    <td>
+                    <td class="text-wrap">
                         <strong><?= e($post['title']) ?></strong>
                         <?php if ($post['is_featured']): ?><span class="badge bg-warning text-dark ms-1">Öne Çıkan</span><?php endif; ?>
                     </td>
@@ -234,6 +235,7 @@ $posts = $db->query("SELECT bp.*, bc.name as category_name, u.full_name as autho
                 <?php endforeach; ?>
             </tbody>
         </table>
+        </div>
     </div>
 </div>
 <?php endif; ?>

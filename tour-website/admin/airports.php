@@ -276,11 +276,16 @@ document.getElementById('airportForm').addEventListener('submit', function(e) {
             btn.innerHTML = '<i class="bi bi-check-lg me-1"></i>Kaydet';
         });
 });
+</script>
 
+<?php require_once __DIR__ . '/includes/footer.php'; ?>
+
+<script>
+// jQuery footer'da yüklendiği için bu blok footer'dan SONRA (önceden "$ is not defined" hatası veriyordu)
 $(document).ready(function() {
     if ($.fn.DataTable && $('#airportsTable').length && !$.fn.DataTable.isDataTable('#airportsTable')) {
         $('#airportsTable').DataTable({
-            language: { url: 'https://cdn.datatables.net/plug-ins/1.13.6/i18n/tr.json' },
+            language: window.DT_TR || { url: 'https://cdn.datatables.net/plug-ins/1.13.6/i18n/tr.json' },
             pageLength: 25,
             autoWidth: false,
             responsive: true
@@ -288,5 +293,3 @@ $(document).ready(function() {
     }
 });
 </script>
-
-<?php require_once __DIR__ . '/includes/footer.php'; ?>

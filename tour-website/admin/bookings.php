@@ -486,11 +486,22 @@ require_once __DIR__ . '/includes/header.php';
 
     <style>
 
-/* Sütun ve metin sığma ayarları (mobilde yatay kaymayı önler) */
+/* Sütun ve metin sığma ayarları (mobilde yatay kaymayı önler)
+   word-break: break-word kaldırıldı (2026-11-28): kelimeleri harf harf bölüyordu ("08:5 5", "Tut ar").
+   Metin yalnız boşluklardan alt satıra geçer; tek kelime hücreye sığmazsa overflow-wrap böler. */
 #bookingsTable th, #bookingsTable td {
     white-space: normal;
-    word-break: break-word;
     overflow-wrap: break-word;
+}
+
+/* Tablo hazır olana kadar ham satırlar gösterilmez (telefonda ilk saniyelerdeki karışık görüntü).
+   DataTables tabloyu .dataTables_wrapper içine alınca bu kurallar kendiliğinden devre dışı kalır. */
+.table-responsive > #bookingsTable:not(.rz-goster) > thead,
+.table-responsive > #bookingsTable:not(.rz-goster) > tbody { display: none; }
+.rz-yukleniyor { display: none; }
+.table-responsive > #bookingsTable:not(.rz-goster) ~ .rz-yukleniyor {
+    display: flex; align-items: center; justify-content: center; gap: .6rem;
+    padding: 2.5rem 1rem; color: var(--text-muted); font-size: .9rem;
 }
 
 /* Tarih kolonu asla alt satıra kaymasın */
@@ -504,7 +515,7 @@ require_once __DIR__ . '/includes/header.php';
 #bookingsTable th:nth-child(8), #bookingsTable td:nth-child(8) {
     max-width: 170px !important;
     white-space: normal !important;
-    word-break: break-word !important;
+    overflow-wrap: break-word !important;
 }
 
 @media (max-width: 991.98px) {
@@ -521,14 +532,14 @@ require_once __DIR__ . '/includes/header.php';
     .hotel-full { display: none; }
     /* Detay satırında tam otel adı görünsün ve alt satıra geçsin */
     .dtr-details .hotel-short { display: none; }
-    .dtr-details .hotel-full { display: inline; white-space: normal !important; word-break: break-word; }
+    .dtr-details .hotel-full { display: inline; white-space: normal !important; overflow-wrap: break-word; }
 }
 
 table.dataTable > tbody > tr.child ul.custom-dtr-details > li.dtr-info-full {
     width: 100% !important;
     flex: 1 1 100% !important;
     white-space: normal !important;
-    word-break: break-word;
+    overflow-wrap: break-word;
 }
 @media (min-width: 768px) {
     /* Özel masaüstü gizleme kuralları iptal edildi, tüm sütunlar görünür */
@@ -1090,6 +1101,16 @@ table.dataTable > tbody > tr.child ul.custom-dtr-details > li.dtr-info-full {
         </tbody>
     </table>
     <?php endif; ?>
+
+    <!-- Tablo hazırlanırken görünür; DataTables hazır olunca CSS ile kendiliğinden gizlenir -->
+    <div class="rz-yukleniyor" role="status"><span class="spinner-border spinner-border-sm" aria-hidden="true"></span>Rezervasyonlar yükleniyor…</div>
+    <script>
+    /* Güvenlik: tablo 12 sn içinde hazırlanamazsa (ör. internet kütüphanesi yüklenemedi) satırları ham haliyle göster */
+    setTimeout(function () {
+        var t = document.getElementById('bookingsTable');
+        if (t && t.parentNode && t.parentNode.classList && t.parentNode.classList.contains('table-responsive')) t.classList.add('rz-goster');
+    }, 12000);
+    </script>
 
     </div><!-- /.table-responsive -->
     </div><!-- /.view-X -->
@@ -2307,12 +2328,27 @@ const currentView = '<?= $view ?>';
 <script>
 $(document).ready(function() {
     var table = window.bookingsTable = $('#bookingsTable').DataTable({
-        language: {
+        // Türkçe metinler sayfada (assets/js/dt-tr.js); yoksa eskisi gibi internetten
+        language: window.DT_TR || {
             url: 'https://cdn.datatables.net/plug-ins/1.13.6/i18n/tr.json'
         },
         pageLength: 25,
+        // İlk sıralama doğrudan tarih (aşağıdaki order([[1,'asc']]) ile aynı). Dil metinleri artık sayfada olduğu için
+        // tablo hemen çiziliyor; bu satır olmasa ilk çizim "Yön"e göre sıralanır ve aynı günün kayıtlarının sırası değişirdi.
+        // Eskisi gibi: aynı tarihteki kayıtlar sunucudan geldiği sırada (en yeni kayıt üstte) kalır.
+        order: (currentView === 'all' || currentView === 'daily' || currentView === 'arrival' || currentView === 'return') ? [[1, 'asc']] : [[0, 'asc']],
         autoWidth: false,
         responsive: {
+            // Pencere 1280 px'ten darsa (telefon dik/yan, tablet) satırlar telefon düzeninde: 4 ana sütun + dokununca açılan ayrıntı.
+            // Varsayılan ayarda 481–1279 px arası 13 sütunun hepsi zorla gösteriliyordu; sığmayınca tablo yana kayıyordu.
+            // 1280 px ve üzeri (masaüstü) eskisi gibi 13 sütun.
+            breakpoints: [
+                { name: 'desktop',  width: Infinity },
+                { name: 'tablet-l', width: 1281 },
+                { name: 'tablet-p', width: 1280 },
+                { name: 'mobile-l', width: 1279 },
+                { name: 'mobile-p', width: 320 }
+            ],
             details: {
                 renderer: function (api, rowIdx, columns) {
                     var data = $.map(columns, function (col, i) {
